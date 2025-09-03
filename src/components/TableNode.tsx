@@ -24,11 +24,11 @@ interface TableNodeData {
 
 function TableNode({ data }: NodeProps<TableNodeData>) {
   return (
-    <Card className="w-64 shadow-md react-flow__node-default border-2 border-slate-400">
-      <CardHeader className="bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 p-2 rounded-t-lg cursor-move">
+    <Card className="w-64 shadow-md react-flow__node-default">
+      <CardHeader className="bg-primary text-primary-foreground p-2 rounded-t-lg cursor-move">
         <CardTitle className="text-sm text-center font-semibold">{data.label}</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 divide-y divide-slate-200 dark:divide-slate-700">
+      <CardContent className="p-0 divide-y">
         {data.columns?.map((col) => (
           <TooltipProvider key={col.id} delayDuration={200}>
             <Tooltip>
@@ -39,21 +39,20 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
                     position={Position.Left}
                     id={col.id}
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
-                    className="!w-2 !h-2 !bg-slate-400"
+                    className="!w-2 !h-2 !bg-muted-foreground"
                   />
-                  <div className="flex items-center gap-2 truncate">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
+                  <div className="flex items-center gap-1 truncate">
                       {col.pk && <Key className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
                       <span className="truncate">{col.name}</span>
                       {col.nullable && <span className="text-muted-foreground font-mono -ml-1 mr-1">?</span>}
                   </div>
-                  <span className="font-mono text-orange-500 dark:text-orange-400">{col.type}</span>
+                  <span className="font-mono text-muted-foreground">{col.type}</span>
                   <Handle
                     type="source"
                     position={Position.Right}
                     id={col.id}
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
-                    className="!w-2 !h-2 !bg-slate-400"
+                    className="!w-2 !h-2 !bg-muted-foreground"
                   />
                 </div>
               </TooltipTrigger>
