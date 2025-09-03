@@ -8,11 +8,11 @@ export default function Layout() {
 
   return (
     <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full rounded-lg border">
-      <ResizablePanel defaultSize={25} minSize={20}>
+      <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
         <DiagramList selectedDiagramId={selectedDiagramId} setSelectedDiagramId={setSelectedDiagramId} />
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={75} minSize={50}>
+      <ResizablePanel defaultSize={80}>
         <div className="flex h-full items-center justify-center relative">
           {selectedDiagramId ? (
             <DiagramEditor diagramId={selectedDiagramId} setSelectedDiagramId={setSelectedDiagramId} />
