@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -22,20 +22,20 @@ import { Save, Trash2, Plus } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 import TableNode from './TableNode';
 import { AddTableDialog } from './AddTableDialog';
-import InspectorPanel from './InspectorPanel';
+import DiagramSelector from './DiagramSelector';
 
 interface DiagramEditorProps {
   diagramId: number;
   setSelectedDiagramId: (id: number | null) => void;
+  onNodeSelect: (node: Node | null) => void;
 }
 
-export default function DiagramEditor({ diagramId, setSelectedDiagramId }: DiagramEditorProps) {
+const DiagramEditor = forwardRef(({ diagramId, setSelectedDiagramId, onNodeSelect }: DiagramEditorProps, ref) => {
   const diagram = useLiveQuery(() => db.diagrams.get(diagramId), [diagramId]);
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
 
@@ -44,8 +44,17 @@ export default function DiagramEditor({ diagramId, setSelectedDiagramId }: Diagr
       setNodes(diagram.data.nodes || []);
       setEdges(diagram.data.edges || []);
     }
-    setSelectedNode(null);
-  }, [diagram]);
+    onNodeSelect(null);
+  }, [diagram, onNodeSelect]);
+
+  useImperativeHandle(ref, () => ({
+    updateNode(updatedNode: Node) {
+      handleNodeUpdate(updatedNode);
+    },
+    deleteNode(nodeId: string) {
+      handleNodeDelete(nodeId);
+    }
+  }));
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -102,8 +111,8 @@ export default function DiagramEditor({ diagramId, setSelectedDiagramId }: Diagr
   };
 
   const onSelectionChange = useCallback(({ nodes }: OnSelectionChangeParams) => {
-    setSelectedNode(nodes.length === 1 ? nodes[0] : null);
-  }, []);
+    onNodeSelect(nodes.length === 1 ? nodes[0] : null);
+  }, [onNodeSelect]);
 
   const handleNodeUpdate = (updatedNode: Node) => {
     setNodes((nds) =>
@@ -119,13 +128,13 @@ export default function DiagramEditor({ diagramId, setSelectedDiagramId }: Diagr
   const handleNodeDelete = (nodeId: string) => {
     const nodeChanges: NodeChange[] = [{ id: nodeId, type: 'remove' }];
     setNodes((nds) => applyNodeChanges(nodeChanges, nds));
-    setSelectedNode(null);
+    onNodeSelect(null);
   }
 
   return (
-    <div className="flex w-full h-full">
-      <div className="flex-grow relative">
-        <div className="absolute top-4 left-4 z-10 flex gap-2">
+    <div className="w-full h-full relative">
+        <div className="absolute top-4 left-4 z-10 flex gap-2 items-center bg-background p-2 rounded-lg border">
+            <DiagramSelector selectedDiagramId={diagramId} setSelectedDiagramId={setSelectedDiagramId} />
             <Button onClick={() => setIsAddTableDialogOpen(true)} size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Table</Button>
             <Button onClick={saveDiagram} size="sm"><Save className="h-4 w-4 mr-2" /> Save</Button>
             <Button onClick={deleteDiagram} variant="destructive" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
@@ -144,12 +153,8 @@ export default function DiagramEditor({ diagramId, setSelectedDiagramId }: Diagr
             <Background />
         </ReactFlow>
         <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} />
-      </div>
-      {selectedNode && (
-        <div className="w-80 border-l">
-            <InspectorPanel node={selectedNode} onNodeUpdate={handleNodeUpdate} onNodeDelete={handleNodeDelete} />
-        </div>
-      )}
     </div>
   );
-}
+});
+
+export default DiagramEditor;
