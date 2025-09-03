@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Node } from "reactflow";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,6 +23,15 @@ export default function InspectorPanel({ node, onNodeUpdate, onNodeDelete }: Ins
     const [columns, setColumns] = useState<Column[]>(node?.data.columns || []);
     const [editingColumn, setEditingColumn] = useState<Column | null>(null);
     const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (node) {
+            setTableName(node.data.label || "");
+            setColumns(node.data.columns || []);
+            setEditingColumn(null);
+            setEditingColumnIndex(null);
+        }
+    }, [node]);
 
     if (!node) return null;
 
