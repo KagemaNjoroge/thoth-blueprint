@@ -102,7 +102,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     );
 }
 
-export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
+export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
     const [tableName, setTableName] = useState(node?.data.label || "");
     const [columns, setColumns] = useState<Column[]>([]);
 
