@@ -24,7 +24,7 @@ interface TableNodeData {
 
 function TableNode({ data }: NodeProps<TableNodeData>) {
   return (
-    <Card className="w-64 shadow-md">
+    <Card className="w-64 shadow-md react-flow__node-default">
       <CardHeader className="bg-primary text-primary-foreground p-2 rounded-t-lg cursor-move">
         <CardTitle className="text-sm text-center font-semibold">{data.label}</CardTitle>
       </CardHeader>
@@ -33,12 +33,26 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
           <TooltipProvider key={col.id} delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex justify-between items-center text-xs py-1 px-2 border-b last:border-b-0">
+                <div className="relative flex justify-between items-center text-xs py-1 px-2 border-b last:border-b-0">
+                  <Handle
+                    type="target"
+                    position={Position.Left}
+                    id={col.id}
+                    style={{ top: '50%', transform: 'translateY(-50%)' }}
+                    className="!w-3 !h-3"
+                  />
                   <div className="flex items-center gap-1">
                       {col.pk && <Key className="h-3 w-3 text-yellow-500" />}
                       <span>{col.name}</span>
                   </div>
                   <span className={`text-muted-foreground ${col.nullable === false ? 'font-bold text-foreground/80' : ''}`}>{col.type}</span>
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={col.id}
+                    style={{ top: '50%', transform: 'translateY(-50%)' }}
+                    className="!w-3 !h-3"
+                  />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" align="start">
@@ -64,14 +78,6 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
           </TooltipProvider>
         ))}
       </CardContent>
-      <Handle type="source" position={Position.Top} className="!w-3 !h-3" />
-      <Handle type="source" position={Position.Right} className="!w-3 !h-3" />
-      <Handle type="source" position={Position.Bottom} className="!w-3 !h-3" />
-      <Handle type="source" position={Position.Left} className="!w-3 !h-3" />
-      <Handle type="target" position={Position.Top} className="!w-3 !h-3" />
-      <Handle type="target" position={Position.Right} className="!w-3 !h-3" />
-      <Handle type="target" position={Position.Bottom} className="!w-3 !h-3" />
-      <Handle type="target" position={Position.Left} className="!w-3 !h-3" />
     </Card>
   );
 }
