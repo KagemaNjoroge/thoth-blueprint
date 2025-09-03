@@ -114,7 +114,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
       data: { 
         label: tableName,
         columns: [
-            { name: 'id', type: 'INT', pk: true },
+            { id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false },
         ]
       },
     };
