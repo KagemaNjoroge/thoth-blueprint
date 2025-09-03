@@ -104,7 +104,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
 
 export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
     const [tableName, setTableName] = useState(node?.data.label || "");
-    const [columns, setColumns] = useState<Column[]>(node?.data.columns || []);
+    const [columns, setColumns] = useState<Column[]>([]);
 
     const availableTypes = dataTypes[dbType] || [];
     const sensors = useSensors(useSensor(PointerSensor));
@@ -112,7 +112,11 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
     useEffect(() => {
         if (node) {
             setTableName(node.data.label || "");
-            setColumns(node.data.columns || []);
+            const columnsWithIds = (node.data.columns || []).map((col: any) => ({
+                ...col,
+                id: col.id || `col_${Math.random().toString(36).substring(2, 11)}`
+            }));
+            setColumns(columnsWithIds);
         }
     }, [node]);
 
@@ -164,10 +168,10 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
-        if (active.id !== over?.id) {
+        if (over && active.id !== over.id) {
             setColumns((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over!.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
                 const newColumns = arrayMove(items, oldIndex, newIndex);
                 onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
                 return newColumns;
