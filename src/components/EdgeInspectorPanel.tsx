@@ -9,6 +9,7 @@ export const relationshipTypes = [
     { value: 'one-to-one', label: 'One-to-One' },
     { value: 'one-to-many', label: 'One-to-Many' },
     { value: 'many-to-one', label: 'Many-to-One' },
+    { value: 'many-to-many', label: 'Many-to-Many' },
 ];
 
 interface EdgeInspectorPanelProps {
@@ -30,7 +31,6 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
         const newEdge = { 
             ...edge, 
             data: { ...edge.data, relationship: value },
-            label: relationshipTypes.find(t => t.value === value)?.label || '',
         };
         onEdgeUpdate(newEdge);
     };

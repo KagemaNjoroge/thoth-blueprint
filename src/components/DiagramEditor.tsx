@@ -23,6 +23,7 @@ import TableNode from './TableNode';
 import { AddTableDialog } from './AddTableDialog';
 import DiagramSelector from './DiagramSelector';
 import { relationshipTypes } from './EdgeInspectorPanel';
+import CustomEdge from './CustomEdge';
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -36,11 +37,16 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
 
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
+  const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
   useEffect(() => {
     if (diagram?.data) {
       setNodes(diagram.data.nodes || []);
-      setEdges(diagram.data.edges || []);
+      const updatedEdges = (diagram.data.edges || []).map(edge => ({
+        ...edge,
+        type: 'custom',
+      }));
+      setEdges(updatedEdges);
     }
   }, [diagram]);
 
@@ -97,10 +103,8 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
         const defaultRelationship = relationshipTypes[1]; // One-to-Many
         const newEdge = {
             ...connection,
-            type: 'smoothstep',
-            markerEnd: { type: 'arrowclosed' },
+            type: 'custom',
             data: { relationship: defaultRelationship.value },
-            label: defaultRelationship.label,
         };
         setEdges((eds) => addEdge(newEdge, eds))
     },
@@ -173,6 +177,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
             onConnect={onConnect}
             onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             fitView
         >
             <Controls />
