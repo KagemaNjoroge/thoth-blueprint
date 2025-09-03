@@ -5,6 +5,9 @@ import { Input } from "./ui/input";
 import { Trash2, Plus, Edit, Save, X } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
+import { DatabaseType } from "@/lib/db";
+import { dataTypes } from "@/lib/db-types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface Column {
     name: string;
@@ -14,15 +17,18 @@ interface Column {
 
 interface InspectorPanelProps {
     node: Node | null;
+    dbType: DatabaseType;
     onNodeUpdate: (node: Node) => void;
     onNodeDelete: (nodeId: string) => void;
 }
 
-export default function InspectorPanel({ node, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
+export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
     const [tableName, setTableName] = useState(node?.data.label || "");
     const [columns, setColumns] = useState<Column[]>(node?.data.columns || []);
     const [editingColumn, setEditingColumn] = useState<Column | null>(null);
     const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null);
+
+    const availableTypes = dataTypes[dbType] || [];
 
     useEffect(() => {
         if (node) {
@@ -44,7 +50,7 @@ export default function InspectorPanel({ node, onNodeUpdate, onNodeDelete }: Ins
     };
 
     const handleAddColumn = () => {
-        const newColumn = { name: "new_column", type: "TEXT" };
+        const newColumn = { name: "new_column", type: availableTypes[0] || "TEXT" };
         setColumns([...columns, newColumn]);
         setEditingColumn(newColumn);
         setEditingColumnIndex(columns.length);
@@ -95,7 +101,14 @@ export default function InspectorPanel({ node, onNodeUpdate, onNodeDelete }: Ins
                             {editingColumnIndex === index ? (
                                 <div className="space-y-2">
                                     <Input placeholder="Name" value={editingColumn?.name} onChange={(e) => handleColumnChange('name', e.target.value)} />
-                                    <Input placeholder="Type" value={editingColumn?.type} onChange={(e) => handleColumnChange('type', e.target.value)} />
+                                    <Select value={editingColumn?.type} onValueChange={(value) => handleColumnChange('type', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                     <div className="flex items-center gap-2">
                                         <input type="checkbox" checked={!!editingColumn?.pk} onChange={(e) => handleColumnChange('pk', e.target.checked)} />
                                         <label className="text-xs">Primary Key</label>

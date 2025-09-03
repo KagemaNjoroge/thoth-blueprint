@@ -4,11 +4,18 @@ import InspectorPanel from "./InspectorPanel";
 import { useState, useRef } from "react";
 import { Node } from "reactflow";
 import DiagramSelector from "./DiagramSelector";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/db";
 
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const editorRef = useRef<{ updateNode: (node: Node) => void; deleteNode: (nodeId: string) => void }>(null);
+
+  const diagram = useLiveQuery(() => 
+    selectedDiagramId ? db.diagrams.get(selectedDiagramId) : undefined,
+    [selectedDiagramId]
+  );
 
   const handleNodeUpdate = (node: Node) => {
     editorRef.current?.updateNode(node);
@@ -21,9 +28,10 @@ export default function Layout() {
   return (
     <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
       <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-background">
-        {selectedNode && (
+        {selectedNode && diagram && (
           <InspectorPanel 
             node={selectedNode} 
+            dbType={diagram.dbType}
             onNodeUpdate={handleNodeUpdate} 
             onNodeDelete={handleNodeDelete} 
           />
@@ -32,10 +40,10 @@ export default function Layout() {
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={75}>
         <div className="flex h-full items-center justify-center relative">
-          {selectedDiagramId ? (
+          {selectedDiagramId && diagram ? (
             <DiagramEditor 
               ref={editorRef}
-              diagramId={selectedDiagramId} 
+              diagram={diagram}
               setSelectedDiagramId={setSelectedDiagramId}
               onNodeSelect={setSelectedNode}
             />
