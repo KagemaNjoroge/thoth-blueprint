@@ -13,7 +13,6 @@ import ReactFlow, {
   Connection,
   NodeChange,
   OnSelectionChangeParams,
-  applyChanges,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -107,19 +106,19 @@ export default function DiagramEditor({ diagramId, setSelectedDiagramId }: Diagr
   }, []);
 
   const handleNodeUpdate = (updatedNode: Node) => {
-    const nodeChanges: NodeChange[] = [
-        {
-            id: updatedNode.id,
-            type: 'change',
-            data: updatedNode.data,
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === updatedNode.id) {
+          return { ...node, data: { ...updatedNode.data } };
         }
-    ];
-    setNodes((nds) => applyChanges(nodeChanges, nds));
+        return node;
+      })
+    );
   };
 
   const handleNodeDelete = (nodeId: string) => {
     const nodeChanges: NodeChange[] = [{ id: nodeId, type: 'remove' }];
-    setNodes((nds) => applyChanges(nodeChanges, nds));
+    setNodes((nds) => applyNodeChanges(nodeChanges, nds));
     setSelectedNode(null);
   }
 
