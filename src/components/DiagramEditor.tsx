@@ -36,13 +36,18 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
 
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
 
+  // This effect now only updates the nodes and edges when the diagram data changes.
   useEffect(() => {
     if (diagram?.data) {
       setNodes(diagram.data.nodes || []);
       setEdges(diagram.data.edges || []);
     }
+  }, [diagram]);
+
+  // This new effect clears the selection ONLY when the diagram ID changes.
+  useEffect(() => {
     onNodeSelect(null);
-  }, [diagram, onNodeSelect]);
+  }, [diagram.id, onNodeSelect]);
 
   const saveDiagram = useCallback(async () => {
     if (diagram) {
