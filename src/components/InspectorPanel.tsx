@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { Node } from "reactflow";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Plus, Edit, Save, X } from "lucide-react";
+import { Trash2, Plus, Edit, Save, X, Key } from "lucide-react";
 import { Separator } from "./ui/separator";
-import { Badge } from "./ui/badge";
 import { DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -79,6 +78,21 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
         onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
     };
 
+    const handleTogglePK = (index: number) => {
+        const newColumns = [...columns];
+        const isCurrentlyPk = !!newColumns[index].pk;
+
+        // If we are about to set a new PK, first clear all existing PKs
+        if (!isCurrentlyPk) {
+            newColumns.forEach(c => c.pk = false);
+        }
+        // Then toggle the clicked one
+        newColumns[index].pk = !isCurrentlyPk;
+
+        setColumns(newColumns);
+        onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
+    };
+
     return (
         <div className="h-full w-full bg-card p-4 overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Inspector</h3>
@@ -109,10 +123,6 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
                                             {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                    <div className="flex items-center gap-2">
-                                        <input type="checkbox" checked={!!editingColumn?.pk} onChange={(e) => handleColumnChange('pk', e.target.checked)} />
-                                        <label className="text-xs">Primary Key</label>
-                                    </div>
                                     <div className="flex justify-end gap-2">
                                         <Button size="icon" variant="ghost" onClick={() => { setEditingColumn(null); setEditingColumnIndex(null); }}><X className="h-4 w-4" /></Button>
                                         <Button size="icon" onClick={handleSaveColumn}><Save className="h-4 w-4" /></Button>
@@ -120,12 +130,12 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
                                 </div>
                             ) : (
                                 <div className="flex justify-between items-center">
-                                    <div>
-                                        <span className="font-mono">{col.name}</span>
-                                        {col.pk && <Badge variant="secondary" className="ml-2">PK</Badge>}
-                                    </div>
+                                    <span className="font-mono">{col.name}</span>
                                     <div className="flex items-center">
-                                        <span className="text-muted-foreground text-sm mr-4">{col.type}</span>
+                                        <span className="text-muted-foreground text-sm mr-2">{col.type}</span>
+                                        <Button size="icon" variant="ghost" onClick={() => handleTogglePK(index)}>
+                                            <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground hover:text-foreground'}`} />
+                                        </Button>
                                         <Button size="icon" variant="ghost" onClick={() => { setEditingColumn(col); setEditingColumnIndex(index); }}><Edit className="h-4 w-4" /></Button>
                                         <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDeleteColumn(index)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>

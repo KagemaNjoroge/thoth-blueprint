@@ -17,7 +17,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { db, Diagram } from '@/lib/db';
 import { Button } from './ui/button';
-import { Save, Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 import TableNode from './TableNode';
 import { AddTableDialog } from './AddTableDialog';
@@ -43,6 +43,25 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
     }
     onNodeSelect(null);
   }, [diagram, onNodeSelect]);
+
+  const saveDiagram = useCallback(async () => {
+    if (diagram) {
+      await db.diagrams.update(diagram.id!, {
+        data: { nodes, edges, viewport: {} },
+        updatedAt: new Date(),
+      });
+    }
+  }, [diagram, nodes, edges]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      saveDiagram();
+    }, 1000); // Autosave after 1 second of inactivity
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [nodes, edges, saveDiagram]);
 
   useImperativeHandle(ref, () => ({
     updateNode(updatedNode: Node) {
@@ -74,16 +93,6 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
     },
     [setEdges]
   );
-
-  const saveDiagram = async () => {
-    if (diagram) {
-      await db.diagrams.update(diagram.id!, {
-        data: { nodes, edges, viewport: {} },
-        updatedAt: new Date(),
-      });
-      showSuccess("Diagram saved successfully!");
-    }
-  };
 
   const deleteDiagram = async () => {
     if (confirm("Are you sure you want to delete this diagram?")) {
@@ -133,7 +142,6 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
         <div className="absolute top-4 left-4 z-10 flex gap-2 items-center bg-background p-2 rounded-lg border">
             <DiagramSelector selectedDiagramId={diagram.id!} setSelectedDiagramId={setSelectedDiagramId} />
             <Button onClick={() => setIsAddTableDialogOpen(true)} size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Table</Button>
-            <Button onClick={saveDiagram} size="sm"><Save className="h-4 w-4 mr-2" /> Save</Button>
             <Button onClick={deleteDiagram} variant="destructive" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
         </div>
         <ReactFlow
