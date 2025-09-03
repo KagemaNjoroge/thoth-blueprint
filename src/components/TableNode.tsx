@@ -6,6 +6,7 @@ interface Column {
     name: string;
     type: string;
     pk?: boolean;
+    nullable?: boolean;
 }
 
 interface TableNodeData {
@@ -26,7 +27,7 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
                 {col.pk && <Key className="h-3 w-3 text-yellow-500" />}
                 <span>{col.name}</span>
             </div>
-            <span className="text-muted-foreground">{col.type}</span>
+            <span className={`text-muted-foreground ${col.nullable === false ? 'font-bold text-foreground/80' : ''}`}>{col.type}</span>
           </div>
         ))}
       </CardContent>

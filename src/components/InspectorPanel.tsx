@@ -2,16 +2,26 @@ import { useState, useEffect } from "react";
 import { Node } from "reactflow";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Plus, Edit, Save, X, Key } from "lucide-react";
+import { Trash2, Plus, Key, MoreHorizontal, HelpCircle } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { Checkbox } from "./ui/checkbox";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
 
 interface Column {
     name: string;
     type: string;
     pk?: boolean;
+    nullable?: boolean;
+    defaultValue?: string;
+    isUnique?: boolean;
+    isAutoIncrement?: boolean;
+    isUnsigned?: boolean;
+    comment?: string;
 }
 
 interface InspectorPanelProps {
@@ -24,8 +34,6 @@ interface InspectorPanelProps {
 export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
     const [tableName, setTableName] = useState(node?.data.label || "");
     const [columns, setColumns] = useState<Column[]>(node?.data.columns || []);
-    const [editingColumn, setEditingColumn] = useState<Column | null>(null);
-    const [editingColumnIndex, setEditingColumnIndex] = useState<number | null>(null);
 
     const availableTypes = dataTypes[dbType] || [];
 
@@ -33,8 +41,6 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
         if (node) {
             setTableName(node.data.label || "");
             setColumns(node.data.columns || []);
-            setEditingColumn(null);
-            setEditingColumnIndex(null);
         }
     }, [node]);
 
@@ -49,27 +55,14 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
     };
 
     const handleAddColumn = () => {
-        const newColumn = { name: "new_column", type: availableTypes[0] || "TEXT" };
-        setColumns([...columns, newColumn]);
-        setEditingColumn(newColumn);
-        setEditingColumnIndex(columns.length);
-    };
-
-    const handleColumnChange = (key: keyof Column, value: any) => {
-        if (editingColumn) {
-            setEditingColumn({ ...editingColumn, [key]: value });
-        }
-    };
-
-    const handleSaveColumn = () => {
-        if (editingColumn && editingColumnIndex !== null) {
-            const newColumns = [...columns];
-            newColumns[editingColumnIndex] = editingColumn;
-            setColumns(newColumns);
-            onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
-            setEditingColumn(null);
-            setEditingColumnIndex(null);
-        }
+        const newColumn: Column = { 
+            name: `new_column_${columns.length + 1}`, 
+            type: availableTypes[0] || "TEXT",
+            nullable: true,
+        };
+        const newColumns = [...columns, newColumn];
+        setColumns(newColumns);
+        onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
     };
 
     const handleDeleteColumn = (index: number) => {
@@ -78,16 +71,17 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
         onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
     };
 
-    const handleTogglePK = (index: number) => {
+    const handleColumnUpdate = (index: number, field: keyof Column, value: any) => {
         const newColumns = [...columns];
-        const isCurrentlyPk = !!newColumns[index].pk;
-
-        // If we are about to set a new PK, first clear all existing PKs
-        if (!isCurrentlyPk) {
+        
+        if (field === 'pk' && value === true) {
             newColumns.forEach(c => c.pk = false);
         }
-        // Then toggle the clicked one
-        newColumns[index].pk = !isCurrentlyPk;
+
+        newColumns[index] = {
+            ...newColumns[index],
+            [field]: value,
+        };
 
         setColumns(newColumns);
         onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
@@ -111,36 +105,58 @@ export default function InspectorPanel({ node, dbType, onNodeUpdate, onNodeDelet
                 </div>
                 <div className="space-y-2">
                     {columns.map((col, index) => (
-                        <div key={index} className="p-2 border rounded-md">
-                            {editingColumnIndex === index ? (
-                                <div className="space-y-2">
-                                    <Input placeholder="Name" value={editingColumn?.name} onChange={(e) => handleColumnChange('name', e.target.value)} />
-                                    <Select value={editingColumn?.type} onValueChange={(value) => handleColumnChange('type', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <div className="flex justify-end gap-2">
-                                        <Button size="icon" variant="ghost" onClick={() => { setEditingColumn(null); setEditingColumnIndex(null); }}><X className="h-4 w-4" /></Button>
-                                        <Button size="icon" onClick={handleSaveColumn}><Save className="h-4 w-4" /></Button>
+                        <div key={index} className="flex items-center gap-1 p-1 border rounded-md">
+                            <Input 
+                                value={col.name} 
+                                onChange={(e) => handleColumnUpdate(index, 'name', e.target.value)}
+                                className="h-8 flex-grow"
+                            />
+                            <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)}>
+                                <SelectTrigger className="h-8 w-[110px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Button size="icon" variant="ghost" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)}>
+                                <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)}>
+                                <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                            </Button>
+                            
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-64 p-2 space-y-4" onClick={(e) => e.stopPropagation()}>
+                                    <div className="space-y-1">
+                                        <Label htmlFor={`default-${index}`}>Default Value</Label>
+                                        <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} />
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="flex justify-between items-center">
-                                    <span className="font-mono">{col.name}</span>
-                                    <div className="flex items-center">
-                                        <span className="text-muted-foreground text-sm mr-2">{col.type}</span>
-                                        <Button size="icon" variant="ghost" onClick={() => handleTogglePK(index)}>
-                                            <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground hover:text-foreground'}`} />
-                                        </Button>
-                                        <Button size="icon" variant="ghost" onClick={() => { setEditingColumn(col); setEditingColumnIndex(index); }}><Edit className="h-4 w-4" /></Button>
-                                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDeleteColumn(index)}><Trash2 className="h-4 w-4" /></Button>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id={`unique-${index}`} checked={!!col.isUnique} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnique', !!checked)} />
+                                        <Label htmlFor={`unique-${index}`}>Unique</Label>
                                     </div>
-                                </div>
-                            )}
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id={`autoincrement-${index}`} checked={!!col.isAutoIncrement} onCheckedChange={(checked) => handleColumnUpdate(index, 'isAutoIncrement', !!checked)} />
+                                        <Label htmlFor={`autoincrement-${index}`}>Autoincrement</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id={`unsigned-${index}`} checked={!!col.isUnsigned} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnsigned', !!checked)} />
+                                        <Label htmlFor={`unsigned-${index}`}>Unsigned</Label>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor={`comment-${index}`}>Comment</Label>
+                                        <Textarea id={`comment-${index}`} placeholder="Column comment..." value={col.comment || ''} onChange={(e) => handleColumnUpdate(index, 'comment', e.target.value)} />
+                                    </div>
+                                    <Separator />
+                                    <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteColumn(index)}>
+                                        Delete Column
+                                    </Button>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     ))}
                 </div>
