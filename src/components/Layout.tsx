@@ -2,7 +2,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import DiagramEditor from "./DiagramEditor";
 import NodeInspectorPanel from "./NodeInspectorPanel";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Node, Edge, OnSelectionChangeParams } from "reactflow";
 import DiagramSelector from "./DiagramSelector";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -24,25 +24,25 @@ export default function Layout() {
     [selectedDiagramId]
   );
 
-  const handleNodeUpdate = (node: Node) => {
+  const handleNodeUpdate = useCallback((node: Node) => {
     editorRef.current?.updateNode(node);
-  };
+  }, []);
 
-  const handleNodeDelete = (nodeId: string) => {
+  const handleNodeDelete = useCallback((nodeId: string) => {
     editorRef.current?.deleteNode(nodeId);
     setSelectedNode(null);
-  };
+  }, []);
 
-  const handleEdgeUpdate = (edge: Edge) => {
+  const handleEdgeUpdate = useCallback((edge: Edge) => {
     editorRef.current?.updateEdge(edge);
-  };
+  }, []);
 
-  const handleEdgeDelete = (edgeId: string) => {
+  const handleEdgeDelete = useCallback((edgeId: string) => {
     editorRef.current?.deleteEdge(edgeId);
     setSelectedEdge(null);
-  };
+  }, []);
 
-  const handleSelectionChange = ({ nodes, edges }: OnSelectionChangeParams) => {
+  const handleSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
     if (nodes.length === 1 && edges.length === 0) {
       setSelectedNode(nodes[0]);
       setSelectedEdge(null);
@@ -53,40 +53,30 @@ export default function Layout() {
       setSelectedNode(null);
       setSelectedEdge(null);
     }
-  };
-
-  const renderInspector = () => {
-    if (selectedNode && diagram) {
-      return (
-        <NodeInspectorPanel 
-          node={selectedNode} 
-          dbType={diagram.dbType}
-          onNodeUpdate={handleNodeUpdate} 
-          onNodeDelete={handleNodeDelete} 
-        />
-      );
-    }
-    if (selectedEdge && diagram && diagram.data.nodes) {
-      return (
-        <EdgeInspectorPanel
-          edge={selectedEdge}
-          nodes={diagram.data.nodes}
-          onEdgeUpdate={handleEdgeUpdate}
-          onEdgeDelete={handleEdgeDelete}
-        />
-      );
-    }
-    return (
-      <div className="p-4 h-full flex items-center justify-center">
-        <p className="text-muted-foreground text-center">Select a table or a relationship to see its properties.</p>
-      </div>
-    );
-  };
+  }, []);
 
   return (
     <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
       <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-background">
-        {renderInspector()}
+        {selectedNode && diagram ? (
+          <NodeInspectorPanel 
+            node={selectedNode} 
+            dbType={diagram.dbType}
+            onNodeUpdate={handleNodeUpdate} 
+            onNodeDelete={handleNodeDelete} 
+          />
+        ) : selectedEdge && diagram && diagram.data.nodes ? (
+          <EdgeInspectorPanel
+            edge={selectedEdge}
+            nodes={diagram.data.nodes}
+            onEdgeUpdate={handleEdgeUpdate}
+            onEdgeDelete={handleEdgeDelete}
+          />
+        ) : (
+          <div className="p-4 h-full flex items-center justify-center">
+            <p className="text-muted-foreground text-center">Select a table or a relationship to see its properties.</p>
+          </div>
+        )}
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={75}>
