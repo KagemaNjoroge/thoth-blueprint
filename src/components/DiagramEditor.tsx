@@ -12,31 +12,31 @@ import ReactFlow, {
   addEdge,
   Connection,
   NodeChange,
+  EdgeChange,
   OnSelectionChangeParams,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { db, Diagram } from '@/lib/db';
 import { Button } from './ui/button';
 import { Trash2, Plus } from 'lucide-react';
-import { showSuccess } from '@/utils/toast';
 import TableNode from './TableNode';
 import { AddTableDialog } from './AddTableDialog';
 import DiagramSelector from './DiagramSelector';
+import { relationshipTypes } from './EdgeInspectorPanel';
 
 interface DiagramEditorProps {
   diagram: Diagram;
   setSelectedDiagramId: (id: number | null) => void;
-  onNodeSelect: (node: Node | null) => void;
+  onSelectionChange: (params: OnSelectionChangeParams) => void;
 }
 
-const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect }: DiagramEditorProps, ref) => {
+const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionChange }: DiagramEditorProps, ref) => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
 
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
 
-  // This effect now only updates the nodes and edges when the diagram data changes.
   useEffect(() => {
     if (diagram?.data) {
       setNodes(diagram.data.nodes || []);
@@ -44,10 +44,9 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
     }
   }, [diagram]);
 
-  // This new effect clears the selection ONLY when the diagram ID changes.
   useEffect(() => {
-    onNodeSelect(null);
-  }, [diagram.id, onNodeSelect]);
+    onSelectionChange({ nodes: [], edges: [] });
+  }, [diagram.id, onSelectionChange]);
 
   const saveDiagram = useCallback(async () => {
     if (diagram) {
@@ -61,7 +60,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
   useEffect(() => {
     const handler = setTimeout(() => {
       saveDiagram();
-    }, 1000); // Autosave after 1 second of inactivity
+    }, 1000);
 
     return () => {
       clearTimeout(handler);
@@ -74,6 +73,12 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
     },
     deleteNode(nodeId: string) {
       handleNodeDelete(nodeId);
+    },
+    updateEdge(updatedEdge: Edge) {
+      handleEdgeUpdate(updatedEdge);
+    },
+    deleteEdge(edgeId: string) {
+      handleEdgeDelete(edgeId);
     }
   }));
 
@@ -89,10 +94,13 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
+        const defaultRelationship = relationshipTypes[1]; // One-to-Many
         const newEdge = {
             ...connection,
             type: 'smoothstep',
             markerEnd: { type: 'arrowclosed' },
+            data: { relationship: defaultRelationship.value },
+            label: defaultRelationship.label,
         };
         setEdges((eds) => addEdge(newEdge, eds))
     },
@@ -121,10 +129,6 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
     setNodes((nds) => nds.concat(newNode));
   };
 
-  const onSelectionChange = useCallback(({ nodes }: OnSelectionChangeParams) => {
-    onNodeSelect(nodes.length === 1 ? nodes[0] : null);
-  }, [onNodeSelect]);
-
   const handleNodeUpdate = (updatedNode: Node) => {
     setNodes((nds) =>
       nds.map((node) => {
@@ -139,8 +143,20 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onNodeSelect 
   const handleNodeDelete = (nodeId: string) => {
     const nodeChanges: NodeChange[] = [{ id: nodeId, type: 'remove' }];
     setNodes((nds) => applyNodeChanges(nodeChanges, nds));
-    onNodeSelect(null);
+    onSelectionChange({ nodes: [], edges: [] });
   }
+
+  const handleEdgeUpdate = (updatedEdge: Edge) => {
+    setEdges((eds) =>
+      eds.map((edge) => (edge.id === updatedEdge.id ? updatedEdge : edge))
+    );
+  };
+
+  const handleEdgeDelete = (edgeId: string) => {
+    const edgeChanges: EdgeChange[] = [{ id: edgeId, type: 'remove' }];
+    setEdges((eds) => applyEdgeChanges(edgeChanges, eds));
+    onSelectionChange({ nodes: [], edges: [] });
+  };
 
   return (
     <div className="w-full h-full relative">
