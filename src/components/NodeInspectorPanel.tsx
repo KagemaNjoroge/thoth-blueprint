@@ -181,7 +181,7 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
 
     return (
         <div className="h-full w-full bg-card p-4 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Inspector</h3>
+            <h3 className="text-lg font-semibold mb-4">Table Inspector</h3>
             <Separator />
             <div className="my-4">
                 <label className="text-sm font-medium">Table Name</label>

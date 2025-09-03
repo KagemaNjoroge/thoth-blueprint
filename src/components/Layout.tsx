@@ -55,25 +55,38 @@ export default function Layout() {
     }
   };
 
+  const renderInspector = () => {
+    if (selectedNode && diagram) {
+      return (
+        <NodeInspectorPanel 
+          node={selectedNode} 
+          dbType={diagram.dbType}
+          onNodeUpdate={handleNodeUpdate} 
+          onNodeDelete={handleNodeDelete} 
+        />
+      );
+    }
+    if (selectedEdge && diagram && diagram.data.nodes) {
+      return (
+        <EdgeInspectorPanel
+          edge={selectedEdge}
+          nodes={diagram.data.nodes}
+          onEdgeUpdate={handleEdgeUpdate}
+          onEdgeDelete={handleEdgeDelete}
+        />
+      );
+    }
+    return (
+      <div className="p-4 h-full flex items-center justify-center">
+        <p className="text-muted-foreground text-center">Select a table or a relationship to see its properties.</p>
+      </div>
+    );
+  };
+
   return (
     <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
       <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-background">
-        {selectedNode && diagram && (
-          <NodeInspectorPanel 
-            node={selectedNode} 
-            dbType={diagram.dbType}
-            onNodeUpdate={handleNodeUpdate} 
-            onNodeDelete={handleNodeDelete} 
-          />
-        )}
-        {selectedEdge && diagram && diagram.data.nodes && (
-          <EdgeInspectorPanel
-            edge={selectedEdge}
-            nodes={diagram.data.nodes}
-            onEdgeUpdate={handleEdgeUpdate}
-            onEdgeDelete={handleEdgeDelete}
-          />
-        )}
+        {renderInspector()}
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={75}>
