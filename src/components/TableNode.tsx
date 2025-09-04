@@ -15,6 +15,7 @@ interface Column {
     isAutoIncrement?: boolean;
     isUnsigned?: boolean;
     comment?: string;
+    enumValues?: string;
 }
 
 interface TableNodeData {
@@ -69,6 +70,12 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
                         {col.isAutoIncrement && <Badge variant="outline">Autoincrement</Badge>}
                         {col.isUnsigned && <Badge variant="outline">Unsigned</Badge>}
                     </div>
+                    {col.type.toUpperCase() === 'ENUM' && col.enumValues && (
+                        <div className="mb-2">
+                            <p className="font-semibold text-foreground text-xs">Enum Values:</p>
+                            <p className="text-xs text-muted-foreground break-all">{col.enumValues}</p>
+                        </div>
+                    )}
                     <div className="space-y-1 text-xs text-muted-foreground">
                         <p><span className="font-semibold text-foreground">Default:</span> {col.defaultValue || 'Not set'}</p>
                         <p><span className="font-semibold text-foreground">Comment:</span> {col.comment || 'Not set'}</p>
