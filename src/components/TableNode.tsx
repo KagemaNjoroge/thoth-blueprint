@@ -26,13 +26,11 @@ interface TableNodeData {
 }
 
 function TableNode({ data, selected }: NodeProps<TableNodeData>) {
-  const headerStyle = {
-    backgroundColor: data.color || '#60A5FA', // Default blue color
-  };
-
   const cardStyle = {
-    borderWidth: selected ? '2px' : '1px',
     borderColor: selected ? data.color || '#60A5FA' : 'hsl(var(--border))',
+    borderTopColor: data.color || '#60A5FA',
+    borderTopWidth: '3px',
+    borderWidth: '1px',
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
   };
 
@@ -42,8 +40,8 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
   };
 
   return (
-    <Card className="w-64 shadow-md react-flow__node-default" style={cardStyle}>
-      <CardHeader style={headerStyle} className="text-white p-2 rounded-t-lg cursor-move">
+    <Card className="w-64 shadow-md react-flow__node-default bg-card" style={cardStyle}>
+      <CardHeader className="p-2 cursor-move">
         <CardTitle className="text-sm text-center font-semibold">{data.label}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 divide-y">
