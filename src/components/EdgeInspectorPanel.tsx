@@ -4,6 +4,17 @@ import { Trash2 } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const relationshipTypes = [
     { value: 'one-to-one', label: 'One-to-One' },
@@ -59,9 +70,25 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
             </div>
             <Separator />
             <div className="mt-6">
-                 <Button variant="destructive" className="w-full" onClick={() => onEdgeDelete(edge.id)}>
-                    <Trash2 className="h-4 w-4 mr-2" /> Delete Relationship
-                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="w-full">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete Relationship
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete the relationship between "{sourceNode?.data.label}.{sourceColumn?.name}" and "{targetNode?.data.label}.{targetColumn?.name}". This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onEdgeDelete(edge.id)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

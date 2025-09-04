@@ -14,6 +14,17 @@ import { Label } from "./ui/label";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Column {
     id: string;
@@ -205,7 +216,25 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
             <div className="my-4">
                 <div className="flex justify-between items-center mb-2">
                     <h4 className="font-semibold">Columns</h4>
-                    <Button size="sm" variant="ghost" onClick={handleAddColumn}><Plus className="h-4 w-4 mr-2" /> Add</Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="h-4 w-4 mr-1" /> Delete Table
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the "{tableName}" table and all its columns and relationships. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onNodeDelete(node.id)}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </div>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={columns.map(c => c.id)} strategy={verticalListSortingStrategy}>
@@ -226,8 +255,8 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
             </div>
             <Separator />
             <div className="mt-6">
-                 <Button variant="destructive" className="w-full" onClick={() => onNodeDelete(node.id)}>
-                    <Trash2 className="h-4 w-4 mr-2" /> Delete Table
+                 <Button className="w-full" onClick={handleAddColumn}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Column
                 </Button>
             </div>
         </div>
