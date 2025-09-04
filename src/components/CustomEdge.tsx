@@ -58,10 +58,10 @@ export default function CustomEdge({
     }
   }, [data?.relationship]);
 
-  const sourceLabelX = sourceX + (sourcePosition === 'right' ? 15 : -15);
+  const sourceLabelX = sourceX + (sourcePosition === 'right' ? 10 : -10);
   const sourceLabelY = sourceY;
 
-  const targetLabelX = targetX + (targetPosition === 'left' ? -15 : 15);
+  const targetLabelX = targetX + (targetPosition === 'left' ? -10 : 10);
   const targetLabelY = targetY;
 
   return (

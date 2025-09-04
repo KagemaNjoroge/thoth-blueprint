@@ -26,6 +26,7 @@ interface Column {
     isAutoIncrement?: boolean;
     isUnsigned?: boolean;
     comment?: string;
+    enumValues?: string;
 }
 
 interface InspectorPanelProps {
@@ -76,6 +77,17 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                         <Label htmlFor={`default-${index}`}>Default Value</Label>
                         <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} />
                     </div>
+                    {col.type.toUpperCase() === 'ENUM' && (
+                        <div className="space-y-1">
+                            <Label htmlFor={`enum-${index}`}>ENUM Values</Label>
+                            <Input 
+                                id={`enum-${index}`} 
+                                placeholder="Use , for batch input" 
+                                value={col.enumValues || ''} 
+                                onChange={(e) => handleColumnUpdate(index, 'enumValues', e.target.value)} 
+                            />
+                        </div>
+                    )}
                     <div className="flex items-center space-x-2">
                         <Checkbox id={`unique-${index}`} checked={!!col.isUnique} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnique', !!checked)} />
                         <Label htmlFor={`unique-${index}`}>Unique</Label>
