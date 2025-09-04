@@ -58,7 +58,7 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" align="start">
-                <div className="p-2 max-w-xs text-sm">
+                <div className="p-2 w-56 text-sm">
                     <div className="flex justify-between items-center font-bold mb-2">
                         <span>{col.name}</span>
                         <span className="text-primary">{col.type}</span>
