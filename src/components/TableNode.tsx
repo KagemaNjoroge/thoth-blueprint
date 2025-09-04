@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Key } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 interface Column {
     id: string;
@@ -59,10 +60,11 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
               </TooltipTrigger>
               <TooltipContent side="right" align="start">
                 <div className="p-2 w-56 text-sm">
-                    <div className="flex justify-between items-center font-bold mb-2">
+                    <div className="flex justify-between items-center font-semibold">
                         <span>{col.name}</span>
                         <span className="text-primary">{col.type}</span>
                     </div>
+                    <Separator className="my-2" />
                     <div className="flex flex-wrap gap-1 mb-2">
                         {col.pk && <Badge variant="outline">Primary</Badge>}
                         {col.isUnique && <Badge variant="outline">Unique</Badge>}
