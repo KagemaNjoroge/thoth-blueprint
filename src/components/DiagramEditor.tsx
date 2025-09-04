@@ -54,7 +54,20 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
 
   useEffect(() => {
     if (diagram?.data) {
-      setNodes(diagram.data.nodes || []);
+      const nodesWithColor = (diagram.data.nodes || []).map((node: Node) => {
+        if (node.data && !node.data.color) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              color: tableColors[Math.floor(Math.random() * tableColors.length)],
+            },
+          };
+        }
+        return node;
+      });
+      setNodes(nodesWithColor);
+
       const updatedEdges = (diagram.data.edges || []).map(edge => ({
         ...edge,
         type: 'custom',

@@ -27,11 +27,7 @@ interface TableNodeData {
 
 function TableNode({ data, selected }: NodeProps<TableNodeData>) {
   const cardStyle = {
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    borderColor: selected ? data.color || '#60A5FA' : 'hsl(var(--border))',
-    borderTopWidth: '3px',
-    borderTopColor: data.color || '#60A5FA',
+    border: `1px solid ${selected ? data.color || '#60A5FA' : 'hsl(var(--border))'}`,
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
   };
 
@@ -42,8 +38,14 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
 
   return (
     <Card className="w-64 shadow-md react-flow__node-default bg-card" style={cardStyle}>
-      <CardHeader className="p-2 cursor-move">
-        <CardTitle className="text-sm text-center font-semibold">{data.label}</CardTitle>
+      <CardHeader className="p-0 cursor-move">
+        <div style={{ 
+          height: '6px', 
+          backgroundColor: data.color || '#60A5FA', 
+          borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
+          borderTopRightRadius: 'calc(var(--radius) - 1px)' 
+        }}></div>
+        <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 divide-y">
         {data.columns?.map((col) => (
