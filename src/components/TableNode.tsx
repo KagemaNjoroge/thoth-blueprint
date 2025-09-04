@@ -22,12 +22,28 @@ interface Column {
 interface TableNodeData {
     label: string;
     columns: Column[];
+    color?: string;
 }
 
-function TableNode({ data }: NodeProps<TableNodeData>) {
+function TableNode({ data, selected }: NodeProps<TableNodeData>) {
+  const headerStyle = {
+    backgroundColor: data.color || '#60A5FA', // Default blue color
+  };
+
+  const cardStyle = {
+    borderWidth: selected ? '2px' : '1px',
+    borderColor: selected ? data.color || '#60A5FA' : 'hsl(var(--border))',
+    boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
+  };
+
+  const handleStyle = {
+    opacity: selected ? 1 : 0,
+    transition: 'opacity 0.15s ease-in-out',
+  };
+
   return (
-    <Card className="w-64 shadow-md react-flow__node-default">
-      <CardHeader className="bg-primary text-primary-foreground p-2 rounded-t-lg cursor-move">
+    <Card className="w-64 shadow-md react-flow__node-default" style={cardStyle}>
+      <CardHeader style={headerStyle} className="text-white p-2 rounded-t-lg cursor-move">
         <CardTitle className="text-sm text-center font-semibold">{data.label}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 divide-y">
@@ -40,8 +56,8 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
                     type="target"
                     position={Position.Left}
                     id={col.id}
-                    style={{ top: '50%', transform: 'translateY(-50%)' }}
-                    className="!w-2 !h-2 !bg-muted-foreground"
+                    style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
+                    className="!w-2.5 !h-2.5"
                   />
                   <div className="flex items-center gap-1 truncate">
                       {col.pk && <Key className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
@@ -53,8 +69,8 @@ function TableNode({ data }: NodeProps<TableNodeData>) {
                     type="source"
                     position={Position.Right}
                     id={col.id}
-                    style={{ top: '50%', transform: 'translateY(-50%)' }}
-                    className="!w-2 !h-2 !bg-muted-foreground"
+                    style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
+                    className="!w-2.5 !h-2.5"
                   />
                 </div>
               </TooltipTrigger>

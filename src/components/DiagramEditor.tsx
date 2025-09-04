@@ -31,6 +31,15 @@ interface DiagramEditorProps {
   onSelectionChange: (params: OnSelectionChangeParams) => void;
 }
 
+const tableColors = [
+  '#34D399', // Green
+  '#60A5FA', // Blue
+  '#FBBF24', // Amber
+  '#F87171', // Red
+  '#A78BFA', // Violet
+  '#2DD4BF', // Teal
+];
+
 const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionChange }: DiagramEditorProps, ref) => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -119,12 +128,14 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
   }
 
   const handleCreateTable = (tableName: string) => {
+    const randomColor = tableColors[Math.floor(Math.random() * tableColors.length)];
     const newNode: Node = {
       id: `${tableName}-${+new Date()}`,
       type: 'table',
       position: { x: Math.random() * 200, y: Math.random() * 200 },
       data: { 
         label: tableName,
+        color: randomColor,
         columns: [
             { id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false },
         ]
