@@ -38,6 +38,10 @@ const tableColors = [
   '#F87171', // Red
   '#A78BFA', // Violet
   '#2DD4BF', // Teal
+  '#F472B6', // Pink
+  '#FB923C', // Orange
+  '#818CF8', // Indigo
+  '#4ADE80', // Lime
 ];
 
 const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionChange }: DiagramEditorProps, ref) => {

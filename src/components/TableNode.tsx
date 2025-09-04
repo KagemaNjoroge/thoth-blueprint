@@ -27,8 +27,11 @@ interface TableNodeData {
 
 function TableNode({ data, selected }: NodeProps<TableNodeData>) {
   const cardStyle = {
-    border: `1px solid ${selected ? data.color || '#60A5FA' : 'hsl(var(--border))'}`,
-    borderTop: `3px solid ${data.color || '#60A5FA'}`,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: selected ? data.color || '#60A5FA' : 'hsl(var(--border))',
+    borderTopWidth: '3px',
+    borderTopColor: data.color || '#60A5FA',
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
   };
 
