@@ -155,8 +155,8 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="right" align="start" className="z-[10000] w-52 p-2 text-xs">
-                <div className="space-y-1.5">
+              <TooltipContent side="right" align="start" className="z-[10000] w-48 p-1.5 text-xs">
+                <div className="space-y-1">
                     <div className="flex justify-between items-center font-semibold">
                         <span>{col.name}</span>
                         <span className="text-primary">{col.type}</span>
@@ -174,7 +174,7 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
                             <p className="text-muted-foreground break-all">{col.enumValues}</p>
                         </div>
                     )}
-                    <div className="space-y-1 text-muted-foreground">
+                    <div className="space-y-0.5 text-muted-foreground">
                         <p><span className="font-semibold text-foreground">Default:</span> {col.defaultValue || 'Not set'}</p>
                         <p><span className="font-semibold text-foreground">Comment:</span> {col.comment || 'Not set'}</p>
                     </div>
