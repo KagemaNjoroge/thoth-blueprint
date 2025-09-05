@@ -20,6 +20,7 @@ import { db, Diagram } from '@/lib/db';
 import TableNode from './TableNode';
 import { relationshipTypes } from './EdgeInspectorPanel';
 import CustomEdge from './CustomEdge';
+import { arrayMove } from '@dnd-kit/sortable';
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -168,6 +169,9 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
       setAllNodes(nds => nds.concat(newNode));
     },
     undoDelete: undoDelete,
+    reorderNodes: (oldIndex: number, newIndex: number) => {
+      setAllNodes((currentNodes) => arrayMove(currentNodes, oldIndex, newIndex));
+    },
   }));
 
   return (

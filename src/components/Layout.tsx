@@ -27,6 +27,7 @@ export default function Layout() {
     deleteEdge: (edgeId: string) => void;
     addNode: (node: Node) => void;
     undoDelete: () => void;
+    reorderNodes: (oldIndex: number, newIndex: number) => void;
   }>(null);
 
   const diagram = useLiveQuery(() => 
@@ -92,6 +93,10 @@ export default function Layout() {
     editorRef.current?.undoDelete();
   }, []);
 
+  const handleNodesReorder = useCallback((oldIndex: number, newIndex: number) => {
+    editorRef.current?.reorderNodes(oldIndex, newIndex);
+  }, []);
+
   return (
     <>
       <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
@@ -109,6 +114,7 @@ export default function Layout() {
               onDeleteDiagram={handleDeleteDiagram}
               onBackToGallery={() => setSelectedDiagramId(null)}
               onUndoDelete={handleUndoDelete}
+              onNodesReorder={handleNodesReorder}
             />
           ) : (
             <div className="p-4 h-full flex items-center justify-center text-center bg-card">

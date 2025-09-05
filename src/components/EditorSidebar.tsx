@@ -14,10 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Edit, GitCommitHorizontal, ArrowLeft } from "lucide-react";
+import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, GripVertical } from "lucide-react";
 import TableAccordionContent from "./TableAccordionContent";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { ScrollArea } from "./ui/scroll-area";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface EditorSidebarProps {
   diagram: Diagram;
@@ -31,6 +34,21 @@ interface EditorSidebarProps {
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
   onUndoDelete: () => void;
+  onNodesReorder: (oldIndex: number, newIndex: number) => void;
+}
+
+function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: node.id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style}>
+            {children(attributes, listeners)}
+        </div>
+    );
 }
 
 export default function EditorSidebar({
@@ -45,6 +63,7 @@ export default function EditorSidebar({
   onDeleteDiagram,
   onBackToGallery,
   onUndoDelete,
+  onNodesReorder,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
@@ -52,6 +71,7 @@ export default function EditorSidebar({
 
   const nodes = diagram.data.nodes || [];
   const edges = diagram.data.edges || [];
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   useEffect(() => {
     if (activeItemId) {
@@ -84,81 +104,106 @@ export default function EditorSidebar({
     setEditingTableName(null);
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+        const oldIndex = nodes.findIndex((n) => n.id === active.id);
+        const newIndex = nodes.findIndex((n) => n.id === over.id);
+        onNodesReorder(oldIndex, newIndex);
+    }
+  };
+
   const inspectingEdge = edges.find(e => e.id === activeItemId);
 
   return (
     <div className="h-full w-full flex flex-col bg-card">
-      <Menubar className="rounded-none border-b">
-        <MenubarMenu>
-          <MenubarTrigger>File</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem onClick={onBackToGallery}>Back to Gallery</MenubarItem>
-            <MenubarSeparator />
-            <MenubarItem onClick={onAddTable}>Add Table</MenubarItem>
-            <MenubarSeparator />
-            <MenubarItem>Export as SQL (coming soon)</MenubarItem>
-            <MenubarSeparator />
-            <MenubarItem onClick={onDeleteDiagram} className="text-destructive focus:text-destructive">
-              Delete Diagram
-            </MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-        <MenubarMenu>
-          <MenubarTrigger>Edit</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem onClick={onUndoDelete}>
-              Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
-            </MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-        <MenubarMenu>
-          <MenubarTrigger>Settings</MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem>Theme (coming soon)</MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      </Menubar>
+      <div className="flex items-center border-b pl-2">
+        <BrainCircuit className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
+        <Menubar className="rounded-none border-none bg-transparent">
+          <MenubarMenu>
+            <MenubarTrigger>File</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem onClick={onBackToGallery}>Back to Gallery</MenubarItem>
+              <MenubarSeparator />
+              <MenubarItem onClick={onAddTable}>Add Table</MenubarItem>
+              <MenubarSeparator />
+              <MenubarItem>Export as SQL (coming soon)</MenubarItem>
+              <MenubarSeparator />
+              <MenubarItem onClick={onDeleteDiagram} className="text-destructive focus:text-destructive">
+                Delete Diagram
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          <MenubarMenu>
+            <MenubarTrigger>Edit</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem onClick={onUndoDelete}>
+                Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          <MenubarMenu>
+            <MenubarTrigger>Settings</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem>Theme (coming soon)</MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+        </Menubar>
+      </div>
       <div className="p-2">
         <h3 className="text-lg font-semibold tracking-tight px-2">{diagram.name}</h3>
         <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
       </div>
       <Tabs value={currentTab} onValueChange={handleTabChange} className="flex-grow flex flex-col">
-        <TabsList className="mx-4">
-          <TabsTrigger value="tables">Tables ({nodes.length})</TabsTrigger>
-          <TabsTrigger value="relationships">Relationships ({edges.length})</TabsTrigger>
+        <TabsList className="mx-4 grid w-auto grid-cols-2">
+          <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
+          <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
         </TabsList>
         <ScrollArea className="flex-grow">
           <TabsContent value="tables" className="m-0">
-            <Accordion type="single" collapsible value={activeItemId || undefined} onValueChange={onActiveItemIdChange} className="w-full px-4">
-              {nodes.map((node) => (
-                <AccordionItem value={node.id} key={node.id}>
-                  <AccordionTrigger>
-                    <div className="flex justify-between items-center w-full pr-2">
-                      {editingTableName === node.id ? (
-                        <Input
-                          value={tableName}
-                          onChange={handleNameChange}
-                          onBlur={() => handleNameSave(node)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleNameSave(node)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="h-8"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="truncate">{node.data.label}</span>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
+                <Accordion type="single" collapsible value={activeItemId || undefined} onValueChange={onActiveItemIdChange} className="w-full px-4">
+                  {nodes.map((node) => (
+                    <SortableAccordionItem key={node.id} node={node}>
+                      {(attributes, listeners) => (
+                        <AccordionItem value={node.id} className="data-[state=open]:bg-accent/50 rounded-md">
+                          <AccordionTrigger className="px-2 group">
+                            <div className="flex items-center gap-2 w-full">
+                              <div {...attributes} {...listeners} className="cursor-grab p-1 -ml-1">
+                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: node.data.color }} />
+                              {editingTableName === node.id ? (
+                                <Input
+                                  value={tableName}
+                                  onChange={handleNameChange}
+                                  onBlur={() => handleNameSave(node)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleNameSave(node)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-8"
+                                  autoFocus
+                                />
+                              ) : (
+                                <span className="truncate">{node.data.label}</span>
+                              )}
+                              <div className="flex-grow" />
+                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartEdit(node)}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onNodeDelete(node.id)}><Trash2 className="h-4 w-4" /></Button>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <TableAccordionContent node={node} dbType={diagram.dbType} onNodeUpdate={onNodeUpdate} />
+                          </AccordionContent>
+                        </AccordionItem>
                       )}
-                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartEdit(node)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onNodeDelete(node.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <TableAccordionContent node={node} dbType={diagram.dbType} onNodeUpdate={onNodeUpdate} />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                    </SortableAccordionItem>
+                  ))}
+                </Accordion>
+              </SortableContext>
+            </DndContext>
           </TabsContent>
           <TabsContent value="relationships" className="m-0 p-4">
             {inspectingEdge ? (
