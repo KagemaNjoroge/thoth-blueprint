@@ -46,30 +46,19 @@ export default function CustomEdge({
   const { sourceLabel, targetLabel } = useMemo(() => {
     const oneIcon = <Minus size={14} strokeWidth={3} />;
     
-    const getManyIcon = (position: Position, isSource: boolean) => {
+    const getManyIcon = (position: Position) => {
       let rotation = 0;
-      if (isSource) {
-        // Icon points away from the source node
-        switch (position) {
-          case Position.Right: rotation = 90; break;
-          case Position.Left: rotation = -90; break;
-          case Position.Bottom: rotation = 180; break;
-          // case Position.Top: is default 0 (up)
-        }
-      } else { 
-        // Icon points towards the target node
-        switch (position) {
-          case Position.Left: rotation = 90; break;
-          case Position.Right: rotation = -90; break;
-          case Position.Top: rotation = 180; break;
-          // case Position.Bottom: is default 0 (up)
-        }
+      switch (position) {
+        case Position.Left: rotation = 90; break;   // Handle on left, icon points right (inward)
+        case Position.Right: rotation = -90; break;  // Handle on right, icon points left (inward)
+        case Position.Top: rotation = 180; break;   // Handle on top, icon points down (inward)
+        case Position.Bottom: rotation = 0; break;    // Handle on bottom, icon points up (inward)
       }
       return <GitFork size={14} strokeWidth={2.5} style={{ transform: `rotate(${rotation}deg)` }} />;
     };
 
-    const sourceManyIcon = getManyIcon(sourcePosition, true);
-    const targetManyIcon = getManyIcon(targetPosition, false);
+    const sourceManyIcon = getManyIcon(sourcePosition);
+    const targetManyIcon = getManyIcon(targetPosition);
 
     switch (data?.relationship) {
       case 'one-to-one':
@@ -85,11 +74,19 @@ export default function CustomEdge({
     }
   }, [data?.relationship, sourcePosition, targetPosition]);
 
-  const sourceLabelX = sourceX + (sourcePosition === 'right' ? 25 : -25);
-  const sourceLabelY = sourceY;
+  const getLabelPosition = (pos: Position, x: number, y: number) => {
+    const offset = 25;
+    switch(pos) {
+        case Position.Right: return { x: x + offset, y };
+        case Position.Left: return { x: x - offset, y };
+        case Position.Top: return { x, y: y - offset };
+        case Position.Bottom: return { x, y: y + offset };
+        default: return { x, y };
+    }
+  }
 
-  const targetLabelX = targetX + (targetPosition === 'left' ? -25 : 25);
-  const targetLabelY = targetY;
+  const { x: sourceLabelX, y: sourceLabelY } = getLabelPosition(sourcePosition, sourceX, sourceY);
+  const { x: targetLabelX, y: targetLabelY } = getLabelPosition(targetPosition, targetX, targetY);
 
   return (
     <>
