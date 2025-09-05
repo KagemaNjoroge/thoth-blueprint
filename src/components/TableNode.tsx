@@ -4,20 +4,8 @@ import { Key, Trash2, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { PopoverWithArrow, PopoverWithArrowContent, PopoverWithArrowTrigger } from './ui/popover-with-arrow';
 import { Button } from './ui/button';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useState } from 'react';
 
 interface Column {
     id: string;
@@ -53,8 +41,6 @@ interface CustomTableNodeProps extends NodeProps<TableNodeData> {
 }
 
 function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps) {
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
   const cardStyle = {
     border: `1px solid ${selected ? data.color || '#60A5FA' : 'hsl(var(--border))'}`,
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
@@ -79,13 +65,13 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
           borderTopRightRadius: 'calc(var(--radius) - 1px)' 
         }}></div>
         <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
-        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-          <PopoverTrigger asChild>
+        <PopoverWithArrow>
+          <PopoverWithArrowTrigger asChild>
             <Button variant="ghost" size="icon" className="absolute top-1/2 right-1 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" className="z-[10000] w-60 p-2 text-xs">
+          </PopoverWithArrowTrigger>
+          <PopoverWithArrowContent side="top" align="center" className="z-[10000]">
             <div className="space-y-2">
               {data.comment && (
                 <div>
@@ -110,28 +96,17 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
                 </div>
               )}
               <Separator />
-              <AlertDialog>
-                  <AlertDialogTrigger asChild onClick={() => setIsPopoverOpen(false)}>
-                      <Button variant="destructive" size="sm" className="w-full h-auto py-1 px-2 text-xs">
-                          <Trash2 className="h-3 w-3 mr-1" /> Delete Table
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                      <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                              This will delete the "{data.label}" table. You can undo this action with Ctrl/Cmd+Z.
-                          </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => onDeleteRequest(id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                  </AlertDialogContent>
-              </AlertDialog>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                className="w-full h-auto py-1 px-2 text-xs"
+                onClick={() => onDeleteRequest(id)}
+              >
+                  <Trash2 className="h-3 w-3 mr-1" /> Delete Table
+              </Button>
             </div>
-          </PopoverContent>
-        </Popover>
+          </PopoverWithArrowContent>
+        </PopoverWithArrow>
       </CardHeader>
       <CardContent className="p-0 divide-y">
         {data.columns?.map((col) => (
