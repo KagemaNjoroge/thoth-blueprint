@@ -7,6 +7,7 @@ import { Node, Edge, OnSelectionChangeParams } from "reactflow";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import DiagramGallery from "./DiagramGallery";
+import { BrainCircuit } from "lucide-react";
 
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
@@ -74,8 +75,18 @@ export default function Layout() {
             onEdgeDelete={handleEdgeDelete}
           />
         ) : (
-          <div className="p-4 h-full flex items-center justify-center">
-            <p className="text-muted-foreground text-center">Select a table or a relationship to see its properties.</p>
+          <div className="p-4 h-full flex items-center justify-center text-center">
+            {diagram ? (
+              <p className="text-muted-foreground">Select a table or a relationship to see its properties.</p>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <BrainCircuit className="h-12 w-12 text-primary" />
+                <h3 className="text-lg font-semibold">Database Designer</h3>
+                <p className="text-muted-foreground">
+                  Select a diagram from the gallery to start editing, or create a new one.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </ResizablePanel>
