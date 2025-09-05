@@ -142,6 +142,7 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
     const [columns, setColumns] = useState<Column[]>([]);
     const [indices, setIndices] = useState<Index[]>([]);
     const [tableComment, setTableComment] = useState("");
+    const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
 
     const availableTypes = dataTypes[dbType] || [];
     const sensors = useSensors(useSensor(PointerSensor));
@@ -160,6 +161,7 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
             }));
             setIndices(indicesWithIds);
             setTableComment(node.data.comment || "");
+            setOpenAccordionItems([]); // Reset accordions on node change
         }
     }, [node]);
 
@@ -232,6 +234,9 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
         const newIndices = [...indices, newIndex];
         setIndices(newIndices);
         onNodeUpdate({ ...node, data: { ...node.data, indices: newIndices } });
+        
+        // Open accordion if not already open
+        setOpenAccordionItems(prev => prev.includes('indices') ? prev : [...prev, 'indices']);
     };
 
     const handleIndexUpdate = (indexId: string, updatedFields: Partial<Index>) => {
@@ -306,9 +311,17 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
                         </div>
                     </SortableContext>
                 </DndContext>
+                <div className="mt-4 flex gap-2">
+                    <Button className="flex-grow" onClick={handleAddColumn}>
+                        <Plus className="h-4 w-4 mr-2" /> Add Column
+                    </Button>
+                    <Button className="flex-grow" variant="outline" onClick={handleAddIndex}>
+                        <Plus className="h-4 w-4 mr-2" /> Add Index
+                    </Button>
+                </div>
             </div>
             <Separator />
-            <Accordion type="multiple" className="w-full my-4" defaultValue={['indices', 'comment']}>
+            <Accordion type="multiple" className="w-full my-4" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
                 <AccordionItem value="indices">
                     <AccordionTrigger>Indices</AccordionTrigger>
                     <AccordionContent className="space-y-2 pt-2">
@@ -392,15 +405,6 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
-            <Separator />
-            <div className="mt-6 flex gap-2">
-                 <Button className="flex-grow" onClick={handleAddColumn}>
-                    <Plus className="h-4 w-4 mr-2" /> Add Column
-                </Button>
-                <Button className="flex-grow" variant="outline" onClick={handleAddIndex}>
-                    <Plus className="h-4 w-4 mr-2" /> Add Index
-                </Button>
-            </div>
         </div>
     );
 }
