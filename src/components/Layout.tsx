@@ -35,6 +35,7 @@ export default function Layout() {
 
   const handleEdgeUpdate = useCallback((edge: Edge) => {
     editorRef.current?.updateEdge(edge);
+    setSelectedEdge(edge);
   }, []);
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
