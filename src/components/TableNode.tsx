@@ -1,4 +1,5 @@
-import { Handle, Position, NodeProps } from 'reactflow';
+import { useEffect, useRef } from 'react';
+import { Handle, Position, NodeProps, useUpdateNodeInternals } from 'reactflow';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Key, Trash2, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -41,6 +42,18 @@ interface CustomTableNodeProps extends NodeProps<TableNodeData> {
 }
 
 function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps) {
+  const updateNodeInternals = useUpdateNodeInternals();
+  const prevColumnsRef = useRef(data.columns);
+
+  useEffect(() => {
+    // When columns are re-ordered, we need to tell React Flow to update the node internals
+    // so it can reposition the handles and update the edges.
+    if (prevColumnsRef.current !== data.columns) {
+      updateNodeInternals(id);
+      prevColumnsRef.current = data.columns;
+    }
+  }, [id, data.columns, updateNodeInternals]);
+
   const cardStyle = {
     border: `1px solid ${selected ? data.color || '#60A5FA' : 'hsl(var(--border))'}`,
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
