@@ -36,22 +36,19 @@ const tableColors = [
 ];
 
 const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionChange }: DiagramEditorProps, ref) => {
-  const [nodes, setNodes] = useState<Node[]>([]);
+  const [allNodes, setAllNodes] = useState<Node[]>([]); // Holds ALL nodes, including soft-deleted
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [deletedNodesStack, setDeletedNodesStack] = useState<Node[]>([]);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  // Ref to hold the latest nodes state to avoid stale closures in callbacks
-  const nodesRef = useRef(nodes);
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
-
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
+  // Filter nodes for rendering, only showing those not marked as deleted
+  const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
+
+  // Load initial data from the database
   useEffect(() => {
     if (diagram?.data) {
       const initialNodes = (diagram.data.nodes || []).map((node: Node) => ({
@@ -59,13 +56,14 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
         data: {
           ...node.data,
           color: node.data.color || tableColors[Math.floor(Math.random() * tableColors.length)],
+          // Ensure deletedAt is a Date object if it exists from storage
+          deletedAt: node.data.deletedAt ? new Date(node.data.deletedAt) : undefined,
         },
       }));
       const initialEdges = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
       
-      setNodes(initialNodes);
+      setAllNodes(initialNodes);
       setEdges(initialEdges);
-      setDeletedNodesStack([]); // Clear undo history when diagram changes
     }
   }, [diagram]);
 
@@ -73,31 +71,42 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     onSelectionChange({ nodes: [], edges: [] });
   }, [diagram.id, onSelectionChange]);
 
+  // Save ALL nodes (including soft-deleted ones) to the database
   const saveDiagram = useCallback(async () => {
     if (diagram) {
       await db.diagrams.update(diagram.id!, {
-        data: { nodes, edges, viewport: rfInstance?.getViewport() || {} },
+        data: { nodes: allNodes, edges, viewport: rfInstance?.getViewport() || {} },
         updatedAt: new Date(),
       });
     }
-  }, [diagram, nodes, edges, rfInstance]);
+  }, [diagram, allNodes, edges, rfInstance]);
 
   useEffect(() => {
     const handler = setTimeout(() => saveDiagram(), 1000);
     return () => clearTimeout(handler);
-  }, [nodes, edges, saveDiagram]);
+  }, [allNodes, edges, saveDiagram]);
 
+  // Undo logic based on soft-delete timestamps
   const undoDelete = useCallback(() => {
-    if (deletedNodesStack.length === 0) return;
+    setAllNodes(currentNodes => {
+      const deletedNodes = currentNodes.filter(n => n.data.isDeleted);
+      if (deletedNodes.length === 0) return currentNodes;
 
-    const newDeletedNodesStack = [...deletedNodesStack];
-    const nodesToRestore = newDeletedNodesStack.pop(); // This might be a single node or an array of nodes
+      // Find the most recently deleted node
+      const lastDeletedNode = deletedNodes.reduce((latest, current) => 
+        (latest.data.deletedAt.getTime() > current.data.deletedAt.getTime() ? latest : current)
+      );
 
-    if (nodesToRestore) {
-      setNodes(nds => [...nds, ...(Array.isArray(nodesToRestore) ? nodesToRestore : [nodesToRestore])]);
-      setDeletedNodesStack(newDeletedNodesStack);
-    }
-  }, [deletedNodesStack]);
+      // "Undelete" the node by removing the isDeleted flag
+      return currentNodes.map(n => {
+        if (n.id === lastDeletedNode.id) {
+          const { isDeleted, deletedAt, ...restData } = n.data;
+          return { ...n, data: restData };
+        }
+        return n;
+      });
+    });
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -110,16 +119,37 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoDelete]);
 
-  const onNodesChange: OnNodesChange = useCallback((changes) => {
-    const removeChanges = changes.filter(c => c.type === 'remove');
-    if (removeChanges.length > 0) {
-      const removedNodeIds = new Set(removeChanges.map(c => c.id));
-      const nodesToRemove = nodesRef.current.filter(n => removedNodeIds.has(n.id));
-      if (nodesToRemove.length > 0) {
-        setDeletedNodesStack(prev => [...prev, nodesToRemove]);
+  // Helper function to perform soft-delete and prune old ones
+  const performSoftDelete = (nodeIds: string[], currentNodes: Node[]): Node[] => {
+    const now = new Date();
+    let newNodes = currentNodes.map(n => {
+      if (nodeIds.includes(n.id)) {
+        return { ...n, data: { ...n.data, isDeleted: true, deletedAt: now } };
       }
+      return n;
+    });
+
+    // Pruning logic: keep only the 10 most recent deletes
+    const deletedNodes = newNodes.filter(n => n.data.isDeleted).sort((a, b) => a.data.deletedAt.getTime() - b.data.deletedAt.getTime());
+    if (deletedNodes.length > 10) {
+      const oldestNodeId = deletedNodes[0].id;
+      newNodes = newNodes.filter(n => n.id !== oldestNodeId); // Permanent deletion
     }
-    setNodes((nds) => applyNodeChanges(changes, nds));
+    return newNodes;
+  };
+
+  const onNodesChange: OnNodesChange = useCallback((changes) => {
+    const removeChangeIds = changes.filter(c => c.type === 'remove').map(c => c.id);
+    
+    if (removeChangeIds.length > 0) {
+      setAllNodes(currentNodes => performSoftDelete(removeChangeIds, currentNodes));
+    }
+
+    // Apply other changes (like dragging) to the full node list
+    const nonRemoveChanges = changes.filter(c => c.type !== 'remove');
+    if (nonRemoveChanges.length > 0) {
+      setAllNodes(nds => applyNodeChanges(nonRemoveChanges, nds));
+    }
   }, []);
 
   const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
@@ -131,14 +161,10 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
 
   useImperativeHandle(ref, () => ({
     updateNode: (updatedNode: Node) => {
-      setNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
+      setAllNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
     },
     deleteNode: (nodeId: string) => {
-      const nodeToDelete = nodesRef.current.find(n => n.id === nodeId);
-      if (nodeToDelete) {
-        setDeletedNodesStack(prev => [...prev, [nodeToDelete]]);
-      }
-      setNodes(nds => nds.filter(n => n.id !== nodeId));
+      setAllNodes(currentNodes => performSoftDelete([nodeId], currentNodes));
       onSelectionChange({ nodes: [], edges: [] });
     },
     updateEdge: (updatedEdge: Edge) => {
@@ -148,7 +174,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
       setEdges(eds => eds.filter(e => e.id !== edgeId));
       onSelectionChange({ nodes: [], edges: [] });
     },
-  }), [onSelectionChange]);
+  }));
 
   const deleteDiagram = async () => {
     if (confirm("Are you sure you want to delete this diagram?")) {
@@ -172,7 +198,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
         columns: [{ id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false }],
       },
     };
-    setNodes(nds => nds.concat(newNode));
+    setAllNodes(nds => nds.concat(newNode));
   };
 
   return (
@@ -183,10 +209,14 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
         <Button onClick={deleteDiagram} variant="destructive" size="sm"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
       </div>
       <ReactFlow
-        nodes={nodes} edges={edges}
-        onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-        onConnect={onConnect} onSelectionChange={onSelectionChange}
-        nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+        nodes={visibleNodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onSelectionChange={onSelectionChange}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onInit={setRfInstance}
         deleteKeyCode={['Backspace', 'Delete']}
         fitView
