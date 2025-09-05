@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Node } from "reactflow";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical } from "lucide-react";
+import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
@@ -25,6 +25,11 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "./ui/command";
+import { Badge } from "./ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Column {
     id: string;
@@ -38,6 +43,13 @@ interface Column {
     isUnsigned?: boolean;
     comment?: string;
     enumValues?: string;
+}
+
+interface Index {
+    id: string;
+    name: string;
+    columns: string[]; // array of column IDs
+    isUnique?: boolean;
 }
 
 interface InspectorPanelProps {
@@ -128,6 +140,8 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
 export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
     const [tableName, setTableName] = useState(node?.data.label || "");
     const [columns, setColumns] = useState<Column[]>([]);
+    const [indices, setIndices] = useState<Index[]>([]);
+    const [tableComment, setTableComment] = useState("");
 
     const availableTypes = dataTypes[dbType] || [];
     const sensors = useSensors(useSensor(PointerSensor));
@@ -140,6 +154,12 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
                 id: col.id || `col_${Math.random().toString(36).substring(2, 11)}`
             }));
             setColumns(columnsWithIds);
+            const indicesWithIds = (node.data.indices || []).map((idx: any) => ({
+                ...idx,
+                id: idx.id || `idx_${Math.random().toString(36).substring(2, 11)}`
+            }));
+            setIndices(indicesWithIds);
+            setTableComment(node.data.comment || "");
         }
     }, [node]);
 
@@ -202,6 +222,40 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
         }
     };
 
+    const handleAddIndex = () => {
+        const newIndex: Index = {
+            id: `idx_${Date.now()}`,
+            name: `${tableName}_index_${indices.length}`,
+            columns: [],
+            isUnique: false,
+        };
+        const newIndices = [...indices, newIndex];
+        setIndices(newIndices);
+        onNodeUpdate({ ...node, data: { ...node.data, indices: newIndices } });
+    };
+
+    const handleIndexUpdate = (indexId: string, updatedFields: Partial<Index>) => {
+        const newIndices = indices.map(idx =>
+            idx.id === indexId ? { ...idx, ...updatedFields } : idx
+        );
+        setIndices(newIndices);
+        onNodeUpdate({ ...node, data: { ...node.data, indices: newIndices } });
+    };
+
+    const handleDeleteIndex = (indexId: string) => {
+        const newIndices = indices.filter(idx => idx.id !== indexId);
+        setIndices(newIndices);
+        onNodeUpdate({ ...node, data: { ...node.data, indices: newIndices } });
+    };
+
+    const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setTableComment(e.target.value);
+    };
+
+    const handleCommentSave = () => {
+        onNodeUpdate({ ...node, data: { ...node.data, comment: tableComment } });
+    };
+
     return (
         <div className="h-full w-full bg-card p-4 overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Table Inspector</h3>
@@ -254,9 +308,97 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
                 </DndContext>
             </div>
             <Separator />
-            <div className="mt-6">
-                 <Button className="w-full" onClick={handleAddColumn}>
+            <Accordion type="multiple" className="w-full my-4" defaultValue={['indices', 'comment']}>
+                <AccordionItem value="indices">
+                    <AccordionTrigger>Indices</AccordionTrigger>
+                    <AccordionContent className="space-y-2 pt-2">
+                        {indices.map(idx => (
+                            <div key={idx.id} className="flex items-center gap-2 p-2 border rounded-md bg-background">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="flex-grow h-auto min-h-10 justify-start">
+                                            {idx.columns.length > 0 ? (
+                                                <div className="flex gap-1 flex-wrap">
+                                                    {idx.columns.map(colId => {
+                                                        const col = columns.find(c => c.id === colId);
+                                                        return (
+                                                            <Badge key={colId} variant="secondary" className="flex items-center gap-1">
+                                                                {col?.name}
+                                                                <button onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newCols = idx.columns.filter(c => c !== colId);
+                                                                    handleIndexUpdate(idx.id, { columns: newCols });
+                                                                }}>
+                                                                    <X className="h-3 w-3" />
+                                                                </button>
+                                                            </Badge>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : <span className="text-muted-foreground text-sm">Select columns...</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-0 w-48">
+                                        <Command>
+                                            <CommandInput placeholder="Search columns..." />
+                                            <CommandEmpty>No columns found.</CommandEmpty>
+                                            <CommandGroup>
+                                                {columns.map(col => (
+                                                    <CommandItem
+                                                        key={col.id}
+                                                        onSelect={() => {
+                                                            const newCols = idx.columns.includes(col.id)
+                                                                ? idx.columns.filter(c => c !== col.id)
+                                                                : [...idx.columns, col.id];
+                                                            handleIndexUpdate(idx.id, { columns: newCols });
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", idx.columns.includes(col.id) ? "opacity-100" : "opacity-0")} />
+                                                        {col.name}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent align="end" className="w-64 p-2 space-y-4">
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`index-name-${idx.id}`}>Name</Label>
+                                            <Input id={`index-name-${idx.id}`} value={idx.name} onChange={(e) => handleIndexUpdate(idx.id, { name: e.target.value })} />
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox id={`index-unique-${idx.id}`} checked={!!idx.isUnique} onCheckedChange={(checked) => handleIndexUpdate(idx.id, { isUnique: !!checked })} />
+                                            <Label htmlFor={`index-unique-${idx.id}`}>Unique</Label>
+                                        </div>
+                                        <Separator />
+                                        <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteIndex(idx.id)}>
+                                            Delete Index
+                                        </Button>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        ))}
+                        {indices.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">No indices defined.</p>}
+                    </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="comment">
+                    <AccordionTrigger>Comment</AccordionTrigger>
+                    <AccordionContent>
+                        <Textarea placeholder="Table comment..." value={tableComment} onChange={handleCommentChange} onBlur={handleCommentSave} />
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+            <Separator />
+            <div className="mt-6 flex gap-2">
+                 <Button className="flex-grow" onClick={handleAddColumn}>
                     <Plus className="h-4 w-4 mr-2" /> Add Column
+                </Button>
+                <Button className="flex-grow" variant="outline" onClick={handleAddIndex}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Index
                 </Button>
             </div>
         </div>
