@@ -4,9 +4,9 @@ import NodeInspectorPanel from "./NodeInspectorPanel";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { useState, useRef, useCallback } from "react";
 import { Node, Edge, OnSelectionChangeParams } from "reactflow";
-import DiagramSelector from "./DiagramSelector";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
+import DiagramGallery from "./DiagramGallery";
 
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
@@ -90,13 +90,7 @@ export default function Layout() {
               onSelectionChange={handleSelectionChange}
             />
           ) : (
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-semibold">Database Designer</h2>
-              <p className="text-muted-foreground">Select a diagram or create a new one to start.</p>
-              <div className="flex justify-center">
-                <DiagramSelector selectedDiagramId={null} setSelectedDiagramId={setSelectedDiagramId} />
-              </div>
-            </div>
+            <DiagramGallery setSelectedDiagramId={setSelectedDiagramId} />
           )}
         </div>
       </ResizablePanel>
