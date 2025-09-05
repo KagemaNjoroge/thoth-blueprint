@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Diagram } from "@/lib/db";
 import { Node, Edge } from "reactflow";
 import {
@@ -69,9 +69,19 @@ export default function EditorSidebar({
   const [tableName, setTableName] = useState("");
   const [currentTab, setCurrentTab] = useState("tables");
 
-  const nodes = (diagram.data.nodes || [])
-    .filter(n => !n.data.isDeleted)
-    .sort((a, b) => (a.data.order ?? Infinity) - (b.data.order ?? Infinity));
+  const sortedNodesFromProp = useMemo(() => 
+    (diagram.data.nodes || [])
+      .filter(n => !n.data.isDeleted)
+      .sort((a, b) => (a.data.order ?? Infinity) - (b.data.order ?? Infinity)),
+    [diagram.data.nodes]
+  );
+
+  const [nodes, setNodes] = useState(sortedNodesFromProp);
+
+  useEffect(() => {
+    setNodes(sortedNodesFromProp);
+  }, [sortedNodesFromProp]);
+
   const edges = diagram.data.edges || [];
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -111,7 +121,9 @@ export default function EditorSidebar({
     if (over && active.id !== over.id) {
         const oldIndex = nodes.findIndex((n) => n.id === active.id);
         const newIndex = nodes.findIndex((n) => n.id === over.id);
+        
         const reorderedNodes = arrayMove(nodes, oldIndex, newIndex);
+        setNodes(reorderedNodes);
         
         const nodesToUpdate = reorderedNodes.map((node, index) => ({
             ...node,
