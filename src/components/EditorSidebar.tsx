@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Diagram } from "@/lib/db";
 import { Node, Edge } from "reactflow";
 import {
@@ -45,9 +45,27 @@ export default function EditorSidebar({
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
+  const [currentTab, setCurrentTab] = useState("tables");
 
   const nodes = diagram.data.nodes || [];
   const edges = diagram.data.edges || [];
+
+  useEffect(() => {
+    if (activeItemId) {
+      if (nodes.some(n => n.id === activeItemId)) {
+        setCurrentTab("tables");
+      } else if (edges.some(e => e.id === activeItemId)) {
+        setCurrentTab("relationships");
+      }
+    }
+  }, [activeItemId, nodes, edges]);
+
+  const handleTabChange = (tab: string) => {
+    if (tab !== currentTab) {
+      setCurrentTab(tab);
+      onActiveItemIdChange(null);
+    }
+  };
 
   const handleStartEdit = (node: Node) => {
     setEditingTableName(node.id);
@@ -63,7 +81,6 @@ export default function EditorSidebar({
     setEditingTableName(null);
   };
 
-  const activeTab = edges.some(e => e.id === activeItemId) ? "relationships" : "tables";
   const inspectingEdge = edges.find(e => e.id === activeItemId);
 
   return (
@@ -88,10 +105,10 @@ export default function EditorSidebar({
         <h3 className="text-lg font-semibold tracking-tight px-2">{diagram.name}</h3>
         <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
       </div>
-      <Tabs defaultValue="tables" value={activeTab} className="flex-grow flex flex-col">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="flex-grow flex flex-col">
         <TabsList className="mx-4">
-          <TabsTrigger value="tables" onClick={() => onActiveItemIdChange(null)}>Tables ({nodes.length})</TabsTrigger>
-          <TabsTrigger value="relationships" onClick={() => onActiveItemIdChange(null)}>Relationships ({edges.length})</TabsTrigger>
+          <TabsTrigger value="tables">Tables ({nodes.length})</TabsTrigger>
+          <TabsTrigger value="relationships">Relationships ({edges.length})</TabsTrigger>
         </TabsList>
         <ScrollArea className="flex-grow">
           <TabsContent value="tables" className="m-0">
