@@ -162,8 +162,9 @@ export default function EditorSidebar({
             <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
             <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
           </TabsList>
-          <Button variant="ghost" size="icon" onClick={onAddTable}>
-            <Plus className="h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={onAddTable}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Table
           </Button>
         </div>
         <ScrollArea className="flex-grow">
