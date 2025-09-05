@@ -206,6 +206,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
             onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            deleteKeyCode={['Backspace', 'Delete']}
             fitView
         >
             <Controls />
