@@ -1,9 +1,22 @@
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Key } from 'lucide-react';
+import { Key, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from './ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Column {
     id: string;
@@ -34,7 +47,11 @@ interface TableNodeData {
     color?: string;
 }
 
-function TableNode({ data, selected }: NodeProps<TableNodeData>) {
+interface CustomTableNodeProps extends NodeProps<TableNodeData> {
+    onDeleteRequest: (nodeId: string) => void;
+}
+
+function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps) {
   const cardStyle = {
     border: `1px solid ${selected ? data.color || '#60A5FA' : 'hsl(var(--border))'}`,
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
@@ -51,50 +68,65 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
 
   return (
     <Card className="w-64 shadow-md react-flow__node-default bg-card" style={cardStyle}>
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <CardHeader className="p-0 cursor-move">
-              <div style={{ 
-                height: '6px', 
-                backgroundColor: data.color || '#60A5FA', 
-                borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
-                borderTopRightRadius: 'calc(var(--radius) - 1px)' 
-              }}></div>
-              <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
-            </CardHeader>
-          </TooltipTrigger>
-          {(data.comment || (data.indices && data.indices.length > 0)) && (
-            <TooltipContent side="top" align="center" className="z-[10000]">
-              <div className="p-2 w-64 text-sm">
-                {data.comment && (
-                  <div className="mb-2">
-                    <p className="font-semibold text-foreground text-xs">Comment:</p>
-                    <p className="text-xs text-muted-foreground break-words">{data.comment}</p>
-                  </div>
-                )}
-                {data.comment && data.indices && data.indices.length > 0 && <Separator className="my-2" />}
-                {data.indices && data.indices.length > 0 && (
-                  <div>
-                    <p className="font-semibold text-foreground text-xs mb-1">Indices:</p>
-                    <div className="space-y-1">
-                      {data.indices.map(index => (
-                        <div key={index.id} className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <span className="font-semibold text-foreground truncate">{index.name}</span>
-                            {index.isUnique && <Badge variant="outline" className="px-1 py-0 text-[10px]">Unique</Badge>}
-                          </div>
-                          <p className="break-all">({index.columns.map(getColumnNameById).join(', ')})</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+      <Popover>
+        <PopoverTrigger asChild>
+          <CardHeader className="p-0 cursor-move">
+            <div style={{ 
+              height: '6px', 
+              backgroundColor: data.color || '#60A5FA', 
+              borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
+              borderTopRightRadius: 'calc(var(--radius) - 1px)' 
+            }}></div>
+            <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
+          </CardHeader>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="center" className="z-[10000] w-60 p-2 text-xs">
+          <div className="space-y-2">
+            {data.comment && (
+              <div>
+                <p className="font-semibold text-foreground">Comment:</p>
+                <p className="text-muted-foreground break-words">{data.comment}</p>
               </div>
-            </TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
+            )}
+            {data.indices && data.indices.length > 0 && (
+              <div>
+                <p className="font-semibold text-foreground mb-1">Indices:</p>
+                <div className="space-y-1">
+                  {data.indices.map(index => (
+                    <div key={index.id} className="text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-foreground truncate">{index.name}</span>
+                        {index.isUnique && <Badge variant="outline" className="px-1 py-0 text-[10px]">Unique</Badge>}
+                      </div>
+                      <p className="break-all">({index.columns.map(getColumnNameById).join(', ')})</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Separator />
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="w-full h-auto py-1 px-2 text-xs">
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete Table
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will delete the "{data.label}" table. You can undo this action with Ctrl/Cmd+Z.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDeleteRequest(id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </PopoverContent>
+      </Popover>
       <CardContent className="p-0 divide-y">
         {data.columns?.map((col) => (
           <TooltipProvider key={col.id} delayDuration={200}>
@@ -123,14 +155,13 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="right" align="start" className="z-[10000]">
-                <div className="p-2 w-56 text-sm">
+              <TooltipContent side="right" align="start" className="z-[10000] w-52 p-2 text-xs">
+                <div className="space-y-1.5">
                     <div className="flex justify-between items-center font-semibold">
                         <span>{col.name}</span>
                         <span className="text-primary">{col.type}</span>
                     </div>
-                    <Separator className="my-2" />
-                    <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="flex flex-wrap gap-1">
                         {col.pk && <Badge variant="outline">Primary</Badge>}
                         {col.isUnique && <Badge variant="outline">Unique</Badge>}
                         {col.nullable === false && <Badge variant="outline">Not Null</Badge>}
@@ -138,12 +169,12 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
                         {col.isUnsigned && <Badge variant="outline">Unsigned</Badge>}
                     </div>
                     {col.type.toUpperCase() === 'ENUM' && col.enumValues && (
-                        <div className="mb-2">
-                            <p className="font-semibold text-foreground text-xs">Enum Values:</p>
-                            <p className="text-xs text-muted-foreground break-all">{col.enumValues}</p>
+                        <div>
+                            <p className="font-semibold text-foreground">Enum:</p>
+                            <p className="text-muted-foreground break-all">{col.enumValues}</p>
                         </div>
                     )}
-                    <div className="space-y-1 text-xs text-muted-foreground">
+                    <div className="space-y-1 text-muted-foreground">
                         <p><span className="font-semibold text-foreground">Default:</span> {col.defaultValue || 'Not set'}</p>
                         <p><span className="font-semibold text-foreground">Comment:</span> {col.comment || 'Not set'}</p>
                     </div>

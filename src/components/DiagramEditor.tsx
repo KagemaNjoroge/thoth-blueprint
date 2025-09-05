@@ -13,6 +13,7 @@ import ReactFlow, {
   Connection,
   OnSelectionChangeParams,
   ReactFlowInstance,
+  NodeProps,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { db, Diagram } from '@/lib/db';
@@ -42,7 +43,6 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  const nodeTypes = useMemo(() => ({ table: TableNode }), []);
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
   // Filter nodes for rendering, only showing those not marked as deleted
@@ -159,14 +159,20 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     setEdges((eds) => addEdge(newEdge, eds));
   }, []);
 
+  const deleteNode = useCallback((nodeId: string) => {
+    setAllNodes(currentNodes => performSoftDelete([nodeId], currentNodes));
+    onSelectionChange({ nodes: [], edges: [] });
+  }, [onSelectionChange]);
+
+  const nodeTypes = useMemo(() => ({
+    table: (props: NodeProps) => <TableNode {...props} onDeleteRequest={deleteNode} />
+  }), [deleteNode]);
+
   useImperativeHandle(ref, () => ({
     updateNode: (updatedNode: Node) => {
       setAllNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
     },
-    deleteNode: (nodeId: string) => {
-      setAllNodes(currentNodes => performSoftDelete([nodeId], currentNodes));
-      onSelectionChange({ nodes: [], edges: [] });
-    },
+    deleteNode: deleteNode,
     updateEdge: (updatedEdge: Edge) => {
       setEdges((eds) => eds.map((edge) => edge.id === updatedEdge.id ? updatedEdge : edge));
     },
