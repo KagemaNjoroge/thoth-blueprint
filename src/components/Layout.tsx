@@ -1,7 +1,7 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import DiagramEditor from "./DiagramEditor";
 import EditorSidebar from "./EditorSidebar";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Node, Edge, OnSelectionChangeParams, ReactFlowInstance } from "reactflow";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
@@ -92,6 +92,27 @@ export default function Layout() {
   const handleUndoDelete = useCallback(() => {
     editorRef.current?.undoDelete();
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (selectedDiagramId) {
+        const target = event.target as HTMLElement;
+        // Prevent shortcut if focus is on an input, textarea, or contenteditable element
+        if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) {
+          return;
+        }
+
+        if ((event.ctrlKey || event.metaKey) && (event.key === 'n' || event.key === 'a')) {
+          event.preventDefault();
+          if (!isAddTableDialogOpen) {
+            handleAddTable();
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedDiagramId, isAddTableDialogOpen]);
 
   const handleNodesReorder = useCallback((oldIndex: number, newIndex: number) => {
     editorRef.current?.reorderNodes(oldIndex, newIndex);

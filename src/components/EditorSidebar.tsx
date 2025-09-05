@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, GripVertical } from "lucide-react";
+import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, GripVertical, Plus } from "lucide-react";
 import TableAccordionContent from "./TableAccordionContent";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { ScrollArea } from "./ui/scroll-area";
@@ -125,7 +125,9 @@ export default function EditorSidebar({
             <MenubarContent>
               <MenubarItem onClick={onBackToGallery}>Back to Gallery</MenubarItem>
               <MenubarSeparator />
-              <MenubarItem onClick={onAddTable}>Add Table</MenubarItem>
+              <MenubarItem onClick={onAddTable}>
+                Add Table <MenubarShortcut>⌘N/A</MenubarShortcut>
+              </MenubarItem>
               <MenubarSeparator />
               <MenubarItem>Export as SQL (coming soon)</MenubarItem>
               <MenubarSeparator />
@@ -155,10 +157,15 @@ export default function EditorSidebar({
         <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
       </div>
       <Tabs value={currentTab} onValueChange={handleTabChange} className="flex-grow flex flex-col">
-        <TabsList className="mx-4 grid w-auto grid-cols-2">
-          <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
-          <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between px-4">
+          <TabsList className="grid w-auto grid-cols-2">
+            <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
+            <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
+          </TabsList>
+          <Button variant="ghost" size="icon" onClick={onAddTable}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
         <ScrollArea className="flex-grow">
           <TabsContent value="tables" className="m-0">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
