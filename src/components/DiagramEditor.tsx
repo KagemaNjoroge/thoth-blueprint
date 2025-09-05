@@ -43,6 +43,12 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  // Ref to hold the latest nodes state to avoid stale closures in callbacks
+  const nodesRef = useRef(nodes);
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
@@ -85,10 +91,10 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     if (deletedNodesStack.length === 0) return;
 
     const newDeletedNodesStack = [...deletedNodesStack];
-    const nodeToRestore = newDeletedNodesStack.pop();
+    const nodesToRestore = newDeletedNodesStack.pop(); // This might be a single node or an array of nodes
 
-    if (nodeToRestore) {
-      setNodes(nds => [...nds, nodeToRestore]);
+    if (nodesToRestore) {
+      setNodes(nds => [...nds, ...(Array.isArray(nodesToRestore) ? nodesToRestore : [nodesToRestore])]);
       setDeletedNodesStack(newDeletedNodesStack);
     }
   }, [deletedNodesStack]);
@@ -108,11 +114,13 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     const removeChanges = changes.filter(c => c.type === 'remove');
     if (removeChanges.length > 0) {
       const removedNodeIds = new Set(removeChanges.map(c => c.id));
-      const nodesToRemove = nodes.filter(n => removedNodeIds.has(n.id));
-      setDeletedNodesStack(prev => [...prev, ...nodesToRemove]);
+      const nodesToRemove = nodesRef.current.filter(n => removedNodeIds.has(n.id));
+      if (nodesToRemove.length > 0) {
+        setDeletedNodesStack(prev => [...prev, nodesToRemove]);
+      }
     }
     setNodes((nds) => applyNodeChanges(changes, nds));
-  }, [nodes]);
+  }, []);
 
   const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
@@ -126,9 +134,9 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
       setNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
     },
     deleteNode: (nodeId: string) => {
-      const nodeToDelete = nodes.find(n => n.id === nodeId);
+      const nodeToDelete = nodesRef.current.find(n => n.id === nodeId);
       if (nodeToDelete) {
-        setDeletedNodesStack(prev => [...prev, nodeToDelete]);
+        setDeletedNodesStack(prev => [...prev, [nodeToDelete]]);
       }
       setNodes(nds => nds.filter(n => n.id !== nodeId));
       onSelectionChange({ nodes: [], edges: [] });
@@ -140,7 +148,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
       setEdges(eds => eds.filter(e => e.id !== edgeId));
       onSelectionChange({ nodes: [], edges: [] });
     },
-  }));
+  }), [onSelectionChange]);
 
   const deleteDiagram = async () => {
     if (confirm("Are you sure you want to delete this diagram?")) {
