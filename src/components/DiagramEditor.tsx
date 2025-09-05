@@ -42,10 +42,11 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
 
   useEffect(() => {
     if (diagram?.data) {
-      const initialNodes = (diagram.data.nodes || []).map((node: Node) => ({
+      const initialNodes = (diagram.data.nodes || []).map((node: Node, index: number) => ({
         ...node,
         data: {
           ...node.data,
+          order: node.data.order ?? index,
           color: node.data.color || tableColors[Math.floor(Math.random() * tableColors.length)],
           deletedAt: node.data.deletedAt ? new Date(node.data.deletedAt) : undefined,
         },
