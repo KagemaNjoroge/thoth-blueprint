@@ -1,6 +1,6 @@
 import { Handle, Position, NodeProps } from 'reactflow';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Key, Trash2 } from 'lucide-react';
+import { Key, Trash2, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +17,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useState } from 'react';
 
 interface Column {
     id: string;
@@ -52,6 +53,8 @@ interface CustomTableNodeProps extends NodeProps<TableNodeData> {
 }
 
 function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps) {
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
   const cardStyle = {
     border: `1px solid ${selected ? data.color || '#60A5FA' : 'hsl(var(--border))'}`,
     boxShadow: selected ? `0 0 8px ${data.color || '#60A5FA'}40` : 'var(--tw-shadow, 0 0 #0000)',
@@ -67,66 +70,69 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
   };
 
   return (
-    <Card className="w-64 shadow-md react-flow__node-default bg-card" style={cardStyle}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <CardHeader className="p-0 cursor-move">
-            <div style={{ 
-              height: '6px', 
-              backgroundColor: data.color || '#60A5FA', 
-              borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
-              borderTopRightRadius: 'calc(var(--radius) - 1px)' 
-            }}></div>
-            <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
-          </CardHeader>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="center" className="z-[10000] w-60 p-2 text-xs">
-          <div className="space-y-2">
-            {data.comment && (
-              <div>
-                <p className="font-semibold text-foreground">Comment:</p>
-                <p className="text-muted-foreground break-words">{data.comment}</p>
-              </div>
-            )}
-            {data.indices && data.indices.length > 0 && (
-              <div>
-                <p className="font-semibold text-foreground mb-1">Indices:</p>
-                <div className="space-y-1">
-                  {data.indices.map(index => (
-                    <div key={index.id} className="text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <span className="font-semibold text-foreground truncate">{index.name}</span>
-                        {index.isUnique && <Badge variant="outline" className="px-1 py-0 text-[10px]">Unique</Badge>}
-                      </div>
-                      <p className="break-all">({index.columns.map(getColumnNameById).join(', ')})</p>
-                    </div>
-                  ))}
+    <Card className="w-64 shadow-md react-flow__node-default bg-card group" style={cardStyle}>
+      <CardHeader className="p-0 cursor-move relative">
+        <div style={{ 
+          height: '6px', 
+          backgroundColor: data.color || '#60A5FA', 
+          borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
+          borderTopRightRadius: 'calc(var(--radius) - 1px)' 
+        }}></div>
+        <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="absolute top-1/2 right-1 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" className="z-[10000] w-60 p-2 text-xs">
+            <div className="space-y-2">
+              {data.comment && (
+                <div>
+                  <p className="font-semibold text-foreground">Comment:</p>
+                  <p className="text-muted-foreground break-words">{data.comment}</p>
                 </div>
-              </div>
-            )}
-            <Separator />
-            <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" className="w-full h-auto py-1 px-2 text-xs">
-                        <Trash2 className="h-3 w-3 mr-1" /> Delete Table
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will delete the "{data.label}" table. You can undo this action with Ctrl/Cmd+Z.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => onDeleteRequest(id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </PopoverContent>
-      </Popover>
+              )}
+              {data.indices && data.indices.length > 0 && (
+                <div>
+                  <p className="font-semibold text-foreground mb-1">Indices:</p>
+                  <div className="space-y-1">
+                    {data.indices.map(index => (
+                      <div key={index.id} className="text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-foreground truncate">{index.name}</span>
+                          {index.isUnique && <Badge variant="outline" className="px-1 py-0 text-[10px]">Unique</Badge>}
+                        </div>
+                        <p className="break-all">({index.columns.map(getColumnNameById).join(', ')})</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Separator />
+              <AlertDialog>
+                  <AlertDialogTrigger asChild onClick={() => setIsPopoverOpen(false)}>
+                      <Button variant="destructive" size="sm" className="w-full h-auto py-1 px-2 text-xs">
+                          <Trash2 className="h-3 w-3 mr-1" /> Delete Table
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This will delete the "{data.label}" table. You can undo this action with Ctrl/Cmd+Z.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onDeleteRequest(id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </CardHeader>
       <CardContent className="p-0 divide-y">
         {data.columns?.map((col) => (
           <TooltipProvider key={col.id} delayDuration={200}>
