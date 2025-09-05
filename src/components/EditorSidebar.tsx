@@ -181,7 +181,7 @@ export default function EditorSidebar({
         <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
       </div>
       <Tabs value={currentTab} onValueChange={handleTabChange} className="flex-grow flex flex-col">
-        <div className="flex items-center justify-between px-4">
+        <div className="flex items-center justify-between px-4 mb-4">
           <TabsList className="grid w-auto grid-cols-2">
             <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
             <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
