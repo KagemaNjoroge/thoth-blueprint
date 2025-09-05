@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -14,6 +14,7 @@ import ReactFlow, {
   NodeChange,
   EdgeChange,
   OnSelectionChangeParams,
+  ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { db, Diagram } from '@/lib/db';
@@ -48,6 +49,8 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
@@ -146,10 +149,23 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
 
   const handleCreateTable = (tableName: string) => {
     const randomColor = tableColors[Math.floor(Math.random() * tableColors.length)];
+    
+    let position = { x: 200, y: 200 };
+    if (rfInstance && reactFlowWrapper.current) {
+        const { width, height } = reactFlowWrapper.current.getBoundingClientRect();
+        const flowPosition = rfInstance.project({
+            x: width / 2,
+            y: height / 2,
+        });
+        flowPosition.x -= 128; // Adjust for node width (w-64 -> 256px / 2)
+        flowPosition.y -= 50;  // Adjust for approximate node height
+        position = flowPosition;
+    }
+
     const newNode: Node = {
       id: `${tableName}-${+new Date()}`,
       type: 'table',
-      position: { x: Math.random() * 200, y: Math.random() * 200 },
+      position,
       data: { 
         label: tableName,
         color: randomColor,
@@ -191,7 +207,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
   };
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative" ref={reactFlowWrapper}>
         <div className="absolute top-4 left-4 z-10 flex gap-2 items-center bg-background p-2 rounded-lg border">
             <DiagramSelector selectedDiagramId={diagram.id!} setSelectedDiagramId={setSelectedDiagramId} />
             <Button onClick={() => setIsAddTableDialogOpen(true)} size="sm" variant="outline"><Plus className="h-4 w-4 mr-2" /> Add Table</Button>
@@ -206,6 +222,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
             onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            onInit={setRfInstance}
             deleteKeyCode={['Backspace', 'Delete']}
             fitView
         >
