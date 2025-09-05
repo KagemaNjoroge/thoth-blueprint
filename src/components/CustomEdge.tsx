@@ -75,7 +75,7 @@ export default function CustomEdge({
   }, [data?.relationship, sourcePosition, targetPosition]);
 
   const getLabelPosition = (pos: Position, x: number, y: number) => {
-    const offset = 25;
+    const offset = 15; // Reduced from 25
     switch(pos) {
         case Position.Right: return { x: x + offset, y };
         case Position.Left: return { x: x - offset, y };
