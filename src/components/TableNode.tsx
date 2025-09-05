@@ -19,9 +19,18 @@ interface Column {
     enumValues?: string;
 }
 
+interface Index {
+    id: string;
+    name: string;
+    columns: string[];
+    isUnique?: boolean;
+}
+
 interface TableNodeData {
     label: string;
     columns: Column[];
+    indices?: Index[];
+    comment?: string;
     color?: string;
 }
 
@@ -36,17 +45,56 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
     transition: 'opacity 0.15s ease-in-out',
   };
 
+  const getColumnNameById = (id: string) => {
+    return data.columns.find(c => c.id === id)?.name || 'unknown';
+  };
+
   return (
     <Card className="w-64 shadow-md react-flow__node-default bg-card" style={cardStyle}>
-      <CardHeader className="p-0 cursor-move">
-        <div style={{ 
-          height: '6px', 
-          backgroundColor: data.color || '#60A5FA', 
-          borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
-          borderTopRightRadius: 'calc(var(--radius) - 1px)' 
-        }}></div>
-        <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
-      </CardHeader>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <CardHeader className="p-0 cursor-move">
+              <div style={{ 
+                height: '6px', 
+                backgroundColor: data.color || '#60A5FA', 
+                borderTopLeftRadius: 'calc(var(--radius) - 1px)', 
+                borderTopRightRadius: 'calc(var(--radius) - 1px)' 
+              }}></div>
+              <CardTitle className="text-sm text-center font-semibold p-2">{data.label}</CardTitle>
+            </CardHeader>
+          </TooltipTrigger>
+          {(data.comment || (data.indices && data.indices.length > 0)) && (
+            <TooltipContent side="top" align="center">
+              <div className="p-2 w-64 text-sm">
+                {data.comment && (
+                  <div className="mb-2">
+                    <p className="font-semibold text-foreground text-xs">Comment:</p>
+                    <p className="text-xs text-muted-foreground break-words">{data.comment}</p>
+                  </div>
+                )}
+                {data.comment && data.indices && data.indices.length > 0 && <Separator className="my-2" />}
+                {data.indices && data.indices.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-foreground text-xs mb-1">Indices:</p>
+                    <div className="space-y-1">
+                      {data.indices.map(index => (
+                        <div key={index.id} className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold text-foreground truncate">{index.name}</span>
+                            {index.isUnique && <Badge variant="outline" className="px-1 py-0 text-[10px]">Unique</Badge>}
+                          </div>
+                          <p className="break-all">({index.columns.map(getColumnNameById).join(', ')})</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
       <CardContent className="p-0 divide-y">
         {data.columns?.map((col) => (
           <TooltipProvider key={col.id} delayDuration={200}>
