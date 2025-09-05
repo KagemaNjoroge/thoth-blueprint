@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from 'reactflow';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from 'reactflow';
 import { useMemo, ReactNode } from 'react';
 import { GitFork, Minus } from 'lucide-react';
 
@@ -45,21 +45,45 @@ export default function CustomEdge({
 
   const { sourceLabel, targetLabel } = useMemo(() => {
     const oneIcon = <Minus size={14} strokeWidth={3} />;
-    const manyIcon = <GitFork size={14} strokeWidth={2.5} />;
+    
+    const getManyIcon = (position: Position, isSource: boolean) => {
+      let rotation = 0;
+      if (isSource) {
+        // Icon points away from the source node
+        switch (position) {
+          case Position.Right: rotation = 90; break;
+          case Position.Left: rotation = -90; break;
+          case Position.Bottom: rotation = 180; break;
+          // case Position.Top: is default 0 (up)
+        }
+      } else { 
+        // Icon points towards the target node
+        switch (position) {
+          case Position.Left: rotation = 90; break;
+          case Position.Right: rotation = -90; break;
+          case Position.Top: rotation = 180; break;
+          // case Position.Bottom: is default 0 (up)
+        }
+      }
+      return <GitFork size={14} strokeWidth={2.5} style={{ transform: `rotate(${rotation}deg)` }} />;
+    };
+
+    const sourceManyIcon = getManyIcon(sourcePosition, true);
+    const targetManyIcon = getManyIcon(targetPosition, false);
 
     switch (data?.relationship) {
       case 'one-to-one':
         return { sourceLabel: oneIcon, targetLabel: oneIcon };
       case 'one-to-many':
-        return { sourceLabel: oneIcon, targetLabel: manyIcon };
+        return { sourceLabel: oneIcon, targetLabel: targetManyIcon };
       case 'many-to-one':
-        return { sourceLabel: manyIcon, targetLabel: oneIcon };
+        return { sourceLabel: sourceManyIcon, targetLabel: oneIcon };
       case 'many-to-many':
-        return { sourceLabel: manyIcon, targetLabel: manyIcon };
+        return { sourceLabel: sourceManyIcon, targetLabel: targetManyIcon };
       default:
         return { sourceLabel: null, targetLabel: null };
     }
-  }, [data?.relationship]);
+  }, [data?.relationship, sourcePosition, targetPosition]);
 
   const sourceLabelX = sourceX + (sourcePosition === 'right' ? 25 : -25);
   const sourceLabelY = sourceY;
