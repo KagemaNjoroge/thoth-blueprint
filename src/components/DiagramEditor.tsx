@@ -35,6 +35,7 @@ const tableColors = [
 const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }: DiagramEditorProps, ref) => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
@@ -42,19 +43,32 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
 
   useEffect(() => {
     if (diagram?.data) {
-      const initialNodes = (diagram.data.nodes || []).map((node: Node, index: number) => ({
-        ...node,
-        data: {
-          ...node.data,
-          order: node.data.order ?? index,
-          color: node.data.color || tableColors[Math.floor(Math.random() * tableColors.length)],
-          deletedAt: node.data.deletedAt ? new Date(node.data.deletedAt) : undefined,
-        },
-      }));
+      let wasModified = false;
+      const initialNodes = (diagram.data.nodes || []).map((node: Node, index: number) => {
+        if (node.data.order === undefined || node.data.order === null) {
+          wasModified = true;
+        }
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            order: node.data.order ?? index,
+            color: node.data.color || tableColors[Math.floor(Math.random() * tableColors.length)],
+            deletedAt: node.data.deletedAt ? new Date(node.data.deletedAt) : undefined,
+          },
+        };
+      });
       const initialEdges = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
       
       setAllNodes(initialNodes);
       setEdges(initialEdges);
+
+      if (wasModified && diagram.id) {
+        db.diagrams.update(diagram.id, {
+          data: { nodes: initialNodes, edges: initialEdges, viewport: diagram.data.viewport },
+          updatedAt: new Date(),
+        });
+      }
     }
   }, [diagram]);
 
@@ -62,20 +76,19 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     onSelectionChange({ nodes: [], edges: [] });
   }, [diagram.id, onSelectionChange]);
 
-  const saveDiagram = useCallback(async (rfInstance: ReactFlowInstance | null) => {
+  const saveDiagram = useCallback(async () => {
     if (diagram && rfInstance) {
       await db.diagrams.update(diagram.id!, {
         data: { nodes: allNodes, edges, viewport: rfInstance.getViewport() },
         updatedAt: new Date(),
       });
     }
-  }, [diagram, allNodes, edges]);
+  }, [diagram, allNodes, edges, rfInstance]);
 
   useEffect(() => {
-    const instance = (ref as any)?.current?.rfInstance;
-    const handler = setTimeout(() => saveDiagram(instance), 1000);
+    const handler = setTimeout(() => saveDiagram(), 1000);
     return () => clearTimeout(handler);
-  }, [allNodes, edges, saveDiagram, ref]);
+  }, [allNodes, edges, saveDiagram]);
 
   const undoDelete = useCallback(() => {
     setAllNodes(currentNodes => {
@@ -153,6 +166,11 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     table: (props: NodeProps) => <TableNode {...props} onDeleteRequest={deleteNode} />
   }), [deleteNode]);
 
+  const onInit = (instance: ReactFlowInstance) => {
+    setRfInstanceLocal(instance);
+    setRfInstance(instance);
+  };
+
   useImperativeHandle(ref, () => ({
     updateNode: (updatedNode: Node) => {
       setAllNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
@@ -188,7 +206,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
         onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onInit={setRfInstance}
+        onInit={onInit}
         deleteKeyCode={['Backspace', 'Delete']}
         fitView
       >
