@@ -27,7 +27,7 @@ export default function Layout() {
     deleteEdge: (edgeId: string) => void;
     addNode: (node: Node) => void;
     undoDelete: () => void;
-    reorderNodes: (oldIndex: number, newIndex: number) => void;
+    reorderNodesByIds: (orderedIds: string[]) => void;
   }>(null);
 
   const diagram = useLiveQuery(() => 
@@ -114,8 +114,8 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedDiagramId, isAddTableDialogOpen]);
 
-  const handleNodesReorder = useCallback((oldIndex: number, newIndex: number) => {
-    editorRef.current?.reorderNodes(oldIndex, newIndex);
+  const handleNodesReorder = useCallback((orderedIds: string[]) => {
+    editorRef.current?.reorderNodesByIds(orderedIds);
   }, []);
 
   return (

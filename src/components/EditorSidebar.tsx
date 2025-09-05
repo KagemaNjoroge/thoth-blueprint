@@ -34,7 +34,7 @@ interface EditorSidebarProps {
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
   onUndoDelete: () => void;
-  onNodesReorder: (oldIndex: number, newIndex: number) => void;
+  onNodesReorder: (orderedIds: string[]) => void;
 }
 
 function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
@@ -69,7 +69,7 @@ export default function EditorSidebar({
   const [tableName, setTableName] = useState("");
   const [currentTab, setCurrentTab] = useState("tables");
 
-  const nodes = diagram.data.nodes || [];
+  const nodes = (diagram.data.nodes || []).filter(n => !n.data.isDeleted);
   const edges = diagram.data.edges || [];
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -109,7 +109,7 @@ export default function EditorSidebar({
     if (over && active.id !== over.id) {
         const oldIndex = nodes.findIndex((n) => n.id === active.id);
         const newIndex = nodes.findIndex((n) => n.id === over.id);
-        onNodesReorder(oldIndex, newIndex);
+        onNodesReorder(arrayMove(nodes, oldIndex, newIndex).map(n => n.id));
     }
   };
 
@@ -175,8 +175,8 @@ export default function EditorSidebar({
                   {nodes.map((node) => (
                     <SortableAccordionItem key={node.id} node={node}>
                       {(attributes, listeners) => (
-                        <AccordionItem value={node.id} className="data-[state=open]:bg-accent/50 rounded-md">
-                          <AccordionTrigger className="px-2 group">
+                        <AccordionItem value={node.id} className="border rounded-md mb-1 data-[state=open]:bg-accent/50">
+                          <AccordionTrigger className="px-2 group hover:no-underline">
                             <div className="flex items-center gap-2 w-full">
                               <div {...attributes} {...listeners} className="cursor-grab p-1 -ml-1">
                                 <GripVertical className="h-4 w-4 text-muted-foreground" />
