@@ -14,17 +14,6 @@ import { Label } from "./ui/label";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "./ui/command";
@@ -52,11 +41,10 @@ interface Index {
     isUnique?: boolean;
 }
 
-interface InspectorPanelProps {
-    node: Node | null;
+interface TableAccordionContentProps {
+    node: Node;
     dbType: DatabaseType;
     onNodeUpdate: (node: Node) => void;
-    onNodeDelete: (nodeId: string) => void;
 }
 
 function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, handleDeleteColumn }: { col: Column, index: number, availableTypes: string[], handleColumnUpdate: (index: number, field: keyof Column, value: any) => void, handleDeleteColumn: (index: number) => void }) {
@@ -137,8 +125,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     );
 }
 
-export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeDelete }: InspectorPanelProps) {
-    const [tableName, setTableName] = useState(node?.data.label || "");
+export default function TableAccordionContent({ node, dbType, onNodeUpdate }: TableAccordionContentProps) {
     const [columns, setColumns] = useState<Column[]>([]);
     const [indices, setIndices] = useState<Index[]>([]);
     const [tableComment, setTableComment] = useState("");
@@ -149,7 +136,6 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
 
     useEffect(() => {
         if (node) {
-            setTableName(node.data.label || "");
             const columnsWithIds = (node.data.columns || []).map((col: any) => ({
                 ...col,
                 id: col.id || `col_${Math.random().toString(36).substring(2, 11)}`
@@ -161,19 +147,10 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
             }));
             setIndices(indicesWithIds);
             setTableComment(node.data.comment || "");
-            setOpenAccordionItems([]); // Reset accordions on node change
         }
     }, [node]);
 
     if (!node) return null;
-
-    const handleTableNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTableName(e.target.value);
-    };
-
-    const handleTableNameSave = () => {
-        onNodeUpdate({ ...node, data: { ...node.data, label: tableName } });
-    };
 
     const handleAddColumn = () => {
         const newColumn: Column = { 
@@ -227,7 +204,7 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
     const handleAddIndex = () => {
         const newIndex: Index = {
             id: `idx_${Date.now()}`,
-            name: `${tableName}_index_${indices.length}`,
+            name: `${node.data.label}_index_${indices.length}`,
             columns: [],
             isUnique: false,
         };
@@ -235,7 +212,6 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
         setIndices(newIndices);
         onNodeUpdate({ ...node, data: { ...node.data, indices: newIndices } });
         
-        // Open accordion if not already open
         setOpenAccordionItems(prev => prev.includes('indices') ? prev : [...prev, 'indices']);
     };
 
@@ -262,39 +238,9 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
     };
 
     return (
-        <div className="h-full w-full bg-card p-4 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Table Inspector</h3>
-            <Separator />
-            <div className="my-4">
-                <label className="text-sm font-medium">Table Name</label>
-                <div className="flex items-center gap-2 mt-1">
-                    <Input value={tableName} onChange={handleTableNameChange} onBlur={handleTableNameSave} />
-                </div>
-            </div>
-            <Separator />
-            <div className="my-4">
-                <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-semibold">Columns</h4>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4 mr-1" /> Delete Table
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will permanently delete the "{tableName}" table and all its columns and relationships. This action cannot be undone.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => onNodeDelete(node.id)}>Delete</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </div>
+        <div className="space-y-4 px-1">
+            <div>
+                <h4 className="font-semibold mb-2">Columns</h4>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={columns.map(c => c.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-2">
@@ -321,7 +267,7 @@ export default function NodeInspectorPanel({ node, dbType, onNodeUpdate, onNodeD
                 </div>
             </div>
             <Separator />
-            <Accordion type="multiple" className="w-full my-4" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
+            <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
                 <AccordionItem value="indices">
                     <AccordionTrigger>Indices</AccordionTrigger>
                     <AccordionContent className="space-y-2 pt-2">

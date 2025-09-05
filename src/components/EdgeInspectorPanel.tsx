@@ -47,8 +47,8 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
     };
 
     return (
-        <div className="h-full w-full bg-card p-4 overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Relationship Inspector</h3>
+        <div className="h-full w-full">
+            <h3 className="text-lg font-semibold mb-4">Relationship Details</h3>
             <Separator />
             <div className="my-4 space-y-2 text-sm">
                 <p><strong>From:</strong> {sourceNode?.data.label}.{sourceColumn?.name}</p>
