@@ -26,6 +26,7 @@ export default function Layout() {
     updateEdge: (edge: Edge) => void;
     deleteEdge: (edgeId: string) => void;
     addNode: (node: Node) => void;
+    undoDelete: () => void;
   }>(null);
 
   const diagram = useLiveQuery(() => 
@@ -87,6 +88,10 @@ export default function Layout() {
     }
   };
 
+  const handleUndoDelete = useCallback(() => {
+    editorRef.current?.undoDelete();
+  }, []);
+
   return (
     <>
       <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
@@ -103,6 +108,7 @@ export default function Layout() {
               onAddTable={handleAddTable}
               onDeleteDiagram={handleDeleteDiagram}
               onBackToGallery={() => setSelectedDiagramId(null)}
+              onUndoDelete={handleUndoDelete}
             />
           ) : (
             <div className="p-4 h-full flex items-center justify-center text-center bg-card">

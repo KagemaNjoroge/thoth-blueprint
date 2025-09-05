@@ -167,6 +167,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     addNode: (newNode: Node) => {
       setAllNodes(nds => nds.concat(newNode));
     },
+    undoDelete: undoDelete,
   }));
 
   return (

@@ -7,6 +7,7 @@ import {
   MenubarItem,
   MenubarMenu,
   MenubarSeparator,
+  MenubarShortcut,
   MenubarTrigger,
 } from "@/components/ui/menubar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ interface EditorSidebarProps {
   onAddTable: () => void;
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
+  onUndoDelete: () => void;
 }
 
 export default function EditorSidebar({
@@ -42,6 +44,7 @@ export default function EditorSidebar({
   onAddTable,
   onDeleteDiagram,
   onBackToGallery,
+  onUndoDelete,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
@@ -98,6 +101,20 @@ export default function EditorSidebar({
             <MenubarItem onClick={onDeleteDiagram} className="text-destructive focus:text-destructive">
               Delete Diagram
             </MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+        <MenubarMenu>
+          <MenubarTrigger>Edit</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem onClick={onUndoDelete}>
+              Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
+            </MenubarItem>
+          </MenubarContent>
+        </MenubarMenu>
+        <MenubarMenu>
+          <MenubarTrigger>Settings</MenubarTrigger>
+          <MenubarContent>
+            <MenubarItem>Theme (coming soon)</MenubarItem>
           </MenubarContent>
         </MenubarMenu>
       </Menubar>
