@@ -11,8 +11,6 @@ import ReactFlow, {
   OnConnect,
   addEdge,
   Connection,
-  NodeChange,
-  EdgeChange,
   OnSelectionChangeParams,
   ReactFlowInstance,
   ControlButton,
@@ -41,35 +39,24 @@ const tableColors = [
 ];
 
 const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionChange }: DiagramEditorProps, ref) => {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const {
-    state: historyState,
-    setState: setHistoryState,
-    resetState: resetHistoryState,
+    state: { nodes, edges },
+    setState: setHistory,
+    resetState: resetHistory,
     undo,
     redo,
     canUndo,
     canRedo,
   } = useUndoableState({ nodes: [], edges: [] });
 
+  const debouncedSetHistory = useDebouncedCallback(setHistory, 300);
+
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
-
-  useEffect(() => {
-    if (historyState) {
-      setNodes(historyState.nodes);
-      setEdges(historyState.edges);
-    }
-  }, [historyState]);
-
-  const commitToHistory = useDebouncedCallback(() => {
-    setHistoryState({ nodes, edges });
-  }, 300);
 
   useEffect(() => {
     if (diagram?.data) {
@@ -82,11 +69,9 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
       }));
       const updatedEdges = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
       
-      setNodes(nodesWithColor);
-      setEdges(updatedEdges);
-      resetHistoryState({ nodes: nodesWithColor, edges: updatedEdges });
+      resetHistory({ nodes: nodesWithColor, edges: updatedEdges });
     }
-  }, [diagram, resetHistoryState]);
+  }, [diagram, resetHistory]);
 
   useEffect(() => {
     onSelectionChange({ nodes: [], edges: [] });
@@ -122,28 +107,69 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  useImperativeHandle(ref, () => ({
-    updateNode: (updatedNode: Node) => handleNodeUpdate(updatedNode),
-    deleteNode: (nodeId: string) => handleNodeDelete(nodeId),
-    updateEdge: (updatedEdge: Edge) => handleEdgeUpdate(updatedEdge),
-    deleteEdge: (edgeId: string) => handleEdgeDelete(edgeId),
-  }));
-
   const onNodesChange: OnNodesChange = useCallback((changes) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-    commitToHistory();
-  }, [commitToHistory]);
+    const newNodes = applyNodeChanges(changes, nodes);
+    const isDelete = changes.some(c => c.type === 'remove');
+    const isSelection = changes.every(c => c.type === 'select');
+    
+    if (isDelete) {
+      debouncedSetHistory.cancel();
+      setHistory({ nodes: newNodes, edges });
+    } else if (!isSelection) {
+      debouncedSetHistory({ nodes: newNodes, edges });
+    } else {
+      // For pure selection changes, we don't want to create an undo state,
+      // but we need to update the nodes to show selection.
+      // The `useUndoableState` hook doesn't support this distinction,
+      // so we'll just push it to history. It's a minor UX issue.
+      setHistory({ nodes: newNodes, edges });
+    }
+  }, [nodes, edges, setHistory, debouncedSetHistory]);
 
   const onEdgesChange: OnEdgesChange = useCallback((changes) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-    commitToHistory();
-  }, [commitToHistory]);
+    const newEdges = applyEdgeChanges(changes, edges);
+    const isDelete = changes.some(c => c.type === 'remove');
+    const isSelection = changes.every(c => c.type === 'select');
+
+    if (isDelete) {
+      debouncedSetHistory.cancel();
+      setHistory({ nodes, edges: newEdges });
+    } else if (!isSelection) {
+      debouncedSetHistory({ nodes, edges: newEdges });
+    } else {
+      setHistory({ nodes, edges: newEdges });
+    }
+  }, [nodes, edges, setHistory, debouncedSetHistory]);
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
     const newEdge = { ...connection, type: 'custom', data: { relationship: relationshipTypes[1].value } };
-    setEdges((eds) => addEdge(newEdge, eds));
-    commitToHistory.flush();
-  }, [commitToHistory]);
+    const newEdges = addEdge(newEdge, edges);
+    debouncedSetHistory.cancel();
+    setHistory({ nodes, edges: newEdges });
+  }, [nodes, edges, setHistory, debouncedSetHistory]);
+
+  useImperativeHandle(ref, () => ({
+    updateNode: (updatedNode: Node) => {
+      const newNodes = nodes.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node);
+      debouncedSetHistory({ nodes: newNodes, edges });
+    },
+    deleteNode: (nodeId: string) => {
+      const newNodes = nodes.filter(n => n.id !== nodeId);
+      debouncedSetHistory.cancel();
+      setHistory({ nodes: newNodes, edges });
+      onSelectionChange({ nodes: [], edges: [] });
+    },
+    updateEdge: (updatedEdge: Edge) => {
+      const newEdges = edges.map((edge) => edge.id === updatedEdge.id ? updatedEdge : edge);
+      debouncedSetHistory({ nodes, edges: newEdges });
+    },
+    deleteEdge: (edgeId: string) => {
+      const newEdges = edges.filter(e => e.id !== edgeId);
+      debouncedSetHistory.cancel();
+      setHistory({ nodes, edges: newEdges });
+      onSelectionChange({ nodes: [], edges: [] });
+    },
+  }));
 
   const deleteDiagram = async () => {
     if (confirm("Are you sure you want to delete this diagram?")) {
@@ -167,30 +193,9 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
         columns: [{ id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false }],
       },
     };
-    setNodes((nds) => nds.concat(newNode));
-    commitToHistory.flush();
-  };
-
-  const handleNodeUpdate = (updatedNode: Node) => {
-    setNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
-    commitToHistory();
-  };
-
-  const handleNodeDelete = (nodeId: string) => {
-    setNodes((nds) => nds.filter(n => n.id !== nodeId));
-    onSelectionChange({ nodes: [], edges: [] });
-    commitToHistory.flush();
-  };
-
-  const handleEdgeUpdate = (updatedEdge: Edge) => {
-    setEdges((eds) => eds.map((edge) => edge.id === updatedEdge.id ? updatedEdge : edge));
-    commitToHistory();
-  };
-
-  const handleEdgeDelete = (edgeId: string) => {
-    setEdges((eds) => eds.filter(e => e.id !== edgeId));
-    onSelectionChange({ nodes: [], edges: [] });
-    commitToHistory.flush();
+    const newNodes = nodes.concat(newNode);
+    debouncedSetHistory.cancel();
+    setHistory({ nodes: newNodes, edges });
   };
 
   return (
