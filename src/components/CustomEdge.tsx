@@ -1,21 +1,21 @@
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath } from 'reactflow';
-import { useMemo } from 'react';
+import { useMemo, ReactNode } from 'react';
+import { GitFork, Minus } from 'lucide-react';
 
-const EdgeLabel = ({ transform, label }: { transform: string; label: string }) => {
+const EdgeLabel = ({ transform, label }: { transform: string; label: ReactNode }) => {
   return (
     <div
       style={{
         position: 'absolute',
         transform,
         background: 'hsl(var(--background))',
-        padding: '1px 3px',
         borderRadius: '50%',
         border: '1px solid hsl(var(--border))',
-        fontSize: 10,
-        fontWeight: 700,
-        minWidth: '16px',
-        textAlign: 'center',
-        lineHeight: '1',
+        width: '24px',
+        height: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
       className="nodrag nopan"
     >
@@ -44,24 +44,27 @@ export default function CustomEdge({
   });
 
   const { sourceLabel, targetLabel } = useMemo(() => {
+    const oneIcon = <Minus size={14} strokeWidth={3} />;
+    const manyIcon = <GitFork size={14} strokeWidth={2.5} />;
+
     switch (data?.relationship) {
       case 'one-to-one':
-        return { sourceLabel: '1', targetLabel: '1' };
+        return { sourceLabel: oneIcon, targetLabel: oneIcon };
       case 'one-to-many':
-        return { sourceLabel: '1', targetLabel: 'n' };
+        return { sourceLabel: oneIcon, targetLabel: manyIcon };
       case 'many-to-one':
-        return { sourceLabel: 'n', targetLabel: '1' };
+        return { sourceLabel: manyIcon, targetLabel: oneIcon };
       case 'many-to-many':
-        return { sourceLabel: 'n', targetLabel: 'm' };
+        return { sourceLabel: manyIcon, targetLabel: manyIcon };
       default:
-        return { sourceLabel: '', targetLabel: '' };
+        return { sourceLabel: null, targetLabel: null };
     }
   }, [data?.relationship]);
 
-  const sourceLabelX = sourceX + (sourcePosition === 'right' ? 20 : -20);
+  const sourceLabelX = sourceX + (sourcePosition === 'right' ? 25 : -25);
   const sourceLabelY = sourceY;
 
-  const targetLabelX = targetX + (targetPosition === 'left' ? -20 : 20);
+  const targetLabelX = targetX + (targetPosition === 'left' ? -25 : 25);
   const targetLabelY = targetY;
 
   return (
