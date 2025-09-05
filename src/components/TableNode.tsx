@@ -65,7 +65,7 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
             </CardHeader>
           </TooltipTrigger>
           {(data.comment || (data.indices && data.indices.length > 0)) && (
-            <TooltipContent side="top" align="center">
+            <TooltipContent side="top" align="center" className="z-[10000]">
               <div className="p-2 w-64 text-sm">
                 {data.comment && (
                   <div className="mb-2">
@@ -123,7 +123,7 @@ function TableNode({ data, selected }: NodeProps<TableNodeData>) {
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="right" align="start">
+              <TooltipContent side="right" align="start" className="z-[10000]">
                 <div className="p-2 w-56 text-sm">
                     <div className="flex justify-between items-center font-semibold">
                         <span>{col.name}</span>
