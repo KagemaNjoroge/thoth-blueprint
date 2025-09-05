@@ -168,13 +168,11 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
       setAllNodes(nds => nds.concat(newNode));
     },
     undoDelete: undoDelete,
-    reorderNodesByIds: (orderedIds: string[]) => {
-        setAllNodes((currentNodes) => {
-            const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
-            const orderedVisibleNodes = orderedIds.map(id => nodeMap.get(id)).filter(Boolean) as Node[];
-            const otherNodes = currentNodes.filter(n => !orderedIds.includes(n.id));
-            return [...orderedVisibleNodes, ...otherNodes];
-        });
+    batchUpdateNodes: (nodesToUpdate: Node[]) => {
+        const nodeUpdateMap = new Map(nodesToUpdate.map(n => [n.id, n]));
+        setAllNodes(currentNodes => 
+            currentNodes.map(node => nodeUpdateMap.get(node.id) || node)
+        );
     },
   }));
 

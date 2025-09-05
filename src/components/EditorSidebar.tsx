@@ -34,7 +34,7 @@ interface EditorSidebarProps {
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
   onUndoDelete: () => void;
-  onNodesReorder: (orderedIds: string[]) => void;
+  onBatchNodeUpdate: (nodes: Node[]) => void;
 }
 
 function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
@@ -63,13 +63,15 @@ export default function EditorSidebar({
   onDeleteDiagram,
   onBackToGallery,
   onUndoDelete,
-  onNodesReorder,
+  onBatchNodeUpdate,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentTab, setCurrentTab] = useState("tables");
 
-  const nodes = (diagram.data.nodes || []).filter(n => !n.data.isDeleted);
+  const nodes = (diagram.data.nodes || [])
+    .filter(n => !n.data.isDeleted)
+    .sort((a, b) => (a.data.order ?? Infinity) - (b.data.order ?? Infinity));
   const edges = diagram.data.edges || [];
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -109,7 +111,17 @@ export default function EditorSidebar({
     if (over && active.id !== over.id) {
         const oldIndex = nodes.findIndex((n) => n.id === active.id);
         const newIndex = nodes.findIndex((n) => n.id === over.id);
-        onNodesReorder(arrayMove(nodes, oldIndex, newIndex).map(n => n.id));
+        const reorderedNodes = arrayMove(nodes, oldIndex, newIndex);
+        
+        const nodesToUpdate = reorderedNodes.map((node, index) => ({
+            ...node,
+            data: {
+                ...node.data,
+                order: index,
+            }
+        }));
+
+        onBatchNodeUpdate(nodesToUpdate);
     }
   };
 

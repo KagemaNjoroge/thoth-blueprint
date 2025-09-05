@@ -27,7 +27,7 @@ export default function Layout() {
     deleteEdge: (edgeId: string) => void;
     addNode: (node: Node) => void;
     undoDelete: () => void;
-    reorderNodesByIds: (orderedIds: string[]) => void;
+    batchUpdateNodes: (nodes: Node[]) => void;
   }>(null);
 
   const diagram = useLiveQuery(() => 
@@ -71,12 +71,14 @@ export default function Layout() {
       const flowPosition = rfInstance.project({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
       position = { x: flowPosition.x - 128, y: flowPosition.y - 50 };
     }
+    const visibleNodes = diagram?.data.nodes.filter(n => !n.data.isDeleted) || [];
     const newNode: Node = {
       id: `${tableName}-${+new Date()}`, type: 'table', position,
       data: {
         label: tableName,
         color: tableColors[Math.floor(Math.random() * tableColors.length)],
         columns: [{ id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false }],
+        order: visibleNodes.length,
       },
     };
     editorRef.current?.addNode(newNode);
@@ -114,8 +116,8 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedDiagramId, isAddTableDialogOpen]);
 
-  const handleNodesReorder = useCallback((orderedIds: string[]) => {
-    editorRef.current?.reorderNodesByIds(orderedIds);
+  const handleBatchNodeUpdate = useCallback((nodesToUpdate: Node[]) => {
+    editorRef.current?.batchUpdateNodes(nodesToUpdate);
   }, []);
 
   return (
@@ -135,7 +137,7 @@ export default function Layout() {
               onDeleteDiagram={handleDeleteDiagram}
               onBackToGallery={() => setSelectedDiagramId(null)}
               onUndoDelete={handleUndoDelete}
-              onNodesReorder={handleNodesReorder}
+              onBatchNodeUpdate={handleBatchNodeUpdate}
             />
           ) : (
             <div className="p-4 h-full flex items-center justify-center text-center bg-card">
