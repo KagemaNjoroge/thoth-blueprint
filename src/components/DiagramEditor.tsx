@@ -25,7 +25,6 @@ import DiagramSelector from './DiagramSelector';
 import { relationshipTypes } from './EdgeInspectorPanel';
 import CustomEdge from './CustomEdge';
 import { useUndoableState } from '@/hooks/useUndoableState';
-import { useDebouncedCallback } from 'use-debounce';
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -39,12 +38,14 @@ const tableColors = [
 ];
 
 const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionChange }: DiagramEditorProps, ref) => {
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const {
-    state: { nodes, edges },
+    state: historyPresent,
     setState: setHistory,
     resetState: resetHistory,
     undo,
@@ -53,23 +54,32 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     canRedo,
   } = useUndoableState({ nodes: [], edges: [] });
 
-  const debouncedSetHistory = useDebouncedCallback(setHistory, 300);
-
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
+  // Sync local state FROM history (used for undo/redo)
+  useEffect(() => {
+    if (historyPresent) {
+      setNodes(historyPresent.nodes);
+      setEdges(historyPresent.edges);
+    }
+  }, [historyPresent]);
+
+  // Load initial data into both local state and history
   useEffect(() => {
     if (diagram?.data) {
-      const nodesWithColor = (diagram.data.nodes || []).map((node: Node) => ({
+      const initialNodes = (diagram.data.nodes || []).map((node: Node) => ({
         ...node,
         data: {
           ...node.data,
           color: node.data.color || tableColors[Math.floor(Math.random() * tableColors.length)],
         },
       }));
-      const updatedEdges = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
+      const initialEdges = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
       
-      resetHistory({ nodes: nodesWithColor, edges: updatedEdges });
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+      resetHistory({ nodes: initialNodes, edges: initialEdges });
     }
   }, [diagram, resetHistory]);
 
@@ -107,65 +117,42 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  const onNodesChange: OnNodesChange = useCallback((changes) => {
-    const newNodes = applyNodeChanges(changes, nodes);
-    const isDelete = changes.some(c => c.type === 'remove');
-    const isSelection = changes.every(c => c.type === 'select');
-    
-    if (isDelete) {
-      debouncedSetHistory.cancel();
-      setHistory({ nodes: newNodes, edges });
-    } else if (!isSelection) {
-      debouncedSetHistory({ nodes: newNodes, edges });
-    } else {
-      // For pure selection changes, we don't want to create an undo state,
-      // but we need to update the nodes to show selection.
-      // The `useUndoableState` hook doesn't support this distinction,
-      // so we'll just push it to history. It's a minor UX issue.
-      setHistory({ nodes: newNodes, edges });
-    }
-  }, [nodes, edges, setHistory, debouncedSetHistory]);
+  const onNodesChange: OnNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
+  const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
-  const onEdgesChange: OnEdgesChange = useCallback((changes) => {
-    const newEdges = applyEdgeChanges(changes, edges);
-    const isDelete = changes.some(c => c.type === 'remove');
-    const isSelection = changes.every(c => c.type === 'select');
-
-    if (isDelete) {
-      debouncedSetHistory.cancel();
-      setHistory({ nodes, edges: newEdges });
-    } else if (!isSelection) {
-      debouncedSetHistory({ nodes, edges: newEdges });
-    } else {
-      setHistory({ nodes, edges: newEdges });
-    }
-  }, [nodes, edges, setHistory, debouncedSetHistory]);
+  const onNodeDragStop = useCallback(() => {
+    setHistory({ nodes, edges });
+  }, [nodes, edges, setHistory]);
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
     const newEdge = { ...connection, type: 'custom', data: { relationship: relationshipTypes[1].value } };
-    const newEdges = addEdge(newEdge, edges);
-    debouncedSetHistory.cancel();
-    setHistory({ nodes, edges: newEdges });
-  }, [nodes, edges, setHistory, debouncedSetHistory]);
+    setEdges((currentEdges) => {
+      const newEdges = addEdge(newEdge, currentEdges);
+      setHistory({ nodes, edges: newEdges });
+      return newEdges;
+    });
+  }, [nodes, setHistory]);
 
   useImperativeHandle(ref, () => ({
     updateNode: (updatedNode: Node) => {
       const newNodes = nodes.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node);
-      debouncedSetHistory({ nodes: newNodes, edges });
+      setNodes(newNodes);
+      setHistory({ nodes: newNodes, edges });
     },
     deleteNode: (nodeId: string) => {
       const newNodes = nodes.filter(n => n.id !== nodeId);
-      debouncedSetHistory.cancel();
+      setNodes(newNodes);
       setHistory({ nodes: newNodes, edges });
       onSelectionChange({ nodes: [], edges: [] });
     },
     updateEdge: (updatedEdge: Edge) => {
       const newEdges = edges.map((edge) => edge.id === updatedEdge.id ? updatedEdge : edge);
-      debouncedSetHistory({ nodes, edges: newEdges });
+      setEdges(newEdges);
+      setHistory({ nodes, edges: newEdges });
     },
     deleteEdge: (edgeId: string) => {
       const newEdges = edges.filter(e => e.id !== edgeId);
-      debouncedSetHistory.cancel();
+      setEdges(newEdges);
       setHistory({ nodes, edges: newEdges });
       onSelectionChange({ nodes: [], edges: [] });
     },
@@ -194,7 +181,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
       },
     };
     const newNodes = nodes.concat(newNode);
-    debouncedSetHistory.cancel();
+    setNodes(newNodes);
     setHistory({ nodes: newNodes, edges });
   };
 
@@ -209,6 +196,7 @@ const DiagramEditor = forwardRef(({ diagram, setSelectedDiagramId, onSelectionCh
         nodes={nodes} edges={edges}
         onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
         onConnect={onConnect} onSelectionChange={onSelectionChange}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes}
         onInit={setRfInstance}
         deleteKeyCode={['Backspace', 'Delete']}
