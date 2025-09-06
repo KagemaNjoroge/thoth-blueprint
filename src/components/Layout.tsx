@@ -123,22 +123,6 @@ export default function Layout() {
     editorRef.current?.batchUpdateNodes(nodesToUpdate);
   }, []);
 
-  const handleDiagramUpdate = async (data: { nodes: Node[], edges: Edge[] }) => {
-    if (diagram && diagram.id) {
-        const currentViewport = rfInstance?.getViewport() || diagram.data.viewport;
-        await db.diagrams.update(diagram.id, {
-            data: { 
-                ...diagram.data,
-                nodes: data.nodes,
-                edges: data.edges,
-                viewport: currentViewport,
-            },
-            updatedAt: new Date(),
-        });
-        rfInstance?.fitView();
-    }
-  };
-
   const isLocked = diagram?.data?.isLocked ?? false;
 
   const sidebarContent = diagram ? (
@@ -163,7 +147,6 @@ export default function Layout() {
       }}
       onUndoDelete={handleUndoDelete}
       onBatchNodeUpdate={handleBatchNodeUpdate}
-      onDiagramUpdate={handleDiagramUpdate}
       isLocked={isLocked}
       onSetSidebarState={setSidebarState}
     />

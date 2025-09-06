@@ -14,14 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, GripVertical, Plus, FileText, Inspect } from "lucide-react";
+import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, GripVertical, Plus } from "lucide-react";
 import TableAccordionContent from "./TableAccordionContent";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { ScrollArea } from "./ui/scroll-area";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import DbmlEditor from "./DbmlEditor";
 
 interface EditorSidebarProps {
   diagram: Diagram;
@@ -36,7 +35,6 @@ interface EditorSidebarProps {
   onBackToGallery: () => void;
   onUndoDelete: () => void;
   onBatchNodeUpdate: (nodes: Node[]) => void;
-  onDiagramUpdate: (data: { nodes: Node[], edges: Edge[] }) => void;
   isLocked: boolean;
   onSetSidebarState: (state: 'docked' | 'hidden') => void;
 }
@@ -68,7 +66,6 @@ export default function EditorSidebar({
   onBackToGallery,
   onUndoDelete,
   onBatchNodeUpdate,
-  onDiagramUpdate,
   isLocked,
   onSetSidebarState,
 }: EditorSidebarProps) {
@@ -199,133 +196,115 @@ export default function EditorSidebar({
         <h3 className="text-lg font-semibold tracking-tight px-2">{diagram.name}</h3>
         <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
       </div>
-      <Tabs defaultValue="inspector" className="flex-grow flex flex-col min-h-0">
-        <div className="flex-shrink-0 p-2">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="inspector"><Inspect className="h-4 w-4 mr-2" />Inspector</TabsTrigger>
-                <TabsTrigger value="dbml"><FileText className="h-4 w-4 mr-2" />DBML</TabsTrigger>
-            </TabsList>
-        </div>
-
-        <TabsContent value="inspector" className="m-0 flex-grow flex flex-col min-h-0">
-            <Tabs value={currentInspectorTab} onValueChange={handleInspectorTabChange} className="flex-grow flex flex-col min-h-0">
-                <div className="flex-shrink-0 px-4 mb-4">
-                    <div className="flex items-center gap-2">
-                        <TabsList className="grid flex-grow grid-cols-2">
-                            <TabsTrigger value="tables">
-                                <Table className="h-4 w-4 mr-2" />
-                                <span className="hidden lg:inline">Tables</span>
-                                <span className="lg:hidden">Tbls</span>
-                                <span>&nbsp;({nodes.length})</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="relationships">
-                                <GitCommitHorizontal className="h-4 w-4 mr-2" />
-                                <span className="hidden lg:inline">Relations</span>
-                                <span className="lg:hidden">Rels</span>
-                                <span>&nbsp;({edges.length})</span>
-                            </TabsTrigger>
-                        </TabsList>
-                        <Button variant="outline" size="icon" onClick={onAddTable} disabled={isLocked}>
-                            <Plus className="h-4 w-4" />
-                            <span className="sr-only">Add Table</span>
-                        </Button>
-                    </div>
-                </div>
-                <div className="flex-grow min-h-0">
-                    <TabsContent value="tables" className="m-0 h-full">
-                        <ScrollArea className="h-full px-4">
-                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                            <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
-                                <Accordion type="single" collapsible value={activeItemId || undefined} onValueChange={onActiveItemIdChange} className="w-full">
-                                {nodes.map((node) => (
-                                    <SortableAccordionItem key={node.id} node={node}>
-                                    {(attributes, listeners) => (
-                                        <AccordionItem value={node.id} className="border rounded-md mb-1 data-[state=open]:bg-accent/50">
-                                        <AccordionTrigger className="px-2 group hover:no-underline">
-                                            <div className="flex items-center gap-2 w-full">
-                                            <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1 -ml-1" : "cursor-grab p-1 -ml-1"}>
-                                                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                            </div>
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: node.data.color }} />
-                                            {editingTableName === node.id ? (
-                                                <Input
-                                                value={tableName}
-                                                onChange={handleNameChange}
-                                                onBlur={() => handleNameSave(node)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleNameSave(node)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="h-8"
-                                                autoFocus
-                                                />
-                                            ) : (
-                                                <span className="truncate" onDoubleClick={isLocked ? undefined : () => handleStartEdit(node)}>{node.data.label}</span>
-                                            )}
-                                            <div className="flex-grow" />
-                                            </div>
-                                        </AccordionTrigger>
-                                        <AccordionContent>
-                                            <TableAccordionContent 
-                                            node={node} 
-                                            dbType={diagram.dbType} 
-                                            onNodeUpdate={onNodeUpdate} 
-                                            onNodeDelete={onNodeDelete}
-                                            onStartEdit={() => handleStartEdit(node)}
-                                            isLocked={isLocked}
-                                            />
-                                        </AccordionContent>
-                                        </AccordionItem>
-                                    )}
-                                    </SortableAccordionItem>
-                                ))}
-                                </Accordion>
-                            </SortableContext>
-                            </DndContext>
-                        </ScrollArea>
-                    </TabsContent>
-                    <TabsContent value="relationships" className="m-0 h-full">
-                        <ScrollArea className="h-full p-4">
-                            {inspectingEdge ? (
-                                <div>
-                                <Button variant="ghost" onClick={() => onActiveItemIdChange(null)} className="mb-2">
-                                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
-                                </Button>
-                                <EdgeInspectorPanel 
-                                    edge={inspectingEdge}
-                                    nodes={nodes}
-                                    onEdgeUpdate={onEdgeUpdate}
-                                    onEdgeDelete={onEdgeDelete}
-                                    isLocked={isLocked}
-                                />
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                {edges.map(edge => {
-                                    const sourceNode = nodes.find(n => n.id === edge.source);
-                                    const targetNode = nodes.find(n => n.id === edge.target);
-                                    return (
-                                    <Button key={edge.id} variant="ghost" className="w-full justify-start h-auto py-2" onClick={() => onActiveItemIdChange(edge.id)}>
-                                        <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
-                                        <div className="text-left text-sm">
-                                        <p className="font-semibold">{sourceNode?.data.label} to {targetNode?.data.label}</p>
-                                        <p className="text-muted-foreground text-xs">{edge.data?.relationship || 'one-to-many'}</p>
-                                        </div>
-                                    </Button>
-                                    );
-                                })}
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </TabsContent>
-                </div>
-            </Tabs>
-        </TabsContent>
-        <TabsContent value="dbml" className="m-0 flex-grow min-h-0">
-            <DbmlEditor 
-                diagram={diagram}
-                onDiagramUpdate={onDiagramUpdate}
-                isLocked={isLocked}
-            />
-        </TabsContent>
+      <Tabs value={currentInspectorTab} onValueChange={handleInspectorTabChange} className="flex-grow flex flex-col min-h-0">
+          <div className="flex-shrink-0 px-4 my-4">
+              <div className="flex items-center gap-2">
+                  <TabsList className="grid flex-grow grid-cols-2">
+                      <TabsTrigger value="tables">
+                          <Table className="h-4 w-4 mr-2" />
+                          <span className="hidden lg:inline">Tables</span>
+                          <span className="lg:hidden">Tbls</span>
+                          <span>&nbsp;({nodes.length})</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="relationships">
+                          <GitCommitHorizontal className="h-4 w-4 mr-2" />
+                          <span className="hidden lg:inline">Relations</span>
+                          <span className="lg:hidden">Rels</span>
+                          <span>&nbsp;({edges.length})</span>
+                      </TabsTrigger>
+                  </TabsList>
+                  <Button variant="outline" size="icon" onClick={onAddTable} disabled={isLocked}>
+                      <Plus className="h-4 w-4" />
+                      <span className="sr-only">Add Table</span>
+                  </Button>
+              </div>
+          </div>
+          <div className="flex-grow min-h-0">
+              <TabsContent value="tables" className="m-0 h-full">
+                  <ScrollArea className="h-full px-4">
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
+                          <Accordion type="single" collapsible value={activeItemId || undefined} onValueChange={onActiveItemIdChange} className="w-full">
+                          {nodes.map((node) => (
+                              <SortableAccordionItem key={node.id} node={node}>
+                              {(attributes, listeners) => (
+                                  <AccordionItem value={node.id} className="border rounded-md mb-1 data-[state=open]:bg-accent/50">
+                                  <AccordionTrigger className="px-2 group hover:no-underline">
+                                      <div className="flex items-center gap-2 w-full">
+                                      <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1 -ml-1" : "cursor-grab p-1 -ml-1"}>
+                                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: node.data.color }} />
+                                      {editingTableName === node.id ? (
+                                          <Input
+                                          value={tableName}
+                                          onChange={handleNameChange}
+                                          onBlur={() => handleNameSave(node)}
+                                          onKeyDown={(e) => e.key === 'Enter' && handleNameSave(node)}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="h-8"
+                                          autoFocus
+                                          />
+                                      ) : (
+                                          <span className="truncate" onDoubleClick={isLocked ? undefined : () => handleStartEdit(node)}>{node.data.label}</span>
+                                      )}
+                                      <div className="flex-grow" />
+                                      </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent>
+                                      <TableAccordionContent 
+                                      node={node} 
+                                      dbType={diagram.dbType} 
+                                      onNodeUpdate={onNodeUpdate} 
+                                      onNodeDelete={onNodeDelete}
+                                      onStartEdit={() => handleStartEdit(node)}
+                                      isLocked={isLocked}
+                                      />
+                                  </AccordionContent>
+                                  </AccordionItem>
+                              )}
+                              </SortableAccordionItem>
+                          ))}
+                          </Accordion>
+                      </SortableContext>
+                      </DndContext>
+                  </ScrollArea>
+              </TabsContent>
+              <TabsContent value="relationships" className="m-0 h-full">
+                  <ScrollArea className="h-full p-4">
+                      {inspectingEdge ? (
+                          <div>
+                          <Button variant="ghost" onClick={() => onActiveItemIdChange(null)} className="mb-2">
+                              <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
+                          </Button>
+                          <EdgeInspectorPanel 
+                              edge={inspectingEdge}
+                              nodes={nodes}
+                              onEdgeUpdate={onEdgeUpdate}
+                              onEdgeDelete={onEdgeDelete}
+                              isLocked={isLocked}
+                          />
+                          </div>
+                      ) : (
+                          <div className="space-y-2">
+                          {edges.map(edge => {
+                              const sourceNode = nodes.find(n => n.id === edge.source);
+                              const targetNode = nodes.find(n => n.id === edge.target);
+                              return (
+                              <Button key={edge.id} variant="ghost" className="w-full justify-start h-auto py-2" onClick={() => onActiveItemIdChange(edge.id)}>
+                                  <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
+                                  <div className="text-left text-sm">
+                                  <p className="font-semibold">{sourceNode?.data.label} to {targetNode?.data.label}</p>
+                                  <p className="text-muted-foreground text-xs">{edge.data?.relationship || 'one-to-many'}</p>
+                                  </div>
+                              </Button>
+                              );
+                          })}
+                          </div>
+                      )}
+                  </ScrollArea>
+              </TabsContent>
+          </div>
       </Tabs>
     </div>
   );
