@@ -15,6 +15,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useState, useEffect } from "react";
 
 export const relationshipTypes = [
     { value: 'one-to-one', label: 'One-to-One' },
@@ -32,6 +33,14 @@ interface EdgeInspectorPanelProps {
 }
 
 export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDelete, isLocked }: EdgeInspectorPanelProps) {
+    const [relationshipType, setRelationshipType] = useState(edge.data?.relationship || 'one-to-many');
+
+    useEffect(() => {
+        if (edge) {
+            setRelationshipType(edge.data?.relationship || 'one-to-many');
+        }
+    }, [edge]);
+
     if (!edge) return null;
 
     const sourceNode = nodes.find(n => n.id === edge.source);
@@ -40,6 +49,7 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
     const targetColumn = targetNode?.data.columns.find((c: any) => c.id === edge.targetHandle);
 
     const handleTypeChange = (value: string) => {
+        setRelationshipType(value);
         const newEdge = { 
             ...edge, 
             data: { ...edge.data, relationship: value },
@@ -58,7 +68,7 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
             <Separator />
             <div className="my-4">
                 <Label>Relationship Type</Label>
-                <Select value={edge.data?.relationship || 'one-to-many'} onValueChange={handleTypeChange} disabled={isLocked}>
+                <Select value={relationshipType} onValueChange={handleTypeChange} disabled={isLocked}>
                     <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select type" />
                     </SelectTrigger>
