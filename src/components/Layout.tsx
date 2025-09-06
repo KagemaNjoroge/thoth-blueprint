@@ -1,4 +1,4 @@
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup, PanelRef } from "@/components/ui/resizable";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import DiagramGallery from "./DiagramGallery";
 import { AddTableDialog } from "./AddTableDialog";
 import { ExportDialog } from "./ExportDialog";
+import { cn } from "@/lib/utils";
 
 const tableColors = [
   '#34D399', '#60A5FA', '#FBBF24', '#F87171', '#A78BFA', 
@@ -27,6 +28,9 @@ export default function Layout() {
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarState, setSidebarState] = useState<'docked' | 'hidden'>('docked');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+
+  const sidebarPanelRef = useRef<PanelRef>(null);
 
   const editorRef = useRef<{ 
     updateNode: (node: Node) => void; 
@@ -42,6 +46,23 @@ export default function Layout() {
     selectedDiagramId ? db.diagrams.get(selectedDiagramId) : undefined,
     [selectedDiagramId]
   );
+
+  const isSidebarVisible = diagram && sidebarState === 'docked';
+
+  useEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (panel) {
+      if (isSidebarVisible) {
+        if (panel.isCollapsed()) {
+          panel.expand();
+        }
+      } else {
+        if (!panel.isCollapsed()) {
+          panel.collapse();
+        }
+      }
+    }
+  }, [isSidebarVisible]);
 
   const handleNodeUpdate = useCallback((node: Node) => {
     editorRef.current?.updateNode(node);
@@ -174,15 +195,21 @@ export default function Layout() {
       </div>
 
       <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
-        {diagram && sidebarState === 'docked' && (
-          <>
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="hidden lg:block">
-              {sidebarContent}
-            </ResizablePanel>
-            <ResizableHandle withHandle className="hidden lg:flex" />
-          </>
-        )}
-        <ResizablePanel defaultSize={diagram && sidebarState === 'docked' ? 75 : 100}>
+        <ResizablePanel
+          ref={sidebarPanelRef}
+          defaultSize={0}
+          collapsible
+          collapsedSize={0}
+          minSize={20}
+          maxSize={40}
+          className="hidden lg:block"
+          onCollapse={() => setIsSidebarCollapsed(true)}
+          onExpand={() => setIsSidebarCollapsed(false)}
+        >
+          {sidebarContent}
+        </ResizablePanel>
+        <ResizableHandle withHandle className={cn("hidden lg:flex", isSidebarCollapsed && "hidden")} />
+        <ResizablePanel defaultSize={100}>
           <div className="flex h-full items-center justify-center relative">
             {diagram && (
               <div className="absolute top-4 left-4 z-10 lg:hidden">
