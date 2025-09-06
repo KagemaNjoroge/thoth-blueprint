@@ -129,20 +129,17 @@ export async function importFromSql(sql: string, dbType: DatabaseType): Promise<
 
 export async function importFromDbml(dbml: string): Promise<Diagram['data']> {
     try {
-        const dbmlDatabase = await importer.import(dbml, 'dbml');
+        // Correction 1: Replace `column: type` with `column type`
+        let correctedDbml = dbml.replace(/^(\s*['"]?\w+['"]?): ([\w\(\), ]+)/gm, '$1 $2');
+        
+        // Correction 2: Remove trailing commas before a closing brace `}`
+        correctedDbml = correctedDbml.replace(/,(\s*})/g, '$1}');
+        
+        const dbmlDatabase = await importer.import(correctedDbml, 'dbml');
         return transformDbmlDatabase(dbmlDatabase);
     } catch (error) {
-        const isFixableError = error && typeof error === 'object' && 'diags' in error && 
-                               Array.isArray((error as any).diags) && (error as any).diags.length > 0 &&
-                               (error as any).diags[0].message.includes('Expected " " but ":" found');
-
-        if (isFixableError) {
-            console.warn("Attempting to auto-correct common DBML syntax error...");
-            const correctedDbml = dbml.replace(/^(\s*['"]?\w+['"]?): ([\w\(\), ]+)/gm, '$1 $2');
-            
-            const dbmlDatabase = await importer.import(correctedDbml, 'dbml');
-            return transformDbmlDatabase(dbmlDatabase);
-        }
+        // If parsing still fails, the detailed error will be thrown and caught by the dialog.
+        console.error("DBML parsing failed after corrections:", error);
         throw error;
     }
 }
