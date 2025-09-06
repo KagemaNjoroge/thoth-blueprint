@@ -22,7 +22,7 @@ export default function Layout() {
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [sidebarState, setSidebarState] = useState<'docked' | 'floating' | 'hidden'>('docked');
+  const [sidebarState, setSidebarState] = useState<'docked' | 'hidden'>('docked');
 
   const editorRef = useRef<{ 
     updateNode: (node: Node) => void; 
@@ -148,7 +148,6 @@ export default function Layout() {
       onUndoDelete={handleUndoDelete}
       onBatchNodeUpdate={handleBatchNodeUpdate}
       isLocked={isLocked}
-      sidebarState={sidebarState}
       onSetSidebarState={setSidebarState}
     />
   ) : (
@@ -197,12 +196,6 @@ export default function Layout() {
                 <Button size="icon" variant="outline" onClick={() => setSidebarState('docked')}>
                   <Menu className="h-5 w-5" />
                 </Button>
-              </div>
-            )}
-
-            {sidebarState === 'floating' && (
-              <div className="absolute top-4 left-4 z-20 hidden lg:block h-[calc(100%-2rem)] w-[350px] border rounded-lg shadow-lg overflow-hidden">
-                {sidebarContent}
               </div>
             )}
 
