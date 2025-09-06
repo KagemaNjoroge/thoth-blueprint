@@ -6,12 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileJson, Image as ImageIcon, Database, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { exportToDbml, exportToSql, exportToJson } from '@/lib/dbml';
-import { toPng } from 'html-to-image';
+import { toSvg } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { ReactFlowInstance } from 'reactflow';
 import { showError } from '@/utils/toast';
 
-type ExportFormat = 'sql' | 'dbml' | 'json' | 'png';
+type ExportFormat = 'sql' | 'dbml' | 'json' | 'svg';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -40,17 +40,16 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
             case 'json':
                 data = exportToJson(diagram);
                 break;
-            case 'png':
+            case 'svg':
                 if (rfInstance) {
                     const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
                     if (!viewport) throw new Error("React Flow viewport not found.");
                     
-                    const dataUrl = await toPng(viewport, {
+                    const dataUrl = await toSvg(viewport, {
                         backgroundColor: 'white',
-                        pixelRatio: 2,
                     });
                     const blob = await (await fetch(dataUrl)).blob();
-                    saveAs(blob, `${diagram.name.replace(/\s+/g, '_')}.png`);
+                    saveAs(blob, `${diagram.name.replace(/\s+/g, '_')}.svg`);
                 }
                 onOpenChange(false);
                 setSelectedFormat(null);
@@ -73,7 +72,7 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
     { id: 'sql', title: dbTypeDisplay, icon: Database, description: `Export schema as ${dbTypeDisplay} DDL.` },
     { id: 'dbml', title: 'DBML', icon: FileText, description: 'Export a DBML representation.' },
     { id: 'json', title: 'JSON', icon: FileJson, description: 'Export a JSON representation.' },
-    { id: 'png', title: 'Image', icon: ImageIcon, description: 'Export diagram as a .png image.' },
+    { id: 'svg', title: 'SVG', icon: ImageIcon, description: 'Export diagram as a .svg image.' },
   ];
 
   return (
