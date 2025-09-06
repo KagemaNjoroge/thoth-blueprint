@@ -55,14 +55,14 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-1 p-1 border rounded-md bg-background">
+        <div ref={setNodeRef} style={style} className="flex flex-wrap items-center gap-1 p-1 border rounded-md bg-background">
             <div {...attributes} {...listeners} className="cursor-grab p-1">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
             <Input 
                 value={col.name} 
                 onChange={(e) => handleColumnUpdate(index, 'name', e.target.value)}
-                className="h-8 flex-grow"
+                className="h-8 flex-grow min-w-[120px]"
             />
             <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)}>
                 <SelectTrigger className="h-8 w-[110px]">

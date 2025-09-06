@@ -1,4 +1,7 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Menu, BrainCircuit } from "lucide-react";
 import DiagramEditor from "./DiagramEditor";
 import EditorSidebar from "./EditorSidebar";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -6,7 +9,6 @@ import { Node, Edge, OnSelectionChangeParams, ReactFlowInstance } from "reactflo
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import DiagramGallery from "./DiagramGallery";
-import { BrainCircuit } from "lucide-react";
 import { AddTableDialog } from "./AddTableDialog";
 
 const tableColors = [
@@ -19,6 +21,7 @@ export default function Layout() {
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const editorRef = useRef<{ 
     updateNode: (node: Node) => void; 
@@ -99,7 +102,6 @@ export default function Layout() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (selectedDiagramId) {
         const target = event.target as HTMLElement;
-        // Prevent shortcut if focus is on an input, textarea, or contenteditable element
         if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) {
           return;
         }
@@ -120,40 +122,67 @@ export default function Layout() {
     editorRef.current?.batchUpdateNodes(nodesToUpdate);
   }, []);
 
+  const sidebarContent = diagram ? (
+    <EditorSidebar
+      diagram={diagram}
+      activeItemId={activeItemId}
+      onActiveItemIdChange={(id) => {
+        setActiveItemId(id);
+        if (id) setIsSidebarOpen(false);
+      }}
+      onNodeUpdate={handleNodeUpdate}
+      onNodeDelete={handleNodeDelete}
+      onEdgeUpdate={handleEdgeUpdate}
+      onEdgeDelete={handleEdgeDelete}
+      onAddTable={() => {
+        handleAddTable();
+        setIsSidebarOpen(false);
+      }}
+      onDeleteDiagram={handleDeleteDiagram}
+      onBackToGallery={() => {
+        setSelectedDiagramId(null);
+        setIsSidebarOpen(false);
+      }}
+      onUndoDelete={handleUndoDelete}
+      onBatchNodeUpdate={handleBatchNodeUpdate}
+    />
+  ) : (
+    <div className="p-4 h-full flex items-center justify-center text-center bg-card">
+      <div className="flex flex-col items-center gap-4">
+        <BrainCircuit className="h-12 w-12 text-primary" />
+        <h3 className="text-lg font-semibold">Database Designer</h3>
+        <p className="text-muted-foreground">
+          Select a diagram from the gallery to start editing, or create a new one.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <>
+      <div className="lg:hidden">
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+          <SheetContent side="left" className="p-0 w-[350px] sm:w-[400px] flex">
+            {sidebarContent}
+          </SheetContent>
+        </Sheet>
+      </div>
+
       <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-          {diagram ? (
-            <EditorSidebar
-              diagram={diagram}
-              activeItemId={activeItemId}
-              onActiveItemIdChange={setActiveItemId}
-              onNodeUpdate={handleNodeUpdate}
-              onNodeDelete={handleNodeDelete}
-              onEdgeUpdate={handleEdgeUpdate}
-              onEdgeDelete={handleEdgeDelete}
-              onAddTable={handleAddTable}
-              onDeleteDiagram={handleDeleteDiagram}
-              onBackToGallery={() => setSelectedDiagramId(null)}
-              onUndoDelete={handleUndoDelete}
-              onBatchNodeUpdate={handleBatchNodeUpdate}
-            />
-          ) : (
-            <div className="p-4 h-full flex items-center justify-center text-center bg-card">
-              <div className="flex flex-col items-center gap-4">
-                <BrainCircuit className="h-12 w-12 text-primary" />
-                <h3 className="text-lg font-semibold">Database Designer</h3>
-                <p className="text-muted-foreground">
-                  Select a diagram from the gallery to start editing, or create a new one.
-                </p>
-              </div>
-            </div>
-          )}
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="hidden lg:block">
+          {sidebarContent}
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle className="hidden lg:flex" />
         <ResizablePanel defaultSize={75}>
           <div className="flex h-full items-center justify-center relative">
+            {diagram && (
+              <div className="absolute top-4 left-4 z-10 lg:hidden">
+                <Button size="icon" variant="outline" onClick={() => setIsSidebarOpen(true)}>
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+            
             {selectedDiagramId && diagram ? (
               <DiagramEditor 
                 ref={editorRef}
