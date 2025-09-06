@@ -10,6 +10,7 @@ export interface Diagram {
     nodes: any[];
     edges: any[];
     viewport: any;
+    isLocked?: boolean;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +30,13 @@ export class Database extends Dexie {
       return tx.table('diagrams').toCollection().modify(diagram => {
         diagram.dbType = 'postgres'; // Default existing diagrams to postgres
       });
+    });
+    this.version(3).stores({}).upgrade(tx => {
+        return tx.table('diagrams').toCollection().modify(diagram => {
+            if (diagram.data && typeof diagram.data.isLocked === 'undefined') {
+                diagram.data.isLocked = false;
+            }
+        });
     });
   }
 }

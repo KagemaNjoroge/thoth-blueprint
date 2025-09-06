@@ -27,8 +27,6 @@ interface DiagramEditorProps {
   diagram: Diagram;
   onSelectionChange: (params: OnSelectionChangeParams) => void;
   setRfInstance: (instance: ReactFlowInstance | null) => void;
-  isLocked: boolean;
-  onLockChange: (locked: boolean) => void;
 }
 
 const tableColors = [
@@ -36,7 +34,7 @@ const tableColors = [
   '#2DD4BF', '#F472B6', '#FB923C', '#818CF8', '#4ADE80',
 ];
 
-const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, isLocked, onLockChange }: DiagramEditorProps, ref) => {
+const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }: DiagramEditorProps, ref) => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
@@ -44,6 +42,16 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, i
 
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
   const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
+  const isLocked = diagram.data.isLocked ?? false;
+
+  const handleLockChange = useCallback(() => {
+    if (diagram && diagram.id) {
+      db.diagrams.update(diagram.id, {
+        'data.isLocked': !isLocked,
+        updatedAt: new Date(),
+      });
+    }
+  }, [diagram, isLocked]);
 
   useEffect(() => {
     if (diagram?.data) {
@@ -69,7 +77,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, i
 
       if (wasModified && diagram.id) {
         db.diagrams.update(diagram.id, {
-          data: { nodes: initialNodes, edges: initialEdges, viewport: diagram.data.viewport },
+          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges },
           updatedAt: new Date(),
         });
       }
@@ -83,7 +91,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, i
   const saveDiagram = useCallback(async () => {
     if (diagram && rfInstance) {
       await db.diagrams.update(diagram.id!, {
-        data: { nodes: allNodes, edges, viewport: rfInstance.getViewport() },
+        data: { ...diagram.data, nodes: allNodes, edges, viewport: rfInstance.getViewport() },
         updatedAt: new Date(),
       });
     }
@@ -221,7 +229,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, i
         fitView
       >
         <Controls>
-          <ControlButton onClick={() => onLockChange(!isLocked)} title={isLocked ? 'Unlock' : 'Lock'}>
+          <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </ControlButton>
         </Controls>
