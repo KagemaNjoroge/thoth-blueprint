@@ -38,17 +38,17 @@ const tableColors = [
 const MarkerDefinitions = () => (
   <svg>
     <defs>
-      <marker id="one" markerWidth="12.5" markerHeight="12.5" refX="2" refY="5" orient="auto-start-reverse">
+      <marker id="one" markerWidth="12.5" markerHeight="12.5" refX="2" refY="5" orient="auto">
         <path d="M 0 0 L 0 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
       </marker>
-      <marker id="many" markerWidth="12.5" markerHeight="12.5" refX="10" refY="6.25" orient="auto-start-reverse">
-        <path d="M 0,0 L 10,6.25 L 0,12.5 M 0,6.25 L 10,6.25" stroke="#a1a1aa" strokeWidth="2" fill="none" />
+      <marker id="many" markerWidth="12.5" markerHeight="12.5" refX="10" refY="6.25" orient="auto">
+        <path d="M 0,0 L 10,6.25 M 0,12.5 L 10,6.25 M 0,6.25 L 10,6.25" stroke="#a1a1aa" strokeWidth="2" fill="none" />
       </marker>
-      <marker id="one-selected" markerWidth="12.5" markerHeight="12.5" refX="2" refY="5" orient="auto-start-reverse">
+      <marker id="one-selected" markerWidth="12.5" markerHeight="12.5" refX="2" refY="5" orient="auto">
         <path d="M 0 0 L 0 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
       </marker>
-      <marker id="many-selected" markerWidth="12.5" markerHeight="12.5" refX="10" refY="6.25" orient="auto-start-reverse">
-        <path d="M 0,0 L 10,6.25 L 0,12.5 M 0,6.25 L 10,6.25" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
+      <marker id="many-selected" markerWidth="12.5" markerHeight="12.5" refX="10" refY="6.25" orient="auto">
+        <path d="M 0,0 L 10,6.25 M 0,12.5 L 10,6.25 M 0,6.25 L 10,6.25" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
       </marker>
     </defs>
   </svg>
