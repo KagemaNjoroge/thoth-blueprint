@@ -38,17 +38,17 @@ const tableColors = [
 const MarkerDefinitions = () => (
   <svg>
     <defs>
-      <marker id="one" markerWidth="12.5" markerHeight="12.5" refX="2" refY="5" orient="auto">
+      <marker id="one" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
         <path d="M 0 0 L 0 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
       </marker>
-      <marker id="many" markerWidth="12" markerHeight="20" refX="10" refY="10" orient="auto">
-        <path d="M 0,0 L 10,10 L 0,20 M 0,10 L 10,10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
+      <marker id="many" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+        <path d="M 0 1 L 10 6 L 0 11 M 0 6 L 10 6" stroke="#a1a1aa" strokeWidth="2" fill="none" />
       </marker>
-      <marker id="one-selected" markerWidth="12.5" markerHeight="12.5" refX="2" refY="5" orient="auto">
+      <marker id="one-selected" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
         <path d="M 0 0 L 0 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
       </marker>
-      <marker id="many-selected" markerWidth="12" markerHeight="20" refX="10" refY="10" orient="auto">
-        <path d="M 0,0 L 10,10 L 0,20 M 0,10 L 10,10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
+      <marker id="many-selected" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+        <path d="M 0 1 L 10 6 L 0 11 M 0 6 L 10 6" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
       </marker>
     </defs>
   </svg>
