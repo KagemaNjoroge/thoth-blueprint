@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Database, Table, GitCommitHorizontal, Pencil, Trash2 } from "lucide-react";
+import { PlusCircle, Database, Table, GitCommitHorizontal, Pencil, Trash2, Import } from "lucide-react";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { AppIntro } from "./AppIntro";
+import { ImportDialog } from "./ImportDialog";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;
@@ -34,6 +35,7 @@ interface DiagramGalleryProps {
 export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
   const diagrams = useLiveQuery(() => db.diagrams.orderBy("updatedAt").reverse().toArray());
 
@@ -42,6 +44,16 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
       name,
       dbType,
       data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const id = await db.diagrams.add(newDiagram);
+    setSelectedDiagramId(id);
+  };
+
+  const handleImportDiagram = async (diagramData: { name: string; dbType: DatabaseType; data: Diagram['data'] }) => {
+    const newDiagram = {
+      ...diagramData,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -75,10 +87,16 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         </div>
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight">My Diagrams</h1>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Create New Diagram
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+              <Import className="h-4 w-4 mr-2" />
+              Import Diagram
+            </Button>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create New Diagram
+            </Button>
+          </div>
         </div>
 
         {diagrams && diagrams.length > 0 ? (
@@ -153,6 +171,11 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onCreateDiagram={handleCreateDiagram}
+      />
+      <ImportDialog
+        isOpen={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportDiagram={handleImportDiagram}
       />
       <RenameDiagramDialog
         isOpen={isRenameDialogOpen}
