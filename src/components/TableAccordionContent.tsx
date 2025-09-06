@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Node } from "reactflow";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X, Edit } from "lucide-react";
+import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X, Edit, ChevronsUpDown } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Checkbox } from "./ui/checkbox";
 import { Textarea } from "./ui/textarea";
@@ -16,7 +15,7 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "./ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +55,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
         transform: CSS.Transform.toString(transform),
         transition,
     };
+    const [isTypePopoverOpen, setIsTypePopoverOpen] = useState(false);
 
     return (
         <div ref={setNodeRef} style={style} className="space-y-2 md:space-y-0 md:flex md:items-center md:gap-2 p-2 border rounded-md bg-background">
@@ -71,14 +71,47 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                 />
             </div>
             <div className="flex items-center gap-1 justify-end md:justify-start">
-                <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)} disabled={isLocked}>
-                    <SelectTrigger className="h-8 w-[120px]">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                <Popover open={isTypePopoverOpen} onOpenChange={setIsTypePopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            className="h-8 w-[120px] justify-between font-normal"
+                            disabled={isLocked}
+                        >
+                            <span className="truncate">{col.type}</span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                            <CommandInput placeholder="Search type..." />
+                            <CommandList>
+                                <CommandEmpty>No type found.</CommandEmpty>
+                                <CommandGroup>
+                                    {availableTypes.map((type) => (
+                                        <CommandItem
+                                            key={type}
+                                            value={type}
+                                            onSelect={(currentValue) => {
+                                                handleColumnUpdate(index, 'type', currentValue.toUpperCase());
+                                                setIsTypePopoverOpen(false);
+                                            }}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    col.type.toLowerCase() === type.toLowerCase() ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            {type}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)} disabled={isLocked}>
                     <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
                 </Button>
