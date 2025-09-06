@@ -194,7 +194,7 @@ export default function EditorSidebar({
                     </TabsTrigger>
                     <TabsTrigger value="relationships">
                         <GitCommitHorizontal className="h-4 w-4 mr-2" />
-                        <span className="hidden lg:inline">Relationships</span>
+                        <span className="hidden lg:inline">Relations</span>
                         <span className="lg:hidden">Rels</span>
                         <span>&nbsp;({edges.length})</span>
                     </TabsTrigger>
