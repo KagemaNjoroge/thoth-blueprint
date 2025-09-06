@@ -24,10 +24,10 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
     const edges: Edge[] = [];
     const tableMap = new Map<string, { node: Node, columns: Map<string, any> }>();
 
-    const schema = dbmlDatabase.schemas[0];
-    if (!schema) {
-        throw new Error("No schema found in the imported file.");
+    if (!dbmlDatabase || !dbmlDatabase.schemas || dbmlDatabase.schemas.length === 0) {
+        throw new Error("Could not find a valid schema in the imported file. Please check the file content.");
     }
+    const schema = dbmlDatabase.schemas[0];
 
     // First pass: create nodes and map tables/columns
     schema.tables.forEach((table, index) => {
