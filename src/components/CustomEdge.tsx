@@ -106,7 +106,7 @@ export default function CustomEdge({
         style={{
           stroke: isHighlighted ? '#60a5fa' : '#a1a1aa',
           strokeWidth: isHighlighted ? 2.5 : 2,
-          strokeDasharray: isHighlighted ? '5 5' : '1 8',
+          strokeDasharray: isHighlighted ? '5 5' : 'none',
           transition: 'all 0.2s ease-in-out',
           ...style,
         }}
