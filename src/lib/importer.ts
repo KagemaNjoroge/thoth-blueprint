@@ -24,14 +24,19 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
     const edges: Edge[] = [];
     const tableMap = new Map<string, { node: Node, columns: Map<string, any> }>();
 
-    if (!dbmlDatabase || !dbmlDatabase.schemas || dbmlDatabase.schemas.length === 0) {
-        throw new Error("Could not find a valid schema in the imported file. Please check the file content.");
+    // The library might return tables in a top-level array for schemas without an explicit name.
+    // Let's be defensive and check both the new `schemas` structure and the old top-level `tables`.
+    const schema = dbmlDatabase.schemas?.[0];
+    const tables = schema?.tables || (dbmlDatabase as any).tables || [];
+    const refs = schema?.refs || (dbmlDatabase as any).refs || [];
+
+    if (tables.length === 0) {
+        throw new Error("Could not find any tables in the imported file. Please check the file content.");
     }
-    const schema = dbmlDatabase.schemas[0];
 
     // First pass: create nodes and map tables/columns
-    schema.tables.forEach((table, index) => {
-        const columns = (table.fields || []).map(field => {
+    tables.forEach((table: any, index: number) => {
+        const columns = (table.fields || []).map((field: any) => {
             const columnSettings = field.settings || {};
             const col: any = {
                 id: `col_${table.name}_${field.name}`,
@@ -50,8 +55,8 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
             return col;
         });
 
-        const indices = (table.indexes || []).map((index, idx) => {
-            const indexColumns = index.columns.map(c => {
+        const indices = (table.indexes || []).map((index: any, idx: number) => {
+            const indexColumns = index.columns.map((c: any) => {
                 if (typeof c.value === 'string') {
                     const column = columns.find(col => col.name === c.value);
                     return column?.id;
@@ -87,7 +92,7 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
     });
 
     // Second pass: create edges
-    schema.refs.forEach((ref, index) => {
+    refs.forEach((ref: any, index: number) => {
         const sourceEndpoint = ref.endpoints[0];
         const targetEndpoint = ref.endpoints[1];
 
