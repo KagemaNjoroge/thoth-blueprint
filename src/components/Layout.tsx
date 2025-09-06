@@ -21,6 +21,7 @@ export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
@@ -64,12 +65,15 @@ export default function Layout() {
     if (nodes.length === 1 && edges.length === 0) {
       setActiveItemId(nodes[0].id);
       setSelectedNodeId(nodes[0].id);
+      setSelectedEdgeId(null);
     } else if (edges.length === 1 && nodes.length === 0) {
       setActiveItemId(edges[0].id);
       setSelectedNodeId(null);
+      setSelectedEdgeId(edges[0].id);
     } else {
       setActiveItemId(null);
       setSelectedNodeId(null);
+      setSelectedEdgeId(null);
     }
   }, []);
 
@@ -203,6 +207,7 @@ export default function Layout() {
                 onSelectionChange={handleSelectionChange}
                 setRfInstance={setRfInstance}
                 selectedNodeId={selectedNodeId}
+                selectedEdgeId={selectedEdgeId}
               />
             ) : (
               <DiagramGallery setSelectedDiagramId={setSelectedDiagramId} />

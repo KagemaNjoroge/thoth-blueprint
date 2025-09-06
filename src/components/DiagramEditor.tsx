@@ -28,6 +28,7 @@ interface DiagramEditorProps {
   onSelectionChange: (params: OnSelectionChangeParams) => void;
   setRfInstance: (instance: ReactFlowInstance | null) => void;
   selectedNodeId: string | null;
+  selectedEdgeId: string | null;
 }
 
 const tableColors = [
@@ -35,23 +36,36 @@ const tableColors = [
   '#2DD4BF', '#F472B6', '#FB923C', '#818CF8', '#4ADE80',
 ];
 
-const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, selectedNodeId }: DiagramEditorProps, ref) => {
+const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, selectedNodeId, selectedEdgeId }: DiagramEditorProps, ref) => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
   const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
   const isLocked = diagram.data.isLocked ?? false;
 
+  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setHoveredEdgeId(edge.id);
+  }, []);
+
+  const onEdgeMouseLeave = useCallback(() => {
+    setHoveredEdgeId(null);
+  }, []);
+
   const processedEdges = useMemo(() => edges.map(edge => ({
     ...edge,
     data: {
         ...edge.data,
-        isHighlighted: edge.source === selectedNodeId || edge.target === selectedNodeId,
+        isHighlighted: 
+          edge.source === selectedNodeId || 
+          edge.target === selectedNodeId ||
+          edge.id === selectedEdgeId ||
+          edge.id === hoveredEdgeId,
     }
-  })), [edges, selectedNodeId]);
+  })), [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
 
   const handleLockChange = useCallback(() => {
     if (diagram && diagram.id) {
@@ -228,6 +242,8 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onInit={onInit}
+        onEdgeMouseEnter={onEdgeMouseEnter}
+        onEdgeMouseLeave={onEdgeMouseLeave}
         nodesDraggable={!isLocked}
         nodesConnectable={!isLocked}
         elementsSelectable={true}
