@@ -88,7 +88,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     onSelectionChange({ nodes: [], edges: [] });
   }, [diagram.id, onSelectionChange]);
 
-  const saveDiagram = useCallback(async ()_ => {
+  const saveDiagram = useCallback(async () => {
     if (diagram && rfInstance) {
       await db.diagrams.update(diagram.id!, {
         data: { ...diagram.data, nodes: allNodes, edges, viewport: rfInstance.getViewport() },
