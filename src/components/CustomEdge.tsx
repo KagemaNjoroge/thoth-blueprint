@@ -33,6 +33,7 @@ export default function CustomEdge({
   sourcePosition,
   targetPosition,
   data,
+  style,
 }: EdgeProps) {
   const [edgePath] = getSmoothStepPath({
     sourceX,
@@ -90,7 +91,15 @@ export default function CustomEdge({
 
   return (
     <>
-      <BaseEdge id={id} path={edgePath} />
+      <BaseEdge 
+        id={id} 
+        path={edgePath} 
+        style={{
+          stroke: '#b1b1b7',
+          strokeWidth: 1.5,
+          ...style,
+        }}
+      />
       <EdgeLabelRenderer>
         {sourceLabel && (
           <EdgeLabel

@@ -8,44 +8,10 @@ import { cn } from '@/lib/utils';
 import { exportToDbml, exportToSql, exportToJson } from '@/lib/dbml';
 import { toSvg } from 'html-to-image';
 import { saveAs } from 'file-saver';
-import { ReactFlowInstance, Node } from 'reactflow';
+import { ReactFlowInstance, getNodesBounds, getViewportForBounds } from 'reactflow';
 import { showError } from '@/utils/toast';
 
 type ExportFormat = 'sql' | 'dbml' | 'json' | 'svg';
-
-// Helper function based on React Flow v12's getRectOfNodes
-function getRectOfNodes(nodes: Node[]) {
-  if (nodes.length === 0) {
-    return { x: 0, y: 0, width: 0, height: 0 };
-  }
-
-  const rect = nodes.reduce(
-    (acc, node) => {
-      const nodeWidth = node.width || 0;
-      const nodeHeight = node.height || 0;
-
-      return {
-        minX: Math.min(acc.minX, node.position.x),
-        minY: Math.min(acc.minY, node.position.y),
-        maxX: Math.max(acc.maxX, node.position.x + nodeWidth),
-        maxY: Math.max(acc.maxY, node.position.y + nodeHeight),
-      };
-    },
-    {
-      minX: Infinity,
-      minY: Infinity,
-      maxX: -Infinity,
-      maxY: -Infinity,
-    }
-  );
-
-  return {
-    x: rect.minX,
-    y: rect.minY,
-    width: rect.maxX - rect.minX,
-    height: rect.maxY - rect.minY,
-  };
-}
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -82,17 +48,22 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
                         showError("Cannot export an empty diagram.");
                         return;
                     }
-                    const nodesBounds = getRectOfNodes(nodes);
-                    const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-                    if (!viewport) throw new Error("React Flow viewport not found.");
+                    const nodesBounds = getNodesBounds(nodes);
+                    const imageWidth = nodesBounds.width + PADDING * 2;
+                    const imageHeight = nodesBounds.height + PADDING * 2;
+
+                    const viewport = getViewportForBounds(nodesBounds, imageWidth, imageHeight, 0.5, 2, PADDING);
+
+                    const viewportEl = document.querySelector('.react-flow__viewport') as HTMLElement;
+                    if (!viewportEl) throw new Error("React Flow viewport not found.");
                     
-                    const dataUrl = await toSvg(viewport, {
-                        width: nodesBounds.width + PADDING * 2,
-                        height: nodesBounds.height + PADDING * 2,
+                    const dataUrl = await toSvg(viewportEl, {
+                        width: imageWidth,
+                        height: imageHeight,
                         style: {
-                            width: `${nodesBounds.width}px`,
-                            height: `${nodesBounds.height}px`,
-                            transform: `translate(${-nodesBounds.x + PADDING}px, ${-nodesBounds.y + PADDING}px)`,
+                            width: `${imageWidth}px`,
+                            height: `${imageHeight}px`,
+                            transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
                         },
                         backgroundColor: 'white',
                     });
