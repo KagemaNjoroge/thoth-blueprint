@@ -128,7 +128,6 @@ export default function Layout() {
       activeItemId={activeItemId}
       onActiveItemIdChange={(id) => {
         setActiveItemId(id);
-        if (id) setIsSidebarOpen(false);
       }}
       onNodeUpdate={handleNodeUpdate}
       onNodeDelete={handleNodeDelete}
