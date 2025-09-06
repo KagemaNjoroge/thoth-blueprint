@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,10 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatabaseType, Diagram } from "@/lib/db";
 import { showError } from "@/utils/toast";
-import { importFromDbml, importFromJson } from "@/lib/importer";
+import { importFromJson } from "@/lib/importer";
 import { Upload } from "lucide-react";
 
 const formSchema = z.object({
@@ -40,8 +39,6 @@ const formSchema = z.object({
   content: z.string().min(1, "Content to import is required"),
 });
 
-type ImportFormat = "dbml" | "json";
-
 interface ImportDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -49,7 +46,6 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDialogProps) {
-  const [importFormat, setImportFormat] = useState<ImportFormat>("dbml");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,37 +74,15 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      let diagramData: Diagram['data'];
+      const diagramData = importFromJson(values.content);
       const dbType = values.dbType as DatabaseType;
-
-      switch (importFormat) {
-        case "dbml":
-          diagramData = await importFromDbml(values.content);
-          break;
-        case "json":
-          diagramData = importFromJson(values.content);
-          break;
-        default:
-          throw new Error("Invalid import format");
-      }
       
       onImportDiagram({ name: values.name, dbType, data: diagramData });
       onOpenChange(false);
       form.reset();
     } catch (error) {
       console.error("Import failed:", error);
-      let errorMessage: string;
-      if (error && typeof error === 'object' && 'diags' in error && Array.isArray((error as any).diags) && (error as any).diags.length > 0) {
-        const diag = (error as any).diags[0];
-        errorMessage = `DBML Syntax Error: ${diag.message}`;
-        if (diag.location) {
-          errorMessage += ` (Line: ${diag.location.start.line}, Column: ${diag.location.start.column})`;
-        }
-      } else if (error instanceof Error) {
-        errorMessage = `Import failed: ${error.message}`;
-      } else {
-        errorMessage = "An unknown error occurred during import.";
-      }
+      const errorMessage = error instanceof Error ? `Import failed: ${error.message}` : "An unknown error occurred during import.";
       showError(errorMessage);
     }
   }
@@ -117,9 +91,9 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Import Diagram</DialogTitle>
+          <DialogTitle>Import Diagram from JSON</DialogTitle>
           <DialogDescription>
-            Import a diagram from DBML or a JSON export.
+            Import a diagram from a JSON file previously exported from this application.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -137,12 +111,6 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                 </FormItem>
               )}
             />
-            <Tabs value={importFormat} onValueChange={(value) => setImportFormat(value as ImportFormat)}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="dbml">DBML</TabsTrigger>
-                <TabsTrigger value="json">JSON</TabsTrigger>
-              </TabsList>
-            </Tabs>
             <FormField
               control={form.control}
               name="dbType"
@@ -170,7 +138,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
               render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
-                    <FormLabel>Content</FormLabel>
+                    <FormLabel>JSON Content</FormLabel>
                     <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                       <Upload className="h-4 w-4 mr-2" />
                       Upload File
@@ -180,12 +148,12 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                       ref={fileInputRef}
                       onChange={handleFileChange}
                       className="hidden"
-                      accept=".dbml,.json"
+                      accept=".json"
                     />
                   </div>
                   <FormControl>
                     <Textarea
-                      placeholder={`Paste your ${importFormat.toUpperCase()} content here or upload a file...`}
+                      placeholder={`Paste your JSON content here or upload a file...`}
                       className="min-h-[200px] font-mono"
                       {...field}
                     />
