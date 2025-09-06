@@ -54,7 +54,7 @@ export default function CustomEdge({
   }, [relationship, isHighlighted]);
 
   return (
-    <g className={isHighlighted ? 'animated-edge' : ''}>
+    <>
       <BaseEdge 
         path={edgePath} 
         markerStart={markerStartUrl}
@@ -66,6 +66,17 @@ export default function CustomEdge({
           ...style,
         }}
       />
-    </g>
+      {isHighlighted && (
+        <BaseEdge
+          path={edgePath}
+          style={{
+            stroke: '#FFFFFF',
+            strokeWidth: 2,
+            strokeDasharray: '10, 20',
+            animation: 'flow 2s linear infinite',
+          }}
+        />
+      )}
+    </>
   );
 }
