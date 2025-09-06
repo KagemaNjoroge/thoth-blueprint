@@ -97,7 +97,19 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
       form.reset();
     } catch (error) {
       console.error("Import failed:", error);
-      showError(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+      let errorMessage: string;
+      if (error && typeof error === 'object' && 'diags' in error && Array.isArray((error as any).diags) && (error as any).diags.length > 0) {
+        const diag = (error as any).diags[0];
+        errorMessage = `DBML Syntax Error: ${diag.message}`;
+        if (diag.location) {
+          errorMessage += ` (Line: ${diag.location.start.line}, Column: ${diag.location.start.column})`;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = `Import failed: ${error.message}`;
+      } else {
+        errorMessage = "An unknown error occurred during import.";
+      }
+      showError(errorMessage);
     }
   }
 
