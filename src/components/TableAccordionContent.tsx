@@ -31,6 +31,9 @@ interface Column {
     isUnsigned?: boolean;
     comment?: string;
     enumValues?: string;
+    length?: number;
+    precision?: number;
+    scale?: number;
 }
 
 interface Index {
@@ -56,6 +59,10 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
         transition,
     };
     const [isTypePopoverOpen, setIsTypePopoverOpen] = useState(false);
+
+    const upperType = col.type.toUpperCase();
+    const needsLength = ['VARCHAR', 'CHAR', 'BINARY', 'VARBINARY', 'BIT'].includes(upperType);
+    const needsPrecisionScale = ['DECIMAL', 'NUMERIC'].includes(upperType);
 
     return (
         <div ref={setNodeRef} style={style} className="space-y-2 md:space-y-0 md:flex md:items-center md:gap-2 p-2 border rounded-md bg-background">
@@ -112,6 +119,39 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                         </Command>
                     </PopoverContent>
                 </Popover>
+
+                {needsLength && (
+                    <Input
+                        type="number"
+                        placeholder="Len"
+                        value={col.length || ''}
+                        onChange={(e) => handleColumnUpdate(index, 'length', e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                        className="h-8 w-16"
+                        disabled={isLocked}
+                    />
+                )}
+
+                {needsPrecisionScale && (
+                    <>
+                        <Input
+                            type="number"
+                            placeholder="M"
+                            value={col.precision || ''}
+                            onChange={(e) => handleColumnUpdate(index, 'precision', e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                            className="h-8 w-12"
+                            disabled={isLocked}
+                        />
+                        <Input
+                            type="number"
+                            placeholder="D"
+                            value={col.scale || ''}
+                            onChange={(e) => handleColumnUpdate(index, 'scale', e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                            className="h-8 w-12"
+                            disabled={isLocked}
+                        />
+                    </>
+                )}
+
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)} disabled={isLocked}>
                     <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
                 </Button>
@@ -128,9 +168,9 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                             <Label htmlFor={`default-${index}`}>Default Value</Label>
                             <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} disabled={isLocked} />
                         </div>
-                        {col.type.toUpperCase() === 'ENUM' && (
+                        {['ENUM', 'SET'].includes(col.type.toUpperCase()) && (
                             <div className="space-y-1">
-                                <Label htmlFor={`enum-${index}`}>ENUM Values</Label>
+                                <Label htmlFor={`enum-${index}`}>{col.type.toUpperCase()} Values</Label>
                                 <Input 
                                     id={`enum-${index}`} 
                                     placeholder="Use , for batch input" 

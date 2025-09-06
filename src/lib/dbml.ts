@@ -13,6 +13,9 @@ interface Column {
     isAutoIncrement?: boolean;
     comment?: string;
     enumValues?: string;
+    length?: number;
+    precision?: number;
+    scale?: number;
 }
 
 const diagramToDbml = (diagram: Diagram): string => {
@@ -48,19 +51,35 @@ const diagramToDbml = (diagram: Diagram): string => {
         }
 
         node.data.columns.forEach((col: Column) => {
-            let columnType = enumTypeMap.get(`${node.id}-${col.id}`) || col.type;
-            
-            // Add default lengths for certain MySQL types that require it
-            if (diagram.dbType === 'mysql') {
-                const upperType = columnType.toUpperCase();
-                if (upperType === 'VARCHAR') {
-                    columnType = 'VARCHAR(255)';
-                } else if (upperType === 'CHAR') {
-                    columnType = 'CHAR(255)';
+            let finalColumnType = col.type;
+            const upperType = col.type.toUpperCase();
+
+            if (enumTypeMap.has(`${node.id}-${col.id}`)) {
+                finalColumnType = enumTypeMap.get(`${node.id}-${col.id}`)!;
+            } else if (upperType === 'SET' && col.enumValues && diagram.dbType === 'mysql') {
+                const values = col.enumValues.split(',').map(v => `'${v.trim()}'`).join(', ');
+                finalColumnType = `SET(${values})`;
+            } else if (['VARCHAR', 'CHAR', 'BINARY', 'VARBINARY', 'BIT'].includes(upperType)) {
+                let defaultLength = 255;
+                if (upperType === 'CHAR' || upperType === 'BIT') defaultLength = 1;
+                
+                const length = col.length || (diagram.dbType === 'mysql' ? defaultLength : null);
+                if (length) {
+                    finalColumnType = `${col.type}(${length})`;
+                }
+            } else if (['DECIMAL', 'NUMERIC'].includes(upperType)) {
+                const precision = col.precision;
+                const scale = col.scale;
+                if (precision !== undefined && scale !== undefined) {
+                    finalColumnType = `${col.type}(${precision}, ${scale})`;
+                } else if (precision !== undefined) {
+                    finalColumnType = `${col.type}(${precision})`;
+                } else if (diagram.dbType === 'mysql') {
+                    finalColumnType = `${col.type}(10, 2)`;
                 }
             }
 
-            tableDbml += `  ${col.name} ${columnType}`;
+            tableDbml += `  ${col.name} ${finalColumnType}`;
             
             const settings = [];
             if (col.pk) settings.push('pk');
