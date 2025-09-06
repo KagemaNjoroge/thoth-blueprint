@@ -129,18 +129,30 @@ export async function importFromSql(sql: string, dbType: DatabaseType): Promise<
 
 export async function importFromDbml(dbml: string): Promise<Diagram['data']> {
     try {
+        // First attempt: parse the original content
+        const dbmlDatabase = await importer.import(dbml, 'dbml');
+        return transformDbmlDatabase(dbmlDatabase);
+    } catch (initialError) {
+        console.warn("Initial DBML parsing failed. Attempting auto-correction.", initialError);
+
+        // Apply all known corrections
         // Correction 1: Replace `column: type` with `column type`
         let correctedDbml = dbml.replace(/^(\s*['"]?\w+['"]?): ([\w\(\), ]+)/gm, '$1 $2');
         
         // Correction 2: Remove trailing commas before a closing brace `}`
         correctedDbml = correctedDbml.replace(/,(\s*})/g, '$1}');
-        
-        const dbmlDatabase = await importer.import(correctedDbml, 'dbml');
-        return transformDbmlDatabase(dbmlDatabase);
-    } catch (error) {
-        // If parsing still fails, the detailed error will be thrown and caught by the dialog.
-        console.error("DBML parsing failed after corrections:", error);
-        throw error;
+
+        try {
+            // Second attempt: parse the corrected content
+            const dbmlDatabase = await importer.import(correctedDbml, 'dbml');
+            console.log("DBML auto-correction successful.");
+            return transformDbmlDatabase(dbmlDatabase);
+        } catch (correctedError) {
+            console.error("DBML parsing failed even after auto-correction.", correctedError);
+            // If the second attempt also fails, throw the original error as it's likely more relevant
+            // to the user's original file content.
+            throw initialError; 
+        }
     }
 }
 
