@@ -1,7 +1,7 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, BrainCircuit } from "lucide-react";
+import { Menu } from "lucide-react";
 import DiagramEditor from "./DiagramEditor";
 import EditorSidebar from "./EditorSidebar";
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -150,17 +150,7 @@ export default function Layout() {
       isLocked={isLocked}
       onSetSidebarState={setSidebarState}
     />
-  ) : (
-    <div className="p-4 h-full flex items-center justify-center text-center bg-card">
-      <div className="flex flex-col items-center gap-4">
-        <BrainCircuit className="h-12 w-12 text-primary" />
-        <h3 className="text-lg font-semibold">Database Designer</h3>
-        <p className="text-muted-foreground">
-          Select a diagram from the gallery to start editing, or create a new one.
-        </p>
-      </div>
-    </div>
-  );
+  ) : null;
 
   return (
     <>
@@ -173,7 +163,7 @@ export default function Layout() {
       </div>
 
       <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
-        {sidebarState === 'docked' && (
+        {diagram && sidebarState === 'docked' && (
           <>
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="hidden lg:block">
               {sidebarContent}
@@ -181,7 +171,7 @@ export default function Layout() {
             <ResizableHandle withHandle className="hidden lg:flex" />
           </>
         )}
-        <ResizablePanel defaultSize={sidebarState === 'docked' ? 75 : 100}>
+        <ResizablePanel defaultSize={diagram && sidebarState === 'docked' ? 75 : 100}>
           <div className="flex h-full items-center justify-center relative">
             {diagram && (
               <div className="absolute top-4 left-4 z-10 lg:hidden">
