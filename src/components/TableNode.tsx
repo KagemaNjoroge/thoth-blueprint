@@ -148,14 +148,14 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
                   </div>
                   <span className="font-mono text-muted-foreground">{col.type}</span>
                   <Handle
-                    type="source"
+                    type="target"
                     position={Position.Right}
                     id={col.id}
                     style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
                     className="!w-2.5 !h-2.5"
                   />
                   <Handle
-                    type="target"
+                    type="source"
                     position={Position.Right}
                     id={col.id}
                     style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
