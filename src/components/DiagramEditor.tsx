@@ -92,7 +92,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     if (diagram && rfInstance) {
       await db.diagrams.update(diagram.id!, {
         data: { ...diagram.data, nodes: allNodes, edges, viewport: rfInstance.getViewport() },
-        updatedAt: new Date(),
+        updatedAt: new IDate(),
       });
     }
   }, [diagram, allNodes, edges, rfInstance]);
@@ -221,10 +221,10 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
         onInit={onInit}
         nodesDraggable={!isLocked}
         nodesConnectable={!isLocked}
-        elementsSelectable={!isLocked}
-        panOnDrag={!isLocked}
-        zoomOnScroll={!isLocked}
-        zoomOnDoubleClick={!isLocked}
+        elementsSelectable={true}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnDoubleClick={true}
         deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
         fitView
       >
