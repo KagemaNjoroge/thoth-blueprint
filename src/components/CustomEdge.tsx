@@ -25,29 +25,29 @@ export default function CustomEdge({
   const { isHighlighted, relationship } = data;
 
   const { markerStartUrl, markerEndUrl } = useMemo(() => {
-    const markerUrl = (type: 'one' | 'many') => `url(#${type}${isHighlighted ? '-selected' : ''})`;
+    const markerUrl = `url(#many${isHighlighted ? '-selected' : ''})`;
     let startUrl, endUrl;
 
     switch (relationship) {
       case 'one-to-one':
-        startUrl = markerUrl('one');
-        endUrl = markerUrl('one');
+        startUrl = undefined;
+        endUrl = undefined;
         break;
       case 'one-to-many':
-        startUrl = markerUrl('one');
-        endUrl = markerUrl('many');
+        startUrl = undefined;
+        endUrl = markerUrl;
         break;
       case 'many-to-one':
-        startUrl = markerUrl('many');
-        endUrl = markerUrl('one');
+        startUrl = markerUrl;
+        endUrl = undefined;
         break;
       case 'many-to-many':
-        startUrl = markerUrl('many');
-        endUrl = markerUrl('many');
+        startUrl = markerUrl;
+        endUrl = markerUrl;
         break;
       default: // Default to one-to-many
-        startUrl = markerUrl('one');
-        endUrl = markerUrl('many');
+        startUrl = undefined;
+        endUrl = markerUrl;
         break;
     }
     return { markerStartUrl: startUrl, markerEndUrl: endUrl };
