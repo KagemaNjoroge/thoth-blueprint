@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatabaseType, Diagram } from "@/lib/db";
 import { showError } from "@/utils/toast";
 import { importFromSql, importFromDbml, importFromJson } from "@/lib/importer";
+import { Upload } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Diagram name is required"),
@@ -49,6 +50,7 @@ interface ImportDialogProps {
 
 export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDialogProps) {
   const [importFormat, setImportFormat] = useState<ImportFormat>("sql");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,6 +60,21 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
       content: "",
     },
   });
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        form.setValue("content", content);
+      };
+      reader.readAsText(file);
+    }
+    if (event.target) {
+      event.target.value = "";
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -146,10 +163,23 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
               name="content"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Content</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Content</FormLabel>
+                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload File
+                    </Button>
+                    <Input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      accept=".sql,.dbml,.json"
+                    />
+                  </div>
                   <FormControl>
                     <Textarea
-                      placeholder={`Paste your ${importFormat.toUpperCase()} content here...`}
+                      placeholder={`Paste your ${importFormat.toUpperCase()} content here or upload a file...`}
                       className="min-h-[200px] font-mono"
                       {...field}
                     />

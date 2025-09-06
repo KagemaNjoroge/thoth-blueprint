@@ -33,16 +33,37 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
     schema.tables.forEach((table, index) => {
         const columns = (table.fields || []).map(field => {
             const columnSettings = field.settings || {};
-            return {
+            const col: any = {
                 id: `col_${table.name}_${field.name}`,
                 name: field.name,
-                type: field.type.type_name,
+                type: field.type.args ? `${field.type.type_name}(${field.type.args})` : field.type.type_name,
                 pk: field.pk,
-                nullable: field.not_null === false,
+                nullable: !field.not_null,
                 defaultValue: field.dbdefault?.value,
                 isUnique: !!columnSettings.unique,
                 isAutoIncrement: !!columnSettings.increment,
                 comment: field.note?.value,
+            };
+            if (field.type.type_name.toUpperCase() === 'ENUM' && field.type.args) {
+                col.enumValues = field.type.args.replace(/'/g, '').replace(/ /g, '');
+            }
+            return col;
+        });
+
+        const indices = (table.indexes || []).map((index, idx) => {
+            const indexColumns = index.columns.map(c => {
+                if (typeof c.value === 'string') {
+                    const column = columns.find(col => col.name === c.value);
+                    return column?.id;
+                }
+                return null;
+            }).filter((id): id is string => !!id);
+        
+            return {
+                id: `idx_${table.name}_${idx}`,
+                name: index.name || `${table.name}_index_${idx}`,
+                columns: indexColumns,
+                isUnique: !!index.unique,
             };
         });
 
@@ -53,6 +74,7 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
             data: {
                 label: table.name,
                 columns: columns,
+                indices: indices,
                 comment: table.note?.value,
                 color: tableColors[index % tableColors.length],
                 order: index,
