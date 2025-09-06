@@ -22,6 +22,7 @@ export default function Layout() {
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarState, setSidebarState] = useState<'docked' | 'floating' | 'hidden'>('docked');
 
   const editorRef = useRef<{ 
     updateNode: (node: Node) => void; 
@@ -147,6 +148,8 @@ export default function Layout() {
       onUndoDelete={handleUndoDelete}
       onBatchNodeUpdate={handleBatchNodeUpdate}
       isLocked={isLocked}
+      sidebarState={sidebarState}
+      onSetSidebarState={setSidebarState}
     />
   ) : (
     <div className="p-4 h-full flex items-center justify-center text-center bg-card">
@@ -171,11 +174,15 @@ export default function Layout() {
       </div>
 
       <ResizablePanelGroup direction="horizontal" className="min-h-screen w-full">
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="hidden lg:block">
-          {sidebarContent}
-        </ResizablePanel>
-        <ResizableHandle withHandle className="hidden lg:flex" />
-        <ResizablePanel defaultSize={75}>
+        {sidebarState === 'docked' && (
+          <>
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="hidden lg:block">
+              {sidebarContent}
+            </ResizablePanel>
+            <ResizableHandle withHandle className="hidden lg:flex" />
+          </>
+        )}
+        <ResizablePanel defaultSize={sidebarState === 'docked' ? 75 : 100}>
           <div className="flex h-full items-center justify-center relative">
             {diagram && (
               <div className="absolute top-4 left-4 z-10 lg:hidden">
@@ -185,6 +192,20 @@ export default function Layout() {
               </div>
             )}
             
+            {diagram && sidebarState === 'hidden' && (
+              <div className="absolute top-4 left-4 z-10 hidden lg:block">
+                <Button size="icon" variant="outline" onClick={() => setSidebarState('docked')}>
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+
+            {sidebarState === 'floating' && (
+              <div className="absolute top-4 left-4 z-20 hidden lg:block h-[calc(100%-2rem)] w-[350px] border rounded-lg shadow-lg overflow-hidden">
+                {sidebarContent}
+              </div>
+            )}
+
             {selectedDiagramId && diagram ? (
               <DiagramEditor 
                 ref={editorRef}

@@ -36,6 +36,8 @@ interface EditorSidebarProps {
   onUndoDelete: () => void;
   onBatchNodeUpdate: (nodes: Node[]) => void;
   isLocked: boolean;
+  sidebarState: 'docked' | 'floating' | 'hidden';
+  onSetSidebarState: (state: 'docked' | 'floating' | 'hidden') => void;
 }
 
 function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
@@ -66,6 +68,8 @@ export default function EditorSidebar({
   onUndoDelete,
   onBatchNodeUpdate,
   isLocked,
+  sidebarState,
+  onSetSidebarState,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
@@ -139,6 +143,14 @@ export default function EditorSidebar({
     }
   };
 
+  const handleToggleFloating = () => {
+    onSetSidebarState(sidebarState === 'docked' ? 'floating' : 'docked');
+  };
+
+  const handleHideSidebar = () => {
+    onSetSidebarState('hidden');
+  };
+
   const inspectingEdge = edges.find(e => e.id === activeItemId);
 
   return (
@@ -167,6 +179,17 @@ export default function EditorSidebar({
             <MenubarContent>
               <MenubarItem onClick={onUndoDelete} disabled={isLocked}>
                 Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
+              </MenubarItem>
+            </MenubarContent>
+          </MenubarMenu>
+          <MenubarMenu>
+            <MenubarTrigger>View</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem onClick={handleToggleFloating}>
+                Toggle Floating Sidebar
+              </MenubarItem>
+              <MenubarItem onClick={handleHideSidebar}>
+                Hide Sidebar
               </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
