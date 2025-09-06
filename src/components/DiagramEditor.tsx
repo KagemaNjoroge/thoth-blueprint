@@ -15,6 +15,7 @@ import ReactFlow, {
   ReactFlowInstance,
   NodeProps,
   ControlButton,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { db, Diagram } from '@/lib/db';
@@ -55,17 +56,39 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
     setHoveredEdgeId(null);
   }, []);
 
-  const processedEdges = useMemo(() => edges.map(edge => ({
-    ...edge,
-    data: {
-        ...edge.data,
-        isHighlighted: 
-          edge.source === selectedNodeId || 
-          edge.target === selectedNodeId ||
-          edge.id === selectedEdgeId ||
-          edge.id === hoveredEdgeId,
-    }
-  })), [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
+  const processedEdges = useMemo(() => {
+    return edges.map(edge => {
+      const sourceNode = allNodes.find(n => n.id === edge.source);
+      const targetNode = allNodes.find(n => n.id === edge.target);
+
+      let sourcePosition = Position.Right;
+      let targetPosition = Position.Left;
+
+      if (sourceNode && targetNode) {
+        const sourceNodeCenter = sourceNode.position.x + (sourceNode.width || 256) / 2;
+        const targetNodeCenter = targetNode.position.x + (targetNode.width || 256) / 2;
+
+        if (sourceNodeCenter > targetNodeCenter) {
+          sourcePosition = Position.Left;
+          targetPosition = Position.Right;
+        }
+      }
+
+      return {
+        ...edge,
+        sourcePosition,
+        targetPosition,
+        data: {
+            ...edge.data,
+            isHighlighted: 
+              edge.source === selectedNodeId || 
+              edge.target === selectedNodeId ||
+              edge.id === selectedEdgeId ||
+              edge.id === hoveredEdgeId,
+        }
+      };
+    });
+  }, [edges, allNodes, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
 
   const handleLockChange = useCallback(() => {
     if (diagram && diagram.id) {
