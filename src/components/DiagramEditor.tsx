@@ -88,7 +88,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     onSelectionChange({ nodes: [], edges: [] });
   }, [diagram.id, onSelectionChange]);
 
-  const saveDiagram = useCallback(async () => {
+  const saveDiagram = useCallback(async ()_ => {
     if (diagram && rfInstance) {
       await db.diagrams.update(diagram.id!, {
         data: { ...diagram.data, nodes: allNodes, edges, viewport: rfInstance.getViewport() },
@@ -228,7 +228,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
         deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
         fitView
       >
-        <Controls>
+        <Controls showInteractive={false}>
           <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </ControlButton>
