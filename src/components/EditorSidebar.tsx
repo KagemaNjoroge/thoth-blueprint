@@ -186,12 +186,22 @@ export default function EditorSidebar({
         <div className="flex-shrink-0 px-4 mb-4">
             <div className="flex items-center gap-2">
                 <TabsList className="grid flex-grow grid-cols-2">
-                    <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
-                    <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
+                    <TabsTrigger value="tables">
+                        <Table className="h-4 w-4 mr-2" />
+                        <span className="hidden lg:inline">Tables</span>
+                        <span className="lg:hidden">Tbls</span>
+                        <span>&nbsp;({nodes.length})</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="relationships">
+                        <GitCommitHorizontal className="h-4 w-4 mr-2" />
+                        <span className="hidden lg:inline">Relationships</span>
+                        <span className="lg:hidden">Rels</span>
+                        <span>&nbsp;({edges.length})</span>
+                    </TabsTrigger>
                 </TabsList>
-                <Button variant="outline" size="sm" onClick={onAddTable} disabled={isLocked}>
-                    <Plus className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Add Table</span>
+                <Button variant="outline" size="icon" onClick={onAddTable} disabled={isLocked}>
+                    <Plus className="h-4 w-4" />
+                    <span className="sr-only">Add Table</span>
                 </Button>
             </div>
         </div>
