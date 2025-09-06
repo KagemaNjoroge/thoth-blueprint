@@ -62,7 +62,7 @@ export default function CustomEdge({
         markerEnd={markerEndUrl}
         style={{
           stroke: isHighlighted ? '#60a5fa' : '#a1a1aa',
-          strokeWidth: isHighlighted ? 2.5 : 2,
+          strokeWidth: isHighlighted ? 2 : 1.5,
           strokeDasharray: isHighlighted ? '5 5' : 'none',
           transition: 'all 0.2s ease-in-out',
           ...style,

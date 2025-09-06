@@ -35,25 +35,6 @@ const tableColors = [
   '#2DD4BF', '#F472B6', '#FB923C', '#818CF8', '#4ADE80',
 ];
 
-const MarkerDefinitions = () => (
-  <svg>
-    <defs>
-      <marker id="one" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
-        <path d="M 1 0 L 1 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
-      </marker>
-      <marker id="many" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-        <path d="M2,2 L10,6 L2,10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
-      </marker>
-      <marker id="one-selected" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
-        <path d="M 1 0 L 1 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
-      </marker>
-      <marker id="many-selected" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-        <path d="M2,2 L10,6 L2,10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
-      </marker>
-    </defs>
-  </svg>
-);
-
 const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, selectedNodeId }: DiagramEditorProps, ref) => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -256,7 +237,6 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
         deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
         fitView
       >
-        <MarkerDefinitions />
         <Controls showInteractive={false}>
           <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}

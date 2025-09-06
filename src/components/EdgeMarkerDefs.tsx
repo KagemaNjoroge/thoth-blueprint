@@ -14,7 +14,7 @@ const EdgeMarkerDefs = () => {
           markerHeight="10"
           orient="auto"
         >
-          <line x1="1" y1="0" x2="1" y2="10" stroke="#a1a1aa" strokeWidth="1.5" />
+          <line x1="1" y1="1" x2="1" y2="9" stroke="#a1a1aa" strokeWidth="1.5" />
         </marker>
 
         {/* Many marker (crow's foot) for many-to-one and many-to-many relationships */}
@@ -45,7 +45,7 @@ const EdgeMarkerDefs = () => {
           markerHeight="10"
           orient="auto"
         >
-          <line x1="1" y1="0" x2="1" y2="10" stroke="#60a5fa" strokeWidth="2" />
+          <line x1="1" y1="1" x2="1" y2="9" stroke="#60a5fa" strokeWidth="2" />
         </marker>
 
         <marker
