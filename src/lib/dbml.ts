@@ -48,7 +48,18 @@ const diagramToDbml = (diagram: Diagram): string => {
         }
 
         node.data.columns.forEach((col: Column) => {
-            const columnType = enumTypeMap.get(`${node.id}-${col.id}`) || col.type;
+            let columnType = enumTypeMap.get(`${node.id}-${col.id}`) || col.type;
+            
+            // Add default lengths for certain MySQL types that require it
+            if (diagram.dbType === 'mysql') {
+                const upperType = columnType.toUpperCase();
+                if (upperType === 'VARCHAR') {
+                    columnType = 'VARCHAR(255)';
+                } else if (upperType === 'CHAR') {
+                    columnType = 'CHAR(255)';
+                }
+            }
+
             tableDbml += `  ${col.name} ${columnType}`;
             
             const settings = [];
