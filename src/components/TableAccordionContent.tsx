@@ -47,9 +47,10 @@ interface TableAccordionContentProps {
     onNodeUpdate: (node: Node) => void;
     onNodeDelete: (nodeId: string) => void;
     onStartEdit: () => void;
+    isLocked: boolean;
 }
 
-function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, handleDeleteColumn }: { col: Column, index: number, availableTypes: string[], handleColumnUpdate: (index: number, field: keyof Column, value: any) => void, handleDeleteColumn: (index: number) => void }) {
+function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, handleDeleteColumn, isLocked }: { col: Column, index: number, availableTypes: string[], handleColumnUpdate: (index: number, field: keyof Column, value: any) => void, handleDeleteColumn: (index: number) => void, isLocked: boolean }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: col.id });
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -57,16 +58,17 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex flex-wrap sm:flex-nowrap items-center gap-1 p-1 border rounded-md bg-background">
-            <div {...attributes} {...listeners} className="cursor-grab p-1">
+        <div ref={setNodeRef} style={style} className="flex flex-wrap items-center gap-1 p-1 border rounded-md bg-background">
+            <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1" : "cursor-grab p-1"}>
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
             <Input 
                 value={col.name} 
                 onChange={(e) => handleColumnUpdate(index, 'name', e.target.value)}
                 className="h-8 flex-grow min-w-[120px]"
+                disabled={isLocked}
             />
-            <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)}>
+            <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)} disabled={isLocked}>
                 <SelectTrigger className="h-8 w-[110px]">
                     <SelectValue />
                 </SelectTrigger>
@@ -74,21 +76,21 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                     {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
                 </SelectContent>
             </Select>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)} disabled={isLocked}>
                 <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)} disabled={isLocked}>
                 <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground'}`} />
             </Button>
             
             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                <DropdownMenuTrigger asChild disabled={isLocked}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" disabled={isLocked}><MoreHorizontal className="h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 p-2 space-y-4" onClick={(e) => e.stopPropagation()}>
                     <div className="space-y-1">
                         <Label htmlFor={`default-${index}`}>Default Value</Label>
-                        <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} />
+                        <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} disabled={isLocked} />
                     </div>
                     {col.type.toUpperCase() === 'ENUM' && (
                         <div className="space-y-1">
@@ -98,27 +100,28 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                                 placeholder="Use , for batch input" 
                                 value={col.enumValues || ''} 
                                 onChange={(e) => handleColumnUpdate(index, 'enumValues', e.target.value)} 
+                                disabled={isLocked}
                             />
                         </div>
                     )}
                     <div className="flex items-center space-x-2">
-                        <Checkbox id={`unique-${index}`} checked={!!col.isUnique} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnique', !!checked)} />
+                        <Checkbox id={`unique-${index}`} checked={!!col.isUnique} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnique', !!checked)} disabled={isLocked} />
                         <Label htmlFor={`unique-${index}`}>Unique</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Checkbox id={`autoincrement-${index}`} checked={!!col.isAutoIncrement} onCheckedChange={(checked) => handleColumnUpdate(index, 'isAutoIncrement', !!checked)} />
+                        <Checkbox id={`autoincrement-${index}`} checked={!!col.isAutoIncrement} onCheckedChange={(checked) => handleColumnUpdate(index, 'isAutoIncrement', !!checked)} disabled={isLocked} />
                         <Label htmlFor={`autoincrement-${index}`}>Autoincrement</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Checkbox id={`unsigned-${index}`} checked={!!col.isUnsigned} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnsigned', !!checked)} />
+                        <Checkbox id={`unsigned-${index}`} checked={!!col.isUnsigned} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnsigned', !!checked)} disabled={isLocked} />
                         <Label htmlFor={`unsigned-${index}`}>Unsigned</Label>
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor={`comment-${index}`}>Comment</Label>
-                        <Textarea id={`comment-${index}`} placeholder="Column comment..." value={col.comment || ''} onChange={(e) => handleColumnUpdate(index, 'comment', e.target.value)} />
+                        <Textarea id={`comment-${index}`} placeholder="Column comment..." value={col.comment || ''} onChange={(e) => handleColumnUpdate(index, 'comment', e.target.value)} disabled={isLocked} />
                     </div>
                     <Separator />
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteColumn(index)}>
+                    <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteColumn(index)} disabled={isLocked}>
                         Delete Column
                     </Button>
                 </DropdownMenuContent>
@@ -127,7 +130,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     );
 }
 
-export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNodeDelete, onStartEdit }: TableAccordionContentProps) {
+export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNodeDelete, onStartEdit, isLocked }: TableAccordionContentProps) {
     const [columns, setColumns] = useState<Column[]>([]);
     const [indices, setIndices] = useState<Index[]>([]);
     const [tableComment, setTableComment] = useState("");
@@ -254,16 +257,17 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNo
                                     availableTypes={availableTypes} 
                                     handleColumnUpdate={handleColumnUpdate} 
                                     handleDeleteColumn={handleDeleteColumn} 
+                                    isLocked={isLocked}
                                 />
                             ))}
                         </div>
                     </SortableContext>
                 </DndContext>
                 <div className="mt-4 flex gap-2">
-                    <Button className="flex-grow" onClick={handleAddColumn}>
+                    <Button className="flex-grow" onClick={handleAddColumn} disabled={isLocked}>
                         <Plus className="h-4 w-4 mr-2" /> Add Column
                     </Button>
-                    <Button className="flex-grow" variant="outline" onClick={handleAddIndex}>
+                    <Button className="flex-grow" variant="outline" onClick={handleAddIndex} disabled={isLocked}>
                         <Plus className="h-4 w-4 mr-2" /> Add Index
                     </Button>
                 </div>
@@ -276,7 +280,7 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNo
                         {indices.map(idx => (
                             <div key={idx.id} className="flex items-center gap-2 p-2 border rounded-md bg-background">
                                 <Popover>
-                                    <PopoverTrigger asChild>
+                                    <PopoverTrigger asChild disabled={isLocked}>
                                         <Button variant="outline" className="flex-grow h-auto min-h-10 justify-start">
                                             {idx.columns.length > 0 ? (
                                                 <div className="flex gap-1 flex-wrap">
@@ -323,20 +327,20 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNo
                                     </PopoverContent>
                                 </Popover>
                                 <Popover>
-                                    <PopoverTrigger asChild>
+                                    <PopoverTrigger asChild disabled={isLocked}>
                                         <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
                                     </PopoverTrigger>
                                     <PopoverContent align="end" className="w-64 p-2 space-y-4">
                                         <div className="space-y-1">
                                             <Label htmlFor={`index-name-${idx.id}`}>Name</Label>
-                                            <Input id={`index-name-${idx.id}`} value={idx.name} onChange={(e) => handleIndexUpdate(idx.id, { name: e.target.value })} />
+                                            <Input id={`index-name-${idx.id}`} value={idx.name} onChange={(e) => handleIndexUpdate(idx.id, { name: e.target.value })} disabled={isLocked} />
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox id={`index-unique-${idx.id}`} checked={!!idx.isUnique} onCheckedChange={(checked) => handleIndexUpdate(idx.id, { isUnique: !!checked })} />
+                                            <Checkbox id={`index-unique-${idx.id}`} checked={!!idx.isUnique} onCheckedChange={(checked) => handleIndexUpdate(idx.id, { isUnique: !!checked })} disabled={isLocked} />
                                             <Label htmlFor={`index-unique-${idx.id}`}>Unique</Label>
                                         </div>
                                         <Separator />
-                                        <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteIndex(idx.id)}>
+                                        <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteIndex(idx.id)} disabled={isLocked}>
                                             Delete Index
                                         </Button>
                                     </PopoverContent>
@@ -349,7 +353,7 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNo
                 <AccordionItem value="comment">
                     <AccordionTrigger>Comment</AccordionTrigger>
                     <AccordionContent>
-                        <Textarea placeholder="Table comment..." value={tableComment} onChange={handleCommentChange} onBlur={handleCommentSave} />
+                        <Textarea placeholder="Table comment..." value={tableComment} onChange={handleCommentChange} onBlur={handleCommentSave} disabled={isLocked} />
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
@@ -357,10 +361,10 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNo
             <div>
                 <h4 className="font-semibold mb-2">Actions</h4>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="flex-grow" onClick={onStartEdit}>
+                    <Button variant="outline" className="flex-grow" onClick={onStartEdit} disabled={isLocked}>
                         <Edit className="h-4 w-4 mr-2" /> Rename
                     </Button>
-                    <Button variant="destructive" className="flex-grow" onClick={() => onNodeDelete(node.id)}>
+                    <Button variant="destructive" className="flex-grow" onClick={() => onNodeDelete(node.id)} disabled={isLocked}>
                         <Trash2 className="h-4 w-4 mr-2" /> Delete
                     </Button>
                 </div>

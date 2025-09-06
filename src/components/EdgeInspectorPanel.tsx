@@ -28,9 +28,10 @@ interface EdgeInspectorPanelProps {
     nodes: Node[];
     onEdgeUpdate: (edge: Edge) => void;
     onEdgeDelete: (edgeId: string) => void;
+    isLocked: boolean;
 }
 
-export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDelete }: EdgeInspectorPanelProps) {
+export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDelete, isLocked }: EdgeInspectorPanelProps) {
     if (!edge) return null;
 
     const sourceNode = nodes.find(n => n.id === edge.source);
@@ -57,7 +58,7 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
             <Separator />
             <div className="my-4">
                 <Label>Relationship Type</Label>
-                <Select value={edge.data?.relationship || 'one-to-many'} onValueChange={handleTypeChange}>
+                <Select value={edge.data?.relationship || 'one-to-many'} onValueChange={handleTypeChange} disabled={isLocked}>
                     <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -71,8 +72,8 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
             <Separator />
             <div className="mt-6">
                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="w-full">
+                    <AlertDialogTrigger asChild disabled={isLocked}>
+                        <Button variant="destructive" className="w-full" disabled={isLocked}>
                             <Trash2 className="h-4 w-4 mr-2" /> Delete Relationship
                         </Button>
                     </AlertDialogTrigger>

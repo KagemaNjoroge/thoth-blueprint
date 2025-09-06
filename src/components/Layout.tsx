@@ -22,6 +22,7 @@ export default function Layout() {
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   const editorRef = useRef<{ 
     updateNode: (node: Node) => void; 
@@ -141,9 +142,11 @@ export default function Layout() {
       onBackToGallery={() => {
         setSelectedDiagramId(null);
         setIsSidebarOpen(false);
+        setIsLocked(false);
       }}
       onUndoDelete={handleUndoDelete}
       onBatchNodeUpdate={handleBatchNodeUpdate}
+      isLocked={isLocked}
     />
   ) : (
     <div className="p-4 h-full flex items-center justify-center text-center bg-card">
@@ -188,6 +191,8 @@ export default function Layout() {
                 diagram={diagram}
                 onSelectionChange={handleSelectionChange}
                 setRfInstance={setRfInstance}
+                isLocked={isLocked}
+                onLockChange={setIsLocked}
               />
             ) : (
               <DiagramGallery setSelectedDiagramId={setSelectedDiagramId} />

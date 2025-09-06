@@ -35,6 +35,7 @@ interface EditorSidebarProps {
   onBackToGallery: () => void;
   onUndoDelete: () => void;
   onBatchNodeUpdate: (nodes: Node[]) => void;
+  isLocked: boolean;
 }
 
 function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
@@ -64,6 +65,7 @@ export default function EditorSidebar({
   onBackToGallery,
   onUndoDelete,
   onBatchNodeUpdate,
+  isLocked,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
@@ -149,13 +151,13 @@ export default function EditorSidebar({
             <MenubarContent>
               <MenubarItem onClick={onBackToGallery}>Back to Gallery</MenubarItem>
               <MenubarSeparator />
-              <MenubarItem onClick={onAddTable}>
+              <MenubarItem onClick={onAddTable} disabled={isLocked}>
                 Add Table <MenubarShortcut>⌘N/A</MenubarShortcut>
               </MenubarItem>
               <MenubarSeparator />
               <MenubarItem>Export as SQL (coming soon)</MenubarItem>
               <MenubarSeparator />
-              <MenubarItem onClick={onDeleteDiagram} className="text-destructive focus:text-destructive">
+              <MenubarItem onClick={onDeleteDiagram} className="text-destructive focus:text-destructive" disabled={isLocked}>
                 Delete Diagram
               </MenubarItem>
             </MenubarContent>
@@ -163,7 +165,7 @@ export default function EditorSidebar({
           <MenubarMenu>
             <MenubarTrigger>Edit</MenubarTrigger>
             <MenubarContent>
-              <MenubarItem onClick={onUndoDelete}>
+              <MenubarItem onClick={onUndoDelete} disabled={isLocked}>
                 Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
               </MenubarItem>
             </MenubarContent>
@@ -187,7 +189,7 @@ export default function EditorSidebar({
                     <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
                     <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
                 </TabsList>
-                <Button variant="outline" size="sm" onClick={onAddTable}>
+                <Button variant="outline" size="sm" onClick={onAddTable} disabled={isLocked}>
                     <Plus className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Add Table</span>
                 </Button>
@@ -205,7 +207,7 @@ export default function EditorSidebar({
                                 <AccordionItem value={node.id} className="border rounded-md mb-1 data-[state=open]:bg-accent/50">
                                 <AccordionTrigger className="px-2 group hover:no-underline">
                                     <div className="flex items-center gap-2 w-full">
-                                    <div {...attributes} {...listeners} className="cursor-grab p-1 -ml-1">
+                                    <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1 -ml-1" : "cursor-grab p-1 -ml-1"}>
                                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                                     </div>
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: node.data.color }} />
@@ -220,7 +222,7 @@ export default function EditorSidebar({
                                         autoFocus
                                         />
                                     ) : (
-                                        <span className="truncate" onDoubleClick={() => handleStartEdit(node)}>{node.data.label}</span>
+                                        <span className="truncate" onDoubleClick={isLocked ? undefined : () => handleStartEdit(node)}>{node.data.label}</span>
                                     )}
                                     <div className="flex-grow" />
                                     </div>
@@ -232,6 +234,7 @@ export default function EditorSidebar({
                                     onNodeUpdate={onNodeUpdate} 
                                     onNodeDelete={onNodeDelete}
                                     onStartEdit={() => handleStartEdit(node)}
+                                    isLocked={isLocked}
                                     />
                                 </AccordionContent>
                                 </AccordionItem>
@@ -255,6 +258,7 @@ export default function EditorSidebar({
                             nodes={nodes}
                             onEdgeUpdate={onEdgeUpdate}
                             onEdgeDelete={onEdgeDelete}
+                            isLocked={isLocked}
                         />
                         </div>
                     ) : (

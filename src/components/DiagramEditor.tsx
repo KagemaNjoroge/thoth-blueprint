@@ -14,17 +14,21 @@ import ReactFlow, {
   OnSelectionChangeParams,
   ReactFlowInstance,
   NodeProps,
+  ControlButton,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { db, Diagram } from '@/lib/db';
 import TableNode from './TableNode';
 import { relationshipTypes } from './EdgeInspectorPanel';
 import CustomEdge from './CustomEdge';
+import { Lock, Unlock } from 'lucide-react';
 
 interface DiagramEditorProps {
   diagram: Diagram;
   onSelectionChange: (params: OnSelectionChangeParams) => void;
   setRfInstance: (instance: ReactFlowInstance | null) => void;
+  isLocked: boolean;
+  onLockChange: (locked: boolean) => void;
 }
 
 const tableColors = [
@@ -32,7 +36,7 @@ const tableColors = [
   '#2DD4BF', '#F472B6', '#FB923C', '#818CF8', '#4ADE80',
 ];
 
-const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }: DiagramEditorProps, ref) => {
+const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, isLocked, onLockChange }: DiagramEditorProps, ref) => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
@@ -207,10 +211,20 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onInit={onInit}
-        deleteKeyCode={['Backspace', 'Delete']}
+        nodesDraggable={!isLocked}
+        nodesConnectable={!isLocked}
+        elementsSelectable={!isLocked}
+        panOnDrag={!isLocked}
+        zoomOnScroll={!isLocked}
+        zoomOnDoubleClick={!isLocked}
+        deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
         fitView
       >
-        <Controls />
+        <Controls>
+          <ControlButton onClick={() => onLockChange(!isLocked)} title={isLocked ? 'Unlock' : 'Lock'}>
+            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+          </ControlButton>
+        </Controls>
         <Background />
       </ReactFlow>
     </div>
