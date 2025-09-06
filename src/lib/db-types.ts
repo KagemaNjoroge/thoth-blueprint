@@ -11,6 +11,8 @@ export const postgresDataTypes = [
   "DATE", "INTERVAL", "TIME", "TIMETZ", "TIMESTAMP", "TIMESTAMPTZ",
   // Boolean Type
   "BOOLEAN",
+  // Enum Type
+  "ENUM",
   // Geometric Types
   "BOX", "CIRCLE", "LINE", "LSEG", "PATH", "POINT", "POLYGON",
   // Network Address Types
