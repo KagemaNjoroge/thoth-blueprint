@@ -57,7 +57,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-1 p-1 border rounded-md bg-background">
+        <div ref={setNodeRef} style={style} className="flex flex-wrap sm:flex-nowrap items-center gap-1 p-1 border rounded-md bg-background">
             <div {...attributes} {...listeners} className="cursor-grab p-1">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -74,16 +74,16 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                     {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
                 </SelectContent>
             </Select>
-            <Button size="icon" variant="ghost" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)}>
                 <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
             </Button>
-            <Button size="icon" variant="ghost" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)}>
                 <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground'}`} />
             </Button>
             
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64 p-2 space-y-4" onClick={(e) => e.stopPropagation()}>
                     <div className="space-y-1">
