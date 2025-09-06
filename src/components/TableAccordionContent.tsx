@@ -58,74 +58,78 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex flex-wrap items-center gap-1 p-1 border rounded-md bg-background">
-            <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1" : "cursor-grab p-1"}>
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <div ref={setNodeRef} style={style} className="space-y-2 md:space-y-0 md:flex md:items-center md:gap-2 p-2 border rounded-md bg-background">
+            <div className="flex items-center gap-2 flex-1">
+                <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1 -ml-1" : "cursor-grab p-1 -ml-1"}>
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <Input 
+                    value={col.name} 
+                    onChange={(e) => handleColumnUpdate(index, 'name', e.target.value)}
+                    className="h-8 flex-1"
+                    disabled={isLocked}
+                />
             </div>
-            <Input 
-                value={col.name} 
-                onChange={(e) => handleColumnUpdate(index, 'name', e.target.value)}
-                className="h-8 flex-grow min-w-[120px]"
-                disabled={isLocked}
-            />
-            <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)} disabled={isLocked}>
-                <SelectTrigger className="h-8 w-[110px]">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                </SelectContent>
-            </Select>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)} disabled={isLocked}>
-                <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)} disabled={isLocked}>
-                <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-            </Button>
-            
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild disabled={isLocked}>
-                    <Button size="icon" variant="ghost" className="h-8 w-8" disabled={isLocked}><MoreHorizontal className="h-4 w-4" /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 p-2 space-y-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="space-y-1">
-                        <Label htmlFor={`default-${index}`}>Default Value</Label>
-                        <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} disabled={isLocked} />
-                    </div>
-                    {col.type.toUpperCase() === 'ENUM' && (
+            <div className="flex items-center gap-1 justify-end md:justify-start">
+                <Select value={col.type} onValueChange={(value) => handleColumnUpdate(index, 'type', value)} disabled={isLocked}>
+                    <SelectTrigger className="h-8 w-[120px]">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'nullable', !col.nullable)} disabled={isLocked}>
+                    <HelpCircle className={`h-4 w-4 ${col.nullable ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleColumnUpdate(index, 'pk', !col.pk)} disabled={isLocked}>
+                    <Key className={`h-4 w-4 ${col.pk ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                </Button>
+                
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild disabled={isLocked}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" disabled={isLocked}><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 p-2 space-y-4" onClick={(e) => e.stopPropagation()}>
                         <div className="space-y-1">
-                            <Label htmlFor={`enum-${index}`}>ENUM Values</Label>
-                            <Input 
-                                id={`enum-${index}`} 
-                                placeholder="Use , for batch input" 
-                                value={col.enumValues || ''} 
-                                onChange={(e) => handleColumnUpdate(index, 'enumValues', e.target.value)} 
-                                disabled={isLocked}
-                            />
+                            <Label htmlFor={`default-${index}`}>Default Value</Label>
+                            <Input id={`default-${index}`} placeholder="NULL" value={col.defaultValue || ''} onChange={(e) => handleColumnUpdate(index, 'defaultValue', e.target.value)} disabled={isLocked} />
                         </div>
-                    )}
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id={`unique-${index}`} checked={!!col.isUnique} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnique', !!checked)} disabled={isLocked} />
-                        <Label htmlFor={`unique-${index}`}>Unique</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id={`autoincrement-${index}`} checked={!!col.isAutoIncrement} onCheckedChange={(checked) => handleColumnUpdate(index, 'isAutoIncrement', !!checked)} disabled={isLocked} />
-                        <Label htmlFor={`autoincrement-${index}`}>Autoincrement</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id={`unsigned-${index}`} checked={!!col.isUnsigned} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnsigned', !!checked)} disabled={isLocked} />
-                        <Label htmlFor={`unsigned-${index}`}>Unsigned</Label>
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor={`comment-${index}`}>Comment</Label>
-                        <Textarea id={`comment-${index}`} placeholder="Column comment..." value={col.comment || ''} onChange={(e) => handleColumnUpdate(index, 'comment', e.target.value)} disabled={isLocked} />
-                    </div>
-                    <Separator />
-                    <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteColumn(index)} disabled={isLocked}>
-                        Delete Column
-                    </Button>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                        {col.type.toUpperCase() === 'ENUM' && (
+                            <div className="space-y-1">
+                                <Label htmlFor={`enum-${index}`}>ENUM Values</Label>
+                                <Input 
+                                    id={`enum-${index}`} 
+                                    placeholder="Use , for batch input" 
+                                    value={col.enumValues || ''} 
+                                    onChange={(e) => handleColumnUpdate(index, 'enumValues', e.target.value)} 
+                                    disabled={isLocked}
+                                />
+                            </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id={`unique-${index}`} checked={!!col.isUnique} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnique', !!checked)} disabled={isLocked} />
+                            <Label htmlFor={`unique-${index}`}>Unique</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id={`autoincrement-${index}`} checked={!!col.isAutoIncrement} onCheckedChange={(checked) => handleColumnUpdate(index, 'isAutoIncrement', !!checked)} disabled={isLocked} />
+                            <Label htmlFor={`autoincrement-${index}`}>Autoincrement</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id={`unsigned-${index}`} checked={!!col.isUnsigned} onCheckedChange={(checked) => handleColumnUpdate(index, 'isUnsigned', !!checked)} disabled={isLocked} />
+                            <Label htmlFor={`unsigned-${index}`}>Unsigned</Label>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor={`comment-${index}`}>Comment</Label>
+                            <Textarea id={`comment-${index}`} placeholder="Column comment..." value={col.comment || ''} onChange={(e) => handleColumnUpdate(index, 'comment', e.target.value)} disabled={isLocked} />
+                        </div>
+                        <Separator />
+                        <Button variant="destructive" size="sm" className="w-full" onClick={() => handleDeleteColumn(index)} disabled={isLocked}>
+                            Delete Column
+                        </Button>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
         </div>
     );
 }
