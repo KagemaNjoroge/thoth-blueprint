@@ -37,6 +37,7 @@ interface EditorSidebarProps {
   onBatchNodeUpdate: (nodes: Node[]) => void;
   isLocked: boolean;
   onSetSidebarState: (state: 'docked' | 'hidden') => void;
+  onExport: () => void;
 }
 
 function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
@@ -68,6 +69,7 @@ export default function EditorSidebar({
   onBatchNodeUpdate,
   isLocked,
   onSetSidebarState,
+  onExport,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
@@ -161,7 +163,7 @@ export default function EditorSidebar({
                 Add Table <MenubarShortcut>⌘N/A</MenubarShortcut>
               </MenubarItem>
               <MenubarSeparator />
-              <MenubarItem>Export as SQL (coming soon)</MenubarItem>
+              <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
               <MenubarSeparator />
               <MenubarItem onClick={onDeleteDiagram} className="text-destructive focus:text-destructive" disabled={isLocked}>
                 Delete Diagram

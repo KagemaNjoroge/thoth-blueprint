@@ -10,6 +10,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import DiagramGallery from "./DiagramGallery";
 import { AddTableDialog } from "./AddTableDialog";
+import { ExportDialog } from "./ExportDialog";
 
 const tableColors = [
   '#34D399', '#60A5FA', '#FBBF24', '#F87171', '#A78BFA', 
@@ -20,6 +21,7 @@ export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarState, setSidebarState] = useState<'docked' | 'hidden'>('docked');
@@ -149,6 +151,7 @@ export default function Layout() {
       onBatchNodeUpdate={handleBatchNodeUpdate}
       isLocked={isLocked}
       onSetSidebarState={setSidebarState}
+      onExport={() => setIsExportDialogOpen(true)}
     />
   ) : null;
 
@@ -203,6 +206,12 @@ export default function Layout() {
         </ResizablePanel>
       </ResizablePanelGroup>
       <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} />
+      <ExportDialog 
+        isOpen={isExportDialogOpen} 
+        onOpenChange={setIsExportDialogOpen} 
+        diagram={diagram}
+        rfInstance={rfInstance}
+      />
     </>
   );
 }
