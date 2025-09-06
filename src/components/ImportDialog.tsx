@@ -28,10 +28,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatabaseType, Diagram } from "@/lib/db";
 import { showError } from "@/utils/toast";
-import { importFromSql, importFromDbml, importFromJson } from "@/lib/importer";
+import { importFromDbml, importFromJson } from "@/lib/importer";
 import { Upload } from "lucide-react";
 
 const formSchema = z.object({
@@ -40,7 +40,7 @@ const formSchema = z.object({
   content: z.string().min(1, "Content to import is required"),
 });
 
-type ImportFormat = "sql" | "dbml" | "json";
+type ImportFormat = "dbml" | "json";
 
 interface ImportDialogProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDialogProps) {
-  const [importFormat, setImportFormat] = useState<ImportFormat>("sql");
+  const [importFormat, setImportFormat] = useState<ImportFormat>("dbml");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -82,9 +82,6 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
       const dbType = values.dbType as DatabaseType;
 
       switch (importFormat) {
-        case "sql":
-          diagramData = await importFromSql(values.content, dbType);
-          break;
         case "dbml":
           diagramData = await importFromDbml(values.content);
           break;
@@ -110,7 +107,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
         <DialogHeader>
           <DialogTitle>Import Diagram</DialogTitle>
           <DialogDescription>
-            Import a diagram from SQL, DBML, or a JSON export.
+            Import a diagram from DBML or a JSON export.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -129,35 +126,32 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
               )}
             />
             <Tabs value={importFormat} onValueChange={(value) => setImportFormat(value as ImportFormat)}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="sql">SQL</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="dbml">DBML</TabsTrigger>
                 <TabsTrigger value="json">JSON</TabsTrigger>
               </TabsList>
             </Tabs>
-            {importFormat === 'sql' && (
-              <FormField
-                control={form.control}
-                name="dbType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Database Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a database type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="postgres">PostgreSQL</SelectItem>
-                        <SelectItem value="mysql">MySQL</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="dbType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Database Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a database type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="postgres">PostgreSQL</SelectItem>
+                      <SelectItem value="mysql">MySQL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="content"
@@ -174,7 +168,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                       ref={fileInputRef}
                       onChange={handleFileChange}
                       className="hidden"
-                      accept=".sql,.dbml,.json"
+                      accept=".dbml,.json"
                     />
                   </div>
                   <FormControl>
