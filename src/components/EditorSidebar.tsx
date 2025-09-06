@@ -18,9 +18,9 @@ import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, Grip
 import TableAccordionContent from "./TableAccordionContent";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { ScrollArea } from "./ui/scroll-area";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@d-kit/core';
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@d-kit/sortable';
-import { CSS } from '@d-kit/utilities';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import DbmlEditor from "./DbmlEditor";
 
 interface EditorSidebarProps {
