@@ -24,8 +24,6 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
     const edges: Edge[] = [];
     const tableMap = new Map<string, { node: Node, columns: Map<string, any> }>();
 
-    // The library might return tables in a top-level array for schemas without an explicit name.
-    // Let's be defensive and check both the new `schemas` structure and the old top-level `tables`.
     const schema = dbmlDatabase.schemas?.[0];
     const tables = schema?.tables || (dbmlDatabase as any).tables || [];
     const refs = schema?.refs || (dbmlDatabase as any).refs || [];
@@ -34,7 +32,6 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
         throw new Error("Could not find any tables in the imported file. Please check the file content.");
     }
 
-    // First pass: create nodes and map tables/columns
     tables.forEach((table: any, index: number) => {
         const columns = (table.fields || []).map((field: any) => {
             const columnSettings = field.settings || {};
@@ -91,7 +88,6 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
         tableMap.set(table.name, { node, columns: columnMap });
     });
 
-    // Second pass: create edges
     refs.forEach((ref: any, index: number) => {
         const sourceEndpoint = ref.endpoints[0];
         const targetEndpoint = ref.endpoints[1];
@@ -99,7 +95,6 @@ function transformDbmlDatabase(dbmlDatabase: DbmlDatabase): Diagram['data'] {
         const sourceTable = tableMap.get(sourceEndpoint.tableName);
         const targetTable = tableMap.get(targetEndpoint.tableName);
         
-        // Assuming single-column relationships for now
         const sourceColumn = sourceTable?.columns.get(sourceEndpoint.fieldNames[0]);
         const targetColumn = targetTable?.columns.get(targetEndpoint.fieldNames[0]);
 
@@ -133,14 +128,28 @@ export async function importFromSql(sql: string, dbType: DatabaseType): Promise<
 }
 
 export async function importFromDbml(dbml: string): Promise<Diagram['data']> {
-    const dbmlDatabase = await importer.import(dbml, 'dbml');
-    return transformDbmlDatabase(dbmlDatabase);
+    try {
+        const dbmlDatabase = await importer.import(dbml, 'dbml');
+        return transformDbmlDatabase(dbmlDatabase);
+    } catch (error) {
+        const isFixableError = error && typeof error === 'object' && 'diags' in error && 
+                               Array.isArray((error as any).diags) && (error as any).diags.length > 0 &&
+                               (error as any).diags[0].message.includes('Expected " " but ":" found');
+
+        if (isFixableError) {
+            console.warn("Attempting to auto-correct common DBML syntax error...");
+            const correctedDbml = dbml.replace(/^(\s*['"]?\w+['"]?): ([\w\(\), ]+)/gm, '$1 $2');
+            
+            const dbmlDatabase = await importer.import(correctedDbml, 'dbml');
+            return transformDbmlDatabase(dbmlDatabase);
+        }
+        throw error;
+    }
 }
 
 export function importFromJson(json: string): Diagram['data'] {
     try {
         const data = JSON.parse(json);
-        // Basic validation
         if (data && Array.isArray(data.nodes) && Array.isArray(data.edges) && data.viewport) {
             return {
                 nodes: data.nodes,
