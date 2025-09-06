@@ -92,7 +92,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     if (diagram && rfInstance) {
       await db.diagrams.update(diagram.id!, {
         data: { ...diagram.data, nodes: allNodes, edges, viewport: rfInstance.getViewport() },
-        updatedAt: new IDate(),
+        updatedAt: new Date(),
       });
     }
   }, [diagram, allNodes, edges, rfInstance]);
