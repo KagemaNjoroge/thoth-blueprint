@@ -27,6 +27,7 @@ interface DiagramEditorProps {
   diagram: Diagram;
   onSelectionChange: (params: OnSelectionChangeParams) => void;
   setRfInstance: (instance: ReactFlowInstance | null) => void;
+  selectedNodeId: string | null;
 }
 
 const tableColors = [
@@ -34,7 +35,26 @@ const tableColors = [
   '#2DD4BF', '#F472B6', '#FB923C', '#818CF8', '#4ADE80',
 ];
 
-const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }: DiagramEditorProps, ref) => {
+const MarkerDefinitions = () => (
+  <svg>
+    <defs>
+      <marker id="one" markerWidth="12.5" markerHeight="12.5" refX="8" refY="5" orient="auto-start-reverse">
+        <path d="M 0 0 L 0 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
+      </marker>
+      <marker id="many" markerWidth="12.5" markerHeight="12.5" refX="8" refY="5" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
+      </marker>
+      <marker id="one-selected" markerWidth="12.5" markerHeight="12.5" refX="8" refY="5" orient="auto-start-reverse">
+        <path d="M 0 0 L 0 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
+      </marker>
+      <marker id="many-selected" markerWidth="12.5" markerHeight="12.5" refX="8" refY="5" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
+      </marker>
+    </defs>
+  </svg>
+);
+
+const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, selectedNodeId }: DiagramEditorProps, ref) => {
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
@@ -43,6 +63,14 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
   const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
   const isLocked = diagram.data.isLocked ?? false;
+
+  const processedEdges = useMemo(() => edges.map(edge => ({
+    ...edge,
+    data: {
+        ...edge.data,
+        isHighlighted: edge.source === selectedNodeId || edge.target === selectedNodeId,
+    }
+  })), [edges, selectedNodeId]);
 
   const handleLockChange = useCallback(() => {
     if (diagram && diagram.id) {
@@ -211,7 +239,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
     <div className="w-full h-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={visibleNodes}
-        edges={edges}
+        edges={processedEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -228,6 +256,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance }:
         deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
         fitView
       >
+        <MarkerDefinitions />
         <Controls showInteractive={false}>
           <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}

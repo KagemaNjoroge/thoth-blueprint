@@ -20,6 +20,7 @@ const tableColors = [
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
@@ -62,10 +63,13 @@ export default function Layout() {
   const handleSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
     if (nodes.length === 1 && edges.length === 0) {
       setActiveItemId(nodes[0].id);
+      setSelectedNodeId(nodes[0].id);
     } else if (edges.length === 1 && nodes.length === 0) {
       setActiveItemId(edges[0].id);
+      setSelectedNodeId(null);
     } else {
       setActiveItemId(null);
+      setSelectedNodeId(null);
     }
   }, []);
 
@@ -198,6 +202,7 @@ export default function Layout() {
                 diagram={diagram}
                 onSelectionChange={handleSelectionChange}
                 setRfInstance={setRfInstance}
+                selectedNodeId={selectedNodeId}
               />
             ) : (
               <DiagramGallery setSelectedDiagramId={setSelectedDiagramId} />

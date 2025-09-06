@@ -99,3 +99,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 20;
+  }
+}
+
+.animated-edge path {
+  animation: dashdraw 1s linear infinite;
+}

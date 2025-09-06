@@ -1,28 +1,24 @@
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from 'reactflow';
 import { useMemo, ReactNode } from 'react';
-import { GitFork, Minus } from 'lucide-react';
 
-const EdgeLabel = ({ transform, label }: { transform: string; label: ReactNode }) => {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        transform,
-        background: 'hsl(var(--background))',
-        borderRadius: '50%',
-        border: '1px solid hsl(var(--border))',
-        width: '24px',
-        height: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      className="nodrag nopan"
-    >
-      {label}
-    </div>
-  );
-};
+const CardinalityLabel = ({ x, y, label, isHighlighted }: { x: number; y: number; label: ReactNode; isHighlighted: boolean }) => (
+  <div
+    style={{
+      position: 'absolute',
+      transform: `translate(-50%, -50%) translate(${x}px,${y}px)`,
+      background: 'hsl(var(--background))',
+      padding: '1px 4px',
+      borderRadius: '4px',
+      fontSize: '10px',
+      fontWeight: 600,
+      color: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+      border: `1px solid ${isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+    }}
+    className="nodrag nopan"
+  >
+    {label}
+  </div>
+);
 
 export default function CustomEdge({
   id,
@@ -42,41 +38,52 @@ export default function CustomEdge({
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 10,
   });
 
-  const { sourceLabel, targetLabel } = useMemo(() => {
-    const oneIcon = <Minus size={14} strokeWidth={3} />;
-    
-    const getManyIcon = (position: Position) => {
-      let rotation = 0;
-      switch (position) {
-        case Position.Left: rotation = 90; break;   // Handle on left, icon points right (inward)
-        case Position.Right: rotation = -90; break;  // Handle on right, icon points left (inward)
-        case Position.Top: rotation = 180; break;   // Handle on top, icon points down (inward)
-        case Position.Bottom: rotation = 0; break;    // Handle on bottom, icon points up (inward)
-      }
-      return <GitFork size={14} strokeWidth={2.5} style={{ transform: `rotate(${rotation}deg)` }} />;
-    };
+  const { isHighlighted, relationship } = data;
 
-    const sourceManyIcon = getManyIcon(sourcePosition);
-    const targetManyIcon = getManyIcon(targetPosition);
+  const { markerStartUrl, markerEndUrl, sourceLabelText, targetLabelText } = useMemo(() => {
+    const markerUrl = (type: 'one' | 'many') => `url(#${type}${isHighlighted ? '-selected' : ''})`;
+    let startUrl, endUrl, sourceText, targetText;
 
-    switch (data?.relationship) {
+    switch (relationship) {
       case 'one-to-one':
-        return { sourceLabel: oneIcon, targetLabel: oneIcon };
+        startUrl = markerUrl('one');
+        endUrl = markerUrl('one');
+        sourceText = '1';
+        targetText = '1';
+        break;
       case 'one-to-many':
-        return { sourceLabel: oneIcon, targetLabel: targetManyIcon };
+        startUrl = markerUrl('one');
+        endUrl = markerUrl('many');
+        sourceText = '1';
+        targetText = '*';
+        break;
       case 'many-to-one':
-        return { sourceLabel: sourceManyIcon, targetLabel: oneIcon };
+        startUrl = markerUrl('many');
+        endUrl = markerUrl('one');
+        sourceText = '*';
+        targetText = '1';
+        break;
       case 'many-to-many':
-        return { sourceLabel: sourceManyIcon, targetLabel: targetManyIcon };
-      default:
-        return { sourceLabel: null, targetLabel: null };
+        startUrl = markerUrl('many');
+        endUrl = markerUrl('many');
+        sourceText = '*';
+        targetText = '*';
+        break;
+      default: // Default to one-to-many
+        startUrl = markerUrl('one');
+        endUrl = markerUrl('many');
+        sourceText = '1';
+        targetText = '*';
+        break;
     }
-  }, [data?.relationship, sourcePosition, targetPosition]);
+    return { markerStartUrl: startUrl, markerEndUrl: endUrl, sourceLabelText: sourceText, targetLabelText: targetText };
+  }, [relationship, isHighlighted]);
 
   const getLabelPosition = (pos: Position, x: number, y: number) => {
-    const offset = 15; // Reduced from 25
+    const offset = 20;
     switch(pos) {
         case Position.Right: return { x: x + offset, y };
         case Position.Left: return { x: x - offset, y };
@@ -94,23 +101,32 @@ export default function CustomEdge({
       <BaseEdge 
         id={id} 
         path={edgePath} 
+        markerStart={markerStartUrl}
+        markerEnd={markerEndUrl}
         style={{
-          stroke: '#b1b1b7',
-          strokeWidth: 1.5,
+          stroke: isHighlighted ? '#60a5fa' : '#a1a1aa',
+          strokeWidth: isHighlighted ? 2.5 : 2,
+          strokeDasharray: isHighlighted ? '5 5' : '1 8',
+          transition: 'all 0.2s ease-in-out',
           ...style,
         }}
+        className={isHighlighted ? 'animated-edge' : ''}
       />
       <EdgeLabelRenderer>
-        {sourceLabel && (
-          <EdgeLabel
-            transform={`translate(-50%, -50%) translate(${sourceLabelX}px,${sourceLabelY}px)`}
-            label={sourceLabel}
+        {sourceLabelText && (
+          <CardinalityLabel
+            x={sourceLabelX}
+            y={sourceLabelY}
+            label={sourceLabelText}
+            isHighlighted={isHighlighted}
           />
         )}
-        {targetLabel && (
-          <EdgeLabel
-            transform={`translate(-50%, -50%) translate(${targetLabelX}px,${targetLabelY}px)`}
-            label={targetLabel}
+        {targetLabelText && (
+          <CardinalityLabel
+            x={targetLabelX}
+            y={targetLabelY}
+            label={targetLabelText}
+            isHighlighted={isHighlighted}
           />
         )}
       </EdgeLabelRenderer>
