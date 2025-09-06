@@ -17,16 +17,39 @@ interface Column {
 
 const diagramToDbml = (diagram: Diagram): string => {
     const { nodes, edges } = diagram.data;
-    let dbmlString = '';
+    let tableDbml = '';
+    const enumDefinitions = new Set<string>();
+    const enumTypeMap = new Map<string, string>();
 
+    // First pass: find all enums and prepare definitions
     nodes.filter(n => !n.data.isDeleted).forEach((node: Node) => {
-        dbmlString += `Table ${node.data.label} {\n`;
+        node.data.columns.forEach((col: Column) => {
+            if (col.type.toUpperCase() === 'ENUM' && col.enumValues) {
+                const enumTypeName = `${node.data.label}_${col.name}_enum`;
+                // Use a unique key for the map, combining node and column IDs
+                enumTypeMap.set(`${node.id}-${col.id}`, enumTypeName);
+                
+                const values = col.enumValues.split(',')
+                    .map(v => v.trim())
+                    .filter(v => v)
+                    .map(v => `  "${v}"`).join('\n');
+                
+                const enumDef = `Enum ${enumTypeName} {\n${values}\n}\n`;
+                enumDefinitions.add(enumDef);
+            }
+        });
+    });
+
+    // Second pass: build table definitions using the enum map
+    nodes.filter(n => !n.data.isDeleted).forEach((node: Node) => {
+        tableDbml += `Table ${node.data.label} {\n`;
         if (node.data.comment) {
-            dbmlString += `  note: '''${node.data.comment}'''\n`;
+            tableDbml += `  note: '''${node.data.comment}'''\n`;
         }
 
         node.data.columns.forEach((col: Column) => {
-            dbmlString += `  ${col.name} ${col.type}`;
+            const columnType = enumTypeMap.get(`${node.id}-${col.id}`) || col.type;
+            tableDbml += `  ${col.name} ${columnType}`;
             
             const settings = [];
             if (col.pk) settings.push('pk');
@@ -45,25 +68,26 @@ const diagramToDbml = (diagram: Diagram): string => {
             }
 
             if (settings.length > 0) {
-                dbmlString += ` [${settings.join(', ')}]`;
+                tableDbml += ` [${settings.join(', ')}]`;
             }
-            dbmlString += '\n';
+            tableDbml += '\n';
         });
 
         if (node.data.indices && node.data.indices.length > 0) {
-            dbmlString += `\n  Indexes {\n`;
+            tableDbml += `\n  Indexes {\n`;
             node.data.indices.forEach((index: any) => {
                 const columnNames = index.columns.map((colId: string) => node.data.columns.find((c: Column) => c.id === colId)?.name).filter(Boolean);
                 if (columnNames.length > 0) {
-                    dbmlString += `    (${columnNames.join(', ')}) [name: '${index.name}'${index.isUnique ? ', unique' : ''}]\n`;
+                    tableDbml += `    (${columnNames.join(', ')}) [name: '${index.name}'${index.isUnique ? ', unique' : ''}]\n`;
                 }
             });
-            dbmlString += `  }\n`;
+            tableDbml += `  }\n`;
         }
 
-        dbmlString += '}\n\n';
+        tableDbml += '}\n\n';
     });
 
+    let relationshipsDbml = '';
     edges.forEach((edge: Edge) => {
         const sourceNode = nodes.find(n => n.id === edge.source);
         const targetNode = nodes.find(n => n.id === edge.target);
@@ -78,10 +102,12 @@ const diagramToDbml = (diagram: Diagram): string => {
                 case 'many-to-one': relationship = '>'; break;
                 case 'many-to-many': relationship = '<>'; break;
             }
-            dbmlString += `Ref: ${sourceNode.data.label}.${sourceColumn.name} ${relationship} ${targetNode.data.label}.${targetColumn.name}\n`;
+            relationshipsDbml += `Ref: ${sourceNode.data.label}.${sourceColumn.name} ${relationship} ${targetNode.data.label}.${targetColumn.name}\n`;
         }
     });
 
+    // Combine all parts, with enums first to ensure correct dependency order
+    const dbmlString = Array.from(enumDefinitions).join('\n') + tableDbml + relationshipsDbml;
     return dbmlString;
 };
 
