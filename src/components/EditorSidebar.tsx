@@ -180,8 +180,8 @@ export default function EditorSidebar({
         <h3 className="text-lg font-semibold tracking-tight px-2">{diagram.name}</h3>
         <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
       </div>
-      <Tabs value={currentTab} onValueChange={handleTabChange} className="flex-grow flex flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 mb-4">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="flex-grow flex flex-col min-h-0">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 mb-4">
           <TabsList className="grid w-full sm:w-auto grid-cols-2">
             <TabsTrigger value="tables"><Table className="h-4 w-4 mr-2" />Tables ({nodes.length})</TabsTrigger>
             <TabsTrigger value="relationships"><GitCommitHorizontal className="h-4 w-4 mr-2" />Relationships ({edges.length})</TabsTrigger>
@@ -191,8 +191,8 @@ export default function EditorSidebar({
             Add Table
           </Button>
         </div>
-        <ScrollArea className="flex-grow">
-          <TabsContent value="tables" className="m-0">
+        <TabsContent value="tables" className="m-0 flex-grow">
+          <ScrollArea className="h-full">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={nodes.map(n => n.id)} strategy={verticalListSortingStrategy}>
                 <Accordion type="single" collapsible value={activeItemId || undefined} onValueChange={onActiveItemIdChange} className="w-full px-4">
@@ -217,17 +217,19 @@ export default function EditorSidebar({
                                   autoFocus
                                 />
                               ) : (
-                                <span className="truncate">{node.data.label}</span>
+                                <span className="truncate" onDoubleClick={() => handleStartEdit(node)}>{node.data.label}</span>
                               )}
                               <div className="flex-grow" />
-                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleStartEdit(node)}><Edit className="h-4 w-4" /></Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onNodeDelete(node.id)}><Trash2 className="h-4 w-4" /></Button>
-                              </div>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent>
-                            <TableAccordionContent node={node} dbType={diagram.dbType} onNodeUpdate={onNodeUpdate} />
+                            <TableAccordionContent 
+                              node={node} 
+                              dbType={diagram.dbType} 
+                              onNodeUpdate={onNodeUpdate} 
+                              onNodeDelete={onNodeDelete}
+                              onStartEdit={() => handleStartEdit(node)}
+                            />
                           </AccordionContent>
                         </AccordionItem>
                       )}
@@ -236,39 +238,41 @@ export default function EditorSidebar({
                 </Accordion>
               </SortableContext>
             </DndContext>
-          </TabsContent>
-          <TabsContent value="relationships" className="m-0 p-4">
-            {inspectingEdge ? (
-              <div>
-                <Button variant="ghost" onClick={() => onActiveItemIdChange(null)} className="mb-2">
-                  <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
-                </Button>
-                <EdgeInspectorPanel 
-                  edge={inspectingEdge}
-                  nodes={nodes}
-                  onEdgeUpdate={onEdgeUpdate}
-                  onEdgeDelete={onEdgeDelete}
-                />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {edges.map(edge => {
-                  const sourceNode = nodes.find(n => n.id === edge.source);
-                  const targetNode = nodes.find(n => n.id === edge.target);
-                  return (
-                    <Button key={edge.id} variant="ghost" className="w-full justify-start h-auto py-2" onClick={() => onActiveItemIdChange(edge.id)}>
-                      <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
-                      <div className="text-left text-sm">
-                        <p className="font-semibold">{sourceNode?.data.label} to {targetNode?.data.label}</p>
-                        <p className="text-muted-foreground text-xs">{edge.data?.relationship || 'one-to-many'}</p>
-                      </div>
-                    </Button>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-        </ScrollArea>
+          </ScrollArea>
+        </TabsContent>
+        <TabsContent value="relationships" className="m-0 p-4 flex-grow">
+          <ScrollArea className="h-full pr-2">
+              {inspectingEdge ? (
+                <div>
+                  <Button variant="ghost" onClick={() => onActiveItemIdChange(null)} className="mb-2">
+                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
+                  </Button>
+                  <EdgeInspectorPanel 
+                    edge={inspectingEdge}
+                    nodes={nodes}
+                    onEdgeUpdate={onEdgeUpdate}
+                    onEdgeDelete={onEdgeDelete}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {edges.map(edge => {
+                    const sourceNode = nodes.find(n => n.id === edge.source);
+                    const targetNode = nodes.find(n => n.id === edge.target);
+                    return (
+                      <Button key={edge.id} variant="ghost" className="w-full justify-start h-auto py-2" onClick={() => onActiveItemIdChange(edge.id)}>
+                        <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <div className="text-left text-sm">
+                          <p className="font-semibold">{sourceNode?.data.label} to {targetNode?.data.label}</p>
+                          <p className="text-muted-foreground text-xs">{edge.data?.relationship || 'one-to-many'}</p>
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+          </ScrollArea>
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Node } from "reactflow";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X } from "lucide-react";
+import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X, Edit } from "lucide-react";
 import { Separator } from "./ui/separator";
 import { DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
@@ -45,6 +45,8 @@ interface TableAccordionContentProps {
     node: Node;
     dbType: DatabaseType;
     onNodeUpdate: (node: Node) => void;
+    onNodeDelete: (nodeId: string) => void;
+    onStartEdit: () => void;
 }
 
 function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, handleDeleteColumn }: { col: Column, index: number, availableTypes: string[], handleColumnUpdate: (index: number, field: keyof Column, value: any) => void, handleDeleteColumn: (index: number) => void }) {
@@ -55,7 +57,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex flex-wrap items-center gap-1 p-1 border rounded-md bg-background">
+        <div ref={setNodeRef} style={style} className="flex items-center gap-1 p-1 border rounded-md bg-background">
             <div {...attributes} {...listeners} className="cursor-grab p-1">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -125,7 +127,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     );
 }
 
-export default function TableAccordionContent({ node, dbType, onNodeUpdate }: TableAccordionContentProps) {
+export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNodeDelete, onStartEdit }: TableAccordionContentProps) {
     const [columns, setColumns] = useState<Column[]>([]);
     const [indices, setIndices] = useState<Index[]>([]);
     const [tableComment, setTableComment] = useState("");
@@ -351,6 +353,18 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate }: Ta
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
+            <Separator />
+            <div>
+                <h4 className="font-semibold mb-2">Actions</h4>
+                <div className="flex gap-2">
+                    <Button variant="outline" className="flex-grow" onClick={onStartEdit}>
+                        <Edit className="h-4 w-4 mr-2" /> Rename
+                    </Button>
+                    <Button variant="destructive" className="flex-grow" onClick={() => onNodeDelete(node.id)}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                    </Button>
+                </div>
+            </div>
         </div>
     );
 }
