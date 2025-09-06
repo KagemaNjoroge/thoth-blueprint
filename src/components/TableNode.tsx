@@ -134,6 +134,13 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
                     style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
                     className="!w-2.5 !h-2.5"
                   />
+                  <Handle
+                    type="source"
+                    position={Position.Left}
+                    id={col.id}
+                    style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
+                    className="!w-2.5 !h-2.5"
+                  />
                   <div className="flex items-center gap-1 truncate">
                       {col.pk && <Key className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
                       <span className="truncate">{col.name}</span>
@@ -142,6 +149,13 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
                   <span className="font-mono text-muted-foreground">{col.type}</span>
                   <Handle
                     type="source"
+                    position={Position.Right}
+                    id={col.id}
+                    style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
+                    className="!w-2.5 !h-2.5"
+                  />
+                  <Handle
+                    type="target"
                     position={Position.Right}
                     id={col.id}
                     style={{ ...handleStyle, top: '50%', transform: 'translateY(-50%)', background: data.color || '#60A5FA' }}
