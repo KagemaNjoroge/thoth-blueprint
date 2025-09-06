@@ -8,7 +8,7 @@ const EdgeMarkerDefs = () => {
         <marker
           id="one"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="1"
           refY="5"
           markerWidth="10"
           markerHeight="10"
@@ -39,7 +39,7 @@ const EdgeMarkerDefs = () => {
         <marker
           id="one-selected"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="1"
           refY="5"
           markerWidth="10"
           markerHeight="10"
