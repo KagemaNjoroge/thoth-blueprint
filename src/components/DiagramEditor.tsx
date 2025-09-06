@@ -39,16 +39,16 @@ const MarkerDefinitions = () => (
   <svg>
     <defs>
       <marker id="one" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
-        <path d="M 0 0 L 0 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
+        <path d="M 1 0 L 1 10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
       </marker>
       <marker id="many" markerWidth="12" markerHeight="12" refX="2" refY="6" orient="auto">
-        <path d="M2,2 L10,6 L2,10" transform="rotate(180, 6, 6)" stroke="#a1a1aa" strokeWidth="2" fill="none" />
+        <path d="M10,2 L2,6 L10,10" stroke="#a1a1aa" strokeWidth="2" fill="none" />
       </marker>
       <marker id="one-selected" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
-        <path d="M 0 0 L 0 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
+        <path d="M 1 0 L 1 10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
       </marker>
       <marker id="many-selected" markerWidth="12" markerHeight="12" refX="2" refY="6" orient="auto">
-        <path d="M2,2 L10,6 L2,10" transform="rotate(180, 6, 6)" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
+        <path d="M10,2 L2,6 L10,10" stroke="#60a5fa" strokeWidth="2.5" fill="none" />
       </marker>
     </defs>
   </svg>
