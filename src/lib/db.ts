@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { type AppNode, type AppEdge } from './types';
 
 export type DatabaseType = 'mysql' | 'postgres';
 
@@ -7,8 +8,8 @@ export interface Diagram {
   name: string;
   dbType: DatabaseType;
   data: {
-    nodes: any[];
-    edges: any[];
+    nodes: AppNode[];
+    edges: AppEdge[];
     viewport: any;
     isLocked?: boolean;
   };

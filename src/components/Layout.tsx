@@ -1,17 +1,19 @@
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup, PanelRef } from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { type ImperativePanelHandle } from "react-resizable-panels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import DiagramEditor from "./DiagramEditor";
 import EditorSidebar from "./EditorSidebar";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Node, Edge, type Selection as OnSelectionChangeParams, ReactFlowInstance } from '@xyflow/react';
+import { type OnSelectionChangeParams, type ReactFlowInstance } from '@xyflow/react';
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import DiagramGallery from "./DiagramGallery";
 import { AddTableDialog } from "./AddTableDialog";
 import { ExportDialog } from "./ExportDialog";
 import { cn } from "@/lib/utils";
+import { type AppNode, type AppEdge } from "@/lib/types";
 
 const tableColors = [
   '#34D399', '#60A5FA', '#FBBF24', '#F87171', '#A78BFA', 
@@ -30,16 +32,16 @@ export default function Layout() {
   const [sidebarState, setSidebarState] = useState<'docked' | 'hidden'>('docked');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
-  const sidebarPanelRef = useRef<PanelRef>(null);
+  const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
 
   const editorRef = useRef<{ 
-    updateNode: (node: Node) => void; 
+    updateNode: (node: AppNode) => void; 
     deleteNode: (nodeId: string) => void;
-    updateEdge: (edge: Edge) => void;
+    updateEdge: (edge: AppEdge) => void;
     deleteEdge: (edgeId: string) => void;
-    addNode: (node: Node) => void;
+    addNode: (node: AppNode) => void;
     undoDelete: () => void;
-    batchUpdateNodes: (nodes: Node[]) => void;
+    batchUpdateNodes: (nodes: AppNode[]) => void;
   }>(null);
 
   const diagram = useLiveQuery(() => 
@@ -64,7 +66,7 @@ export default function Layout() {
     }
   }, [isSidebarVisible]);
 
-  const handleNodeUpdate = useCallback((node: Node) => {
+  const handleNodeUpdate = useCallback((node: AppNode) => {
     editorRef.current?.updateNode(node);
   }, []);
 
@@ -73,7 +75,7 @@ export default function Layout() {
     setActiveItemId(null);
   }, []);
 
-  const handleEdgeUpdate = useCallback((edge: Edge) => {
+  const handleEdgeUpdate = useCallback((edge: AppEdge) => {
     editorRef.current?.updateEdge(edge);
   }, []);
 
@@ -103,11 +105,11 @@ export default function Layout() {
   const handleCreateTable = (tableName: string) => {
     let position = { x: 200, y: 200 };
     if (rfInstance) {
-      const flowPosition = rfInstance.project({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
       position = { x: flowPosition.x - 128, y: flowPosition.y - 50 };
     }
     const visibleNodes = diagram?.data.nodes.filter(n => !n.data.isDeleted) || [];
-    const newNode: Node = {
+    const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`, type: 'table', position,
       data: {
         label: tableName,
@@ -150,7 +152,7 @@ export default function Layout() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedDiagramId, isAddTableDialogOpen]);
 
-  const handleBatchNodeUpdate = useCallback((nodesToUpdate: Node[]) => {
+  const handleBatchNodeUpdate = useCallback((nodesToUpdate: AppNode[]) => {
     editorRef.current?.batchUpdateNodes(nodesToUpdate);
   }, []);
 

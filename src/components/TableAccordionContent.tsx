@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
-import { Node } from "@xyflow/react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X, Edit, ChevronsUpDown } from "lucide-react";
 import { Separator } from "./ui/separator";
-import { DatabaseType } from "@/lib/db";
+import { type DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Checkbox } from "./ui/checkbox";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
@@ -18,35 +17,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
-
-interface Column {
-    id: string;
-    name: string;
-    type: string;
-    pk?: boolean;
-    nullable?: boolean;
-    defaultValue?: string;
-    isUnique?: boolean;
-    isAutoIncrement?: boolean;
-    isUnsigned?: boolean;
-    comment?: string;
-    enumValues?: string;
-    length?: number;
-    precision?: number;
-    scale?: number;
-}
-
-interface Index {
-    id: string;
-    name: string;
-    columns: string[]; // array of column IDs
-    isUnique?: boolean;
-}
+import { type AppNode, type Column, type Index } from "@/lib/types";
 
 interface TableAccordionContentProps {
-    node: Node;
+    node: AppNode;
     dbType: DatabaseType;
-    onNodeUpdate: (node: Node) => void;
+    onNodeUpdate: (node: AppNode) => void;
     onNodeDelete: (nodeId: string) => void;
     onStartEdit: () => void;
     isLocked: boolean;
@@ -217,12 +193,12 @@ export default function TableAccordionContent({ node, dbType, onNodeUpdate, onNo
 
     useEffect(() => {
         if (node) {
-            const columnsWithIds = (node.data.columns || []).map((col: any) => ({
+            const columnsWithIds = (node.data.columns || []).map((col) => ({
                 ...col,
                 id: col.id || `col_${Math.random().toString(36).substring(2, 11)}`
             }));
             setColumns(columnsWithIds);
-            const indicesWithIds = (node.data.indices || []).map((idx: any) => ({
+            const indicesWithIds = (node.data.indices || []).map((idx) => ({
                 ...idx,
                 id: idx.id || `idx_${Math.random().toString(36).substring(2, 11)}`
             }));

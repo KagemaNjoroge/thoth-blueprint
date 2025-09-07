@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, type EdgeProps, getSmoothStepPath } from '@xyflow/react';
+import { type EdgeData } from '@/lib/types';
 
 const EdgeIndicator = ({ x, y, label, isHighlighted }: { x: number; y: number; label: string; isHighlighted?: boolean }) => (
   <div
@@ -51,7 +52,7 @@ export default function CustomEdge({
   targetPosition,
   data,
   style,
-}: EdgeProps) {
+}: EdgeProps<EdgeData>) {
   const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -62,7 +63,7 @@ export default function CustomEdge({
     borderRadius: 10,
   });
 
-  const { isHighlighted, relationship } = data;
+  const { isHighlighted, relationship } = data || {};
 
   const { sourcePoint, targetPoint } = useMemo(() => {
     const pathLength = getTotalPathLength(edgePath);

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Diagram } from "@/lib/db";
-import { Node, Edge } from "@xyflow/react";
+import { type Diagram } from "@/lib/db";
 import { useTheme } from "next-themes";
 import {
   Menubar,
@@ -22,29 +21,30 @@ import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, Table, GripVertical, Plus
 import TableAccordionContent from "./TableAccordionContent";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { ScrollArea } from "./ui/scroll-area";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { type AppNode, type AppEdge } from "@/lib/types";
 
 interface EditorSidebarProps {
   diagram: Diagram;
   activeItemId: string | null;
   onActiveItemIdChange: (id: string | null) => void;
-  onNodeUpdate: (node: Node) => void;
+  onNodeUpdate: (node: AppNode) => void;
   onNodeDelete: (nodeId: string) => void;
-  onEdgeUpdate: (edge: Edge) => void;
+  onEdgeUpdate: (edge: AppEdge) => void;
   onEdgeDelete: (edgeId: string) => void;
   onAddTable: () => void;
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
   onUndoDelete: () => void;
-  onBatchNodeUpdate: (nodes: Node[]) => void;
+  onBatchNodeUpdate: (nodes: AppNode[]) => void;
   isLocked: boolean;
   onSetSidebarState: (state: 'docked' | 'hidden') => void;
   onExport: () => void;
 }
 
-function SortableAccordionItem({ node, children }: { node: Node, children: (attributes: any, listeners: any) => React.ReactNode }) {
+function SortableAccordionItem({ node, children }: { node: AppNode, children: (attributes: any, listeners: any) => React.ReactNode }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: node.id });
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -87,7 +87,7 @@ export default function EditorSidebar({
     [diagram.data.nodes]
   );
 
-  const [nodes, setNodes] = useState(sortedNodesFromProp);
+  const [nodes, setNodes] = useState<AppNode[]>(sortedNodesFromProp);
 
   useEffect(() => {
     setNodes(sortedNodesFromProp);
@@ -113,7 +113,7 @@ export default function EditorSidebar({
     }
   };
 
-  const handleStartEdit = (node: Node) => {
+  const handleStartEdit = (node: AppNode) => {
     setEditingTableName(node.id);
     setTableName(node.data.label);
   };
@@ -122,7 +122,7 @@ export default function EditorSidebar({
     setTableName(e.target.value);
   };
 
-  const handleNameSave = (node: Node) => {
+  const handleNameSave = (node: AppNode) => {
     onNodeUpdate({ ...node, data: { ...node.data, label: tableName } });
     setEditingTableName(null);
   };

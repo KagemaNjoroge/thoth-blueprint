@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Handle, Position, NodeProps, useUpdateNodeInternals } from '@xyflow/react';
+import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Key, Trash2, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -7,39 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PopoverWithArrow, PopoverWithArrowContent, PopoverWithArrowTrigger } from './ui/popover-with-arrow';
 import { Button } from './ui/button';
+import { type TableNodeData } from '@/lib/types';
 
-interface Column {
-    id: string;
-    name: string;
-    type: string;
-    pk?: boolean;
-    nullable?: boolean;
-    defaultValue?: string;
-    isUnique?: boolean;
-    isAutoIncrement?: boolean;
-    isUnsigned?: boolean;
-    comment?: string;
-    enumValues?: string;
-}
-
-interface Index {
-    id: string;
-    name: string;
-    columns: string[];
-    isUnique?: boolean;
-}
-
-interface TableNodeData {
-    label: string;
-    columns: Column[];
-    indices?: Index[];
-    comment?: string;
-    color?: string;
-}
-
-interface CustomTableNodeProps extends NodeProps<TableNodeData> {
+type CustomTableNodeProps = NodeProps<TableNodeData> & {
     onDeleteRequest: (nodeId: string) => void;
-}
+};
 
 function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps) {
   const updateNodeInternals = useUpdateNodeInternals();

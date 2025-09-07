@@ -1,4 +1,3 @@
-import { Edge, Node } from "@xyflow/react";
 import { Button } from "./ui/button";
 import { Trash2 } from "lucide-react";
 import { Separator } from "./ui/separator";
@@ -16,6 +15,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
+import { type AppEdge, type AppNode } from "@/lib/types";
 
 export const relationshipTypes = [
     { value: 'one-to-one', label: 'One-to-One' },
@@ -25,9 +25,9 @@ export const relationshipTypes = [
 ];
 
 interface EdgeInspectorPanelProps {
-    edge: Edge;
-    nodes: Node[];
-    onEdgeUpdate: (edge: Edge) => void;
+    edge: AppEdge;
+    nodes: AppNode[];
+    onEdgeUpdate: (edge: AppEdge) => void;
     onEdgeDelete: (edgeId: string) => void;
     isLocked: boolean;
 }
@@ -45,12 +45,12 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
 
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
-    const sourceColumn = sourceNode?.data.columns.find((c: any) => c.id === edge.sourceHandle);
-    const targetColumn = targetNode?.data.columns.find((c: any) => c.id === edge.targetHandle);
+    const sourceColumn = sourceNode?.data.columns.find((c) => c.id === edge.sourceHandle);
+    const targetColumn = targetNode?.data.columns.find((c) => c.id === edge.targetHandle);
 
     const handleTypeChange = (value: string) => {
         setRelationshipType(value);
-        const newEdge = { 
+        const newEdge: AppEdge = { 
             ...edge, 
             data: { ...edge.data, relationship: value },
         };

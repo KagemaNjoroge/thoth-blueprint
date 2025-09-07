@@ -5,27 +5,26 @@ import {
   Background,
   applyNodeChanges,
   applyEdgeChanges,
-  Node,
-  Edge,
-  OnNodesChange,
-  OnEdgesChange,
-  OnConnect,
+  type OnNodesChange,
+  type OnEdgesChange,
+  type OnConnect,
   addEdge,
-  Connection,
-  type Selection as OnSelectionChangeParams,
-  ReactFlowInstance,
-  NodeProps,
+  type Connection,
+  type OnSelectionChangeParams,
+  type ReactFlowInstance,
+  type NodeProps,
   ControlButton,
   Position,
   type ColorMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useTheme } from 'next-themes';
-import { db, Diagram } from '@/lib/db';
+import { db, type Diagram } from '@/lib/db';
 import TableNode from './TableNode';
 import { relationshipTypes } from './EdgeInspectorPanel';
 import CustomEdge from './CustomEdge';
 import { Lock, Unlock } from 'lucide-react';
+import { type AppNode, type AppEdge, type TableNodeData } from '@/lib/types';
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -41,8 +40,8 @@ const tableColors = [
 ];
 
 const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, selectedNodeId, selectedEdgeId }: DiagramEditorProps, ref) => {
-  const [allNodes, setAllNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+  const [allNodes, setAllNodes] = useState<AppNode[]>([]);
+  const [edges, setEdges] = useState<AppEdge[]>([]);
   const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -52,7 +51,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
   const isLocked = diagram.data.isLocked ?? false;
 
-  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
+  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: AppEdge) => {
     setHoveredEdgeId(edge.id);
   }, []);
 
@@ -106,7 +105,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   useEffect(() => {
     if (diagram?.data) {
       let wasModified = false;
-      const initialNodes = (diagram.data.nodes || []).map((node: Node, index: number) => {
+      const initialNodes: AppNode[] = (diagram.data.nodes || []).map((node: AppNode, index: number) => {
         if (node.data.order === undefined || node.data.order === null) {
           wasModified = true;
         }
@@ -120,7 +119,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
           },
         };
       });
-      const initialEdges = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
+      const initialEdges: AppEdge[] = (diagram.data.edges || []).map(edge => ({ ...edge, type: 'custom' }));
       
       setAllNodes(initialNodes);
       setEdges(initialEdges);
@@ -154,11 +153,11 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
 
   const undoDelete = useCallback(() => {
     setAllNodes(currentNodes => {
-      const deletedNodes = currentNodes.filter(n => n.data.isDeleted);
+      const deletedNodes = currentNodes.filter(n => n.data.isDeleted && n.data.deletedAt);
       if (deletedNodes.length === 0) return currentNodes;
 
       const lastDeletedNode = deletedNodes.reduce((latest, current) => 
-        (latest.data.deletedAt.getTime() > current.data.deletedAt.getTime() ? latest : current)
+        (latest.data.deletedAt!.getTime() > current.data.deletedAt!.getTime() ? latest : current)
       );
 
       return currentNodes.map(n => {
@@ -182,7 +181,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoDelete]);
 
-  const performSoftDelete = (nodeIds: string[], currentNodes: Node[]): Node[] => {
+  const performSoftDelete = (nodeIds: string[], currentNodes: AppNode[]): AppNode[] => {
     const now = new Date();
     let newNodes = currentNodes.map(n => {
       if (nodeIds.includes(n.id)) {
@@ -191,7 +190,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
       return n;
     });
 
-    const deletedNodes = newNodes.filter(n => n.data.isDeleted).sort((a, b) => a.data.deletedAt.getTime() - b.data.deletedAt.getTime());
+    const deletedNodes = newNodes.filter(n => n.data.isDeleted && n.data.deletedAt).sort((a, b) => a.data.deletedAt!.getTime() - b.data.deletedAt!.getTime());
     if (deletedNodes.length > 10) {
       const oldestNodeId = deletedNodes[0].id;
       newNodes = newNodes.filter(n => n.id !== oldestNodeId);
@@ -215,7 +214,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
-    const newEdge = { ...connection, type: 'custom', data: { relationship: relationshipTypes[1].value } };
+    const newEdge: AppEdge = { ...connection, type: 'custom', data: { relationship: relationshipTypes[1].value } };
     setEdges((eds) => addEdge(newEdge, eds));
   }, []);
 
@@ -225,7 +224,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   }, [onSelectionChange]);
 
   const nodeTypes = useMemo(() => ({
-    table: (props: NodeProps) => <TableNode {...props} onDeleteRequest={deleteNode} />
+    table: (props: NodeProps<TableNodeData>) => <TableNode {...props} onDeleteRequest={deleteNode} />
   }), [deleteNode]);
 
   const onInit = (instance: ReactFlowInstance) => {
@@ -234,22 +233,22 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   };
 
   useImperativeHandle(ref, () => ({
-    updateNode: (updatedNode: Node) => {
+    updateNode: (updatedNode: AppNode) => {
       setAllNodes((nds) => nds.map((node) => node.id === updatedNode.id ? { ...node, data: { ...updatedNode.data } } : node));
     },
     deleteNode: deleteNode,
-    updateEdge: (updatedEdge: Edge) => {
+    updateEdge: (updatedEdge: AppEdge) => {
       setEdges((eds) => eds.map((edge) => edge.id === updatedEdge.id ? updatedEdge : edge));
     },
     deleteEdge: (edgeId: string) => {
       setEdges(eds => eds.filter(e => e.id !== edgeId));
       onSelectionChange({ nodes: [], edges: [] });
     },
-    addNode: (newNode: Node) => {
+    addNode: (newNode: AppNode) => {
       setAllNodes(nds => nds.concat(newNode));
     },
     undoDelete: undoDelete,
-    batchUpdateNodes: (nodesToUpdate: Node[]) => {
+    batchUpdateNodes: (nodesToUpdate: AppNode[]) => {
         const nodeUpdateMap = new Map(nodesToUpdate.map(n => [n.id, n]));
         setAllNodes(currentNodes => 
             currentNodes.map(node => nodeUpdateMap.get(node.id) || node)
