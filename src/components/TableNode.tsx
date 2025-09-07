@@ -126,7 +126,7 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
           <TooltipProvider key={col.id} delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="relative flex justify-between items-center text-xs py-1.5 px-2">
+                <div className="relative flex justify-between items-center text-xs py-1.5 px-4">
                   <Handle
                     type="target"
                     position={Position.Left}
