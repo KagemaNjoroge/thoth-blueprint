@@ -66,7 +66,7 @@ export default function CustomEdge({
 
   const { sourcePoint, targetPoint } = useMemo(() => {
     const pathLength = getTotalPathLength(edgePath);
-    const distance = 25;
+    const distance = 40;
     const safeDistance = Math.min(distance, pathLength / 2 - 5);
 
     const sp = getPointAlongPath(edgePath, safeDistance);
