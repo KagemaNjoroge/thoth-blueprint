@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, BrainCircuit, Table, GripVertical, Plus } from "lucide-react";
+import { Trash2, Edit, GitCommitHorizontal, ArrowLeft, Table, GripVertical, Plus } from "lucide-react";
 import TableAccordionContent from "./TableAccordionContent";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { ScrollArea } from "./ui/scroll-area";
@@ -152,7 +152,7 @@ export default function EditorSidebar({
   return (
     <div className="h-full w-full flex flex-col bg-card">
       <div className="flex items-center border-b pl-2 flex-shrink-0">
-        <BrainCircuit className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
+        <img src="/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" className="h-5 w-5 mr-2 flex-shrink-0" />
         <Menubar className="rounded-none border-none bg-transparent">
           <MenubarMenu>
             <MenubarTrigger>File</MenubarTrigger>
