@@ -189,6 +189,15 @@ const DiagramEditor = forwardRef(
       onSelectionChange({ nodes: [], edges: [] });
     }, [diagram.id, onSelectionChange]);
 
+    useEffect(() => {
+      if (rfInstance) {
+        // Use a timeout to ensure nodes have been rendered before fitting view
+        setTimeout(() => {
+          rfInstance.fitView({ duration: 200 });
+        }, 0);
+      }
+    }, [diagram.id, rfInstance]);
+
     const saveDiagram = useCallback(async () => {
       if (diagram && rfInstance) {
         await db.diagrams.update(diagram.id!, {
