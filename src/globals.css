@@ -87,6 +87,16 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* React Flow Dark Theme */
+    --react-flow-background: hsl(var(--background));
+    --react-flow-node-bg: hsl(var(--card));
+    --react-flow-node-text: hsl(var(--card-foreground));
+    --react-flow-edge-color: hsl(var(--border));
+    --react-flow-controls-bg: hsl(var(--card));
+    --react-flow-controls-bg-hover: hsl(var(--accent));
+    --react-flow-controls-color: hsl(var(--foreground));
+    --react-flow-controls-border: hsl(var(--border));
   }
 }
 
@@ -106,20 +116,5 @@
   }
   to {
     stroke-dashoffset: 0;
-  }
-}
-
-@layer components {
-  .react-flow__controls {
-    @apply bg-card border border-border rounded-lg shadow-md;
-  }
-  .react-flow__controls-button {
-    @apply bg-card text-foreground border-b border-border p-2;
-  }
-  .react-flow__controls-button:hover {
-    @apply bg-accent;
-  }
-  .react-flow__controls-button:last-child {
-    @apply border-b-0;
   }
 }
