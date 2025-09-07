@@ -27,6 +27,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { AppIntro } from "./AppIntro";
 import { ImportDialog } from "./ImportDialog";
+import { ThemeToggle } from "./theme-toggle";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;
@@ -88,6 +89,7 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight">My Diagrams</h1>
           <div className="flex gap-2">
+            <ThemeToggle />
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Import className="h-4 w-4 mr-2" />
               Import Diagram

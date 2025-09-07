@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Diagram } from "@/lib/db";
 import { Node, Edge } from "reactflow";
+import { useTheme } from "next-themes";
 import {
   Menubar,
   MenubarContent,
@@ -8,6 +9,9 @@ import {
   MenubarMenu,
   MenubarSeparator,
   MenubarShortcut,
+  MenubarSub,
+  MenubarSubContent,
+  MenubarSubTrigger,
   MenubarTrigger,
 } from "@/components/ui/menubar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -74,6 +78,7 @@ export default function EditorSidebar({
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
+  const { setTheme } = useTheme();
 
   const sortedNodesFromProp = useMemo(() => 
     (diagram.data.nodes || [])
@@ -189,7 +194,14 @@ export default function EditorSidebar({
           <MenubarMenu>
             <MenubarTrigger>Settings</MenubarTrigger>
             <MenubarContent>
-              <MenubarItem>Theme (coming soon)</MenubarItem>
+              <MenubarSub>
+                <MenubarSubTrigger>Theme</MenubarSubTrigger>
+                <MenubarSubContent>
+                  <MenubarItem onClick={() => setTheme('light')}>Light</MenubarItem>
+                  <MenubarItem onClick={() => setTheme('dark')}>Dark</MenubarItem>
+                  <MenubarItem onClick={() => setTheme('system')}>System</MenubarItem>
+                </MenubarSubContent>
+              </MenubarSub>
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
