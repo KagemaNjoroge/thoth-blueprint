@@ -16,6 +16,10 @@ import {
   ControlButton,
   Position,
   type ColorMode,
+  type Edge,
+  type Node,
+  type NodeTypes,
+  type EdgeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useTheme } from 'next-themes';
@@ -47,11 +51,11 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
-  const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
+  const edgeTypes: EdgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
   const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
   const isLocked = diagram.data.isLocked ?? false;
 
-  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: AppEdge) => {
+  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
     setHoveredEdgeId(edge.id);
   }, []);
 
@@ -207,15 +211,15 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
 
     const nonRemoveChanges = changes.filter(c => c.type !== 'remove');
     if (nonRemoveChanges.length > 0) {
-      setAllNodes(nds => applyNodeChanges(nonRemoveChanges, nds));
+      setAllNodes(nds => applyNodeChanges(nonRemoveChanges, nds) as AppNode[]);
     }
   }, []);
 
-  const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
+  const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds) as AppEdge[]), []);
 
   const onConnect: OnConnect = useCallback((connection: Connection) => {
-    const newEdge: AppEdge = { ...connection, type: 'custom', data: { relationship: relationshipTypes[1].value } };
-    setEdges((eds) => addEdge(newEdge, eds));
+    const newEdge = { ...connection, type: 'custom', data: { relationship: relationshipTypes[1].value } };
+    setEdges((eds) => addEdge(newEdge, eds) as AppEdge[]);
   }, []);
 
   const deleteNode = useCallback((nodeId: string) => {
@@ -223,7 +227,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
     onSelectionChange({ nodes: [], edges: [] });
   }, [onSelectionChange]);
 
-  const nodeTypes = useMemo(() => ({
+  const nodeTypes: NodeTypes = useMemo(() => ({
     table: (props: NodeProps<TableNodeData>) => <TableNode {...props} onDeleteRequest={deleteNode} />
   }), [deleteNode]);
 

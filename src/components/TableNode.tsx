@@ -9,7 +9,7 @@ import { PopoverWithArrow, PopoverWithArrowContent, PopoverWithArrowTrigger } fr
 import { Button } from './ui/button';
 import { type TableNodeData } from '@/lib/types';
 
-type CustomTableNodeProps = NodeProps<TableNodeData> & {
+interface CustomTableNodeProps extends NodeProps<TableNodeData> {
     onDeleteRequest: (nodeId: string) => void;
 };
 
@@ -18,8 +18,6 @@ function TableNode({ id, data, selected, onDeleteRequest }: CustomTableNodeProps
   const prevColumnsRef = useRef(data.columns);
 
   useEffect(() => {
-    // When columns are re-ordered, we need to tell React Flow to update the node internals
-    // so it can reposition the handles and update the edges.
     if (prevColumnsRef.current !== data.columns) {
       updateNodeInternals(id);
       prevColumnsRef.current = data.columns;

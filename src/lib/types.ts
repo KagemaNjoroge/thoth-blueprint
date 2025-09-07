@@ -40,5 +40,5 @@ export interface EdgeData {
     isHighlighted?: boolean;
 }
 
-export type AppNode = Node<TableNodeData>;
+export type AppNode = Node<TableNodeData, 'table'>;
 export type AppEdge = Edge<EdgeData>;
