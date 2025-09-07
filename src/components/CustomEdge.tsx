@@ -17,6 +17,7 @@ const EdgeIndicator = ({ x, y, label }: { x: number; y: number; label: string })
       borderRadius: '50%',
       zIndex: 1,
       lineHeight: '1',
+      paddingBottom: '1px',
     }}
     className="nodrag nopan"
   >
