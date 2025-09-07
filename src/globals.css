@@ -119,9 +119,6 @@
   .react-flow__controls-button:hover {
     @apply bg-accent;
   }
-  .react-flow__controls-button svg {
-    @apply fill-current;
-  }
   .react-flow__controls-button:last-child {
     @apply border-b-0;
   }
