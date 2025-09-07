@@ -28,6 +28,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AppIntro } from "./AppIntro";
 import { ImportDialog } from "./ImportDialog";
 import { ThemeToggle } from "./theme-toggle";
+import { Features } from "./Features";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;
@@ -82,11 +83,14 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
 
   return (
     <div className="p-8 h-full w-full bg-background overflow-y-auto">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <AppIntro />
         </div>
-        <div className="flex justify-between items-center mb-8">
+
+        <Features />
+
+        <div className="flex justify-between items-center mb-8 mt-16">
           <h1 className="text-3xl font-bold tracking-tight">My Diagrams</h1>
           <div className="flex gap-2">
             <ThemeToggle />
@@ -106,9 +110,10 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
             {diagrams.map((diagram) => (
               <div key={diagram.id} className="relative group">
                 <Card
-                  className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full"
+                  className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full overflow-hidden"
                   onClick={() => setSelectedDiagramId(diagram.id!)}
                 >
+                  <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || '#a1a1aa' }} className="h-2 w-full" />
                   <CardHeader>
                     <CardTitle className="truncate">{diagram.name}</CardTitle>
                     <CardDescription className="flex items-center gap-2 pt-1">
@@ -119,7 +124,7 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
                   <CardContent className="flex-grow space-y-3 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Table className="h-4 w-4" />
-                      <span>{diagram.data.nodes?.length || 0} Tables</span>
+                      <span>{diagram.data.nodes?.filter(n => !n.data.isDeleted).length || 0} Tables</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <GitCommitHorizontal className="h-4 w-4" />
@@ -132,7 +137,7 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
                     </p>
                   </CardFooter>
                 </Card>
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute top-4 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(diagram)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
