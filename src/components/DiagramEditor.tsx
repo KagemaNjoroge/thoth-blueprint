@@ -22,7 +22,7 @@ import { db, Diagram } from '@/lib/db';
 import TableNode from './TableNode';
 import { relationshipTypes } from './EdgeInspectorPanel';
 import CustomEdge from './CustomEdge';
-import { Lock, Unlock } from 'lucide-react';
+import { FaLock, FaUnlock } from 'react-icons/fa';
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -278,7 +278,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
       >
         <Controls showInteractive={false}>
           <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>
-            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+            {isLocked ? <FaLock size={16} /> : <FaUnlock size={16} />}
           </ControlButton>
         </Controls>
         <Background />

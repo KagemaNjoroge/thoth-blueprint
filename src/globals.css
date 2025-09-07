@@ -120,9 +120,6 @@
     @apply bg-accent;
   }
   .react-flow__controls-button svg {
-    @apply stroke-current;
-  }
-  .react-flow__controls-button svg path {
     @apply fill-current;
   }
   .react-flow__controls-button:last-child {
