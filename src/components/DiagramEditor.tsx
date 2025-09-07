@@ -282,7 +282,11 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
         colorMode={theme as ColorMode}
       >
         <Controls showInteractive={false}>
-          <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>
+          <ControlButton
+            onClick={handleLockChange}
+            title={isLocked ? 'Unlock' : 'Lock'}
+            className="flex items-center justify-center"
+          >
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </ControlButton>
         </Controls>
