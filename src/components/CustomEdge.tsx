@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from '@xyflow/react';
 
 const EdgeIndicator = ({ x, y, label, isHighlighted }: { x: number; y: number; label: string; isHighlighted?: boolean }) => (
@@ -26,6 +27,20 @@ const EdgeIndicator = ({ x, y, label, isHighlighted }: { x: number; y: number; l
   </div>
 );
 
+const getPointAlongPath = (pathData: string, distance: number) => {
+  if (typeof document === 'undefined') return { x: 0, y: 0 };
+  const pathNode = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  pathNode.setAttribute('d', pathData);
+  return pathNode.getPointAtLength(distance);
+};
+
+const getTotalPathLength = (pathData: string) => {
+    if (typeof document === 'undefined') return 0;
+    const pathNode = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathNode.setAttribute('d', pathData);
+    return pathNode.getTotalLength();
+}
+
 export default function CustomEdge({
   id,
   sourceX,
@@ -49,6 +64,17 @@ export default function CustomEdge({
 
   const { isHighlighted, relationship } = data;
 
+  const { sourcePoint, targetPoint } = useMemo(() => {
+    const pathLength = getTotalPathLength(edgePath);
+    const distance = 25;
+    const safeDistance = Math.min(distance, pathLength / 2 - 5);
+
+    const sp = getPointAlongPath(edgePath, safeDistance);
+    const tp = getPointAlongPath(edgePath, pathLength - safeDistance);
+
+    return { sourcePoint: sp, targetPoint: tp };
+  }, [edgePath]);
+
   let sourceLabel = '';
   let targetLabel = '';
   switch (relationship) {
@@ -58,22 +84,6 @@ export default function CustomEdge({
     case 'many-to-many': sourceLabel = 'n'; targetLabel = 'n'; break;
     default: sourceLabel = '1'; targetLabel = 'n'; break;
   }
-
-  const labelOffset = 40;
-  let sourceLabelX = sourceX;
-  let sourceLabelY = sourceY;
-  let targetLabelX = targetX;
-  let targetLabelY = targetY;
-
-  if (sourcePosition === Position.Right) sourceLabelX += labelOffset;
-  if (sourcePosition === Position.Left) sourceLabelX -= labelOffset;
-  if (sourcePosition === Position.Top) sourceLabelY -= labelOffset;
-  if (sourcePosition === Position.Bottom) sourceLabelY += labelOffset;
-
-  if (targetPosition === Position.Right) targetLabelX += labelOffset;
-  if (targetPosition === Position.Left) targetLabelX -= labelOffset;
-  if (targetPosition === Position.Top) targetLabelY -= labelOffset;
-  if (targetPosition === Position.Bottom) targetLabelY += labelOffset;
 
   return (
     <>
@@ -97,8 +107,8 @@ export default function CustomEdge({
         />
       )}
       <EdgeLabelRenderer>
-        <EdgeIndicator x={sourceLabelX} y={sourceLabelY} label={sourceLabel} isHighlighted={isHighlighted} />
-        <EdgeIndicator x={targetLabelX} y={targetLabelY} label={targetLabel} isHighlighted={isHighlighted} />
+        <EdgeIndicator x={sourcePoint.x} y={sourcePoint.y} label={sourceLabel} isHighlighted={isHighlighted} />
+        <EdgeIndicator x={targetPoint.x} y={targetPoint.y} label={targetLabel} isHighlighted={isHighlighted} />
       </EdgeLabelRenderer>
     </>
   );
