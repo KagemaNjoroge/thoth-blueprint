@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from 'reactflow';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from '@xyflow/react';
 
 const EdgeIndicator = ({ x, y, label }: { x: number; y: number; label: string }) => (
   <div

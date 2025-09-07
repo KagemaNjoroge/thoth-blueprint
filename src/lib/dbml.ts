@@ -1,5 +1,5 @@
 import { Diagram } from './db';
-import { Node, Edge } from 'reactflow';
+import { Node, Edge } from '@xyflow/react';
 import { exporter } from '@dbml/core';
 
 interface Column {

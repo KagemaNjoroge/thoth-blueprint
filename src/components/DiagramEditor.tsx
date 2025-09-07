@@ -11,13 +11,15 @@ import ReactFlow, {
   OnConnect,
   addEdge,
   Connection,
-  OnSelectionChangeParams,
+  type Selection as OnSelectionChangeParams,
   ReactFlowInstance,
   NodeProps,
   ControlButton,
   Position,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+  type ColorMode,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { useTheme } from 'next-themes';
 import { db, Diagram } from '@/lib/db';
 import TableNode from './TableNode';
 import { relationshipTypes } from './EdgeInspectorPanel';
@@ -43,6 +45,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
   const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
   const visibleNodes = useMemo(() => allNodes.filter(n => !n.data.isDeleted), [allNodes]);
@@ -275,6 +278,7 @@ const DiagramEditor = forwardRef(({ diagram, onSelectionChange, setRfInstance, s
         zoomOnDoubleClick={true}
         deleteKeyCode={isLocked ? null : ['Backspace', 'Delete']}
         fitView
+        colorMode={theme as ColorMode}
       >
         <Controls showInteractive={false}>
           <ControlButton onClick={handleLockChange} title={isLocked ? 'Unlock' : 'Lock'}>

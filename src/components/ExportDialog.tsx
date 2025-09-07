@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { exportToDbml, exportToSql, exportToJson } from '@/lib/dbml';
 import { toSvg } from 'html-to-image';
 import { saveAs } from 'file-saver';
-import { ReactFlowInstance, getNodesBounds, getViewportForBounds } from 'reactflow';
+import { ReactFlowInstance, getNodesBounds, getViewportForBounds } from '@xyflow/react';
 import { showError } from '@/utils/toast';
 
 type ExportFormat = 'sql' | 'dbml' | 'json' | 'svg';

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Handle, Position, NodeProps, useUpdateNodeInternals } from 'reactflow';
+import { Handle, Position, NodeProps, useUpdateNodeInternals } from '@xyflow/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Key, Trash2, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';

@@ -5,7 +5,7 @@ import { Menu } from "lucide-react";
 import DiagramEditor from "./DiagramEditor";
 import EditorSidebar from "./EditorSidebar";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Node, Edge, OnSelectionChangeParams, ReactFlowInstance } from "reactflow";
+import { Node, Edge, type Selection as OnSelectionChangeParams, ReactFlowInstance } from '@xyflow/react';
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import DiagramGallery from "./DiagramGallery";
