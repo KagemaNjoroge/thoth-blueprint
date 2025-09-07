@@ -65,8 +65,8 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     const needsPrecisionScale = ['DECIMAL', 'NUMERIC'].includes(upperType);
 
     return (
-        <div ref={setNodeRef} style={style} className="space-y-2 md:space-y-0 md:flex md:items-center md:gap-2 p-2 border rounded-md bg-background">
-            <div className="flex items-center gap-2 flex-1">
+        <div ref={setNodeRef} style={style} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 p-2 border rounded-md bg-background">
+            <div className="flex items-center gap-2 flex-grow min-w-[120px]">
                 <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1 -ml-1" : "cursor-grab p-1 -ml-1"}>
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </div>
@@ -77,7 +77,7 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                     disabled={isLocked}
                 />
             </div>
-            <div className="flex items-center gap-1 justify-end md:justify-start">
+            <div className="flex items-center gap-1 flex-shrink-0">
                 <Popover open={isTypePopoverOpen} onOpenChange={setIsTypePopoverOpen}>
                     <PopoverTrigger asChild>
                         <Button
