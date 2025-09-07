@@ -1,11 +1,11 @@
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, getSmoothStepPath, Position } from '@xyflow/react';
 
-const EdgeIndicator = ({ x, y, label }: { x: number; y: number; label: string }) => (
+const EdgeIndicator = ({ x, y, label, isHighlighted }: { x: number; y: number; label: string; isHighlighted?: boolean }) => (
   <div
     style={{
       position: 'absolute',
       transform: `translate(-50%, -50%) translate(${x}px,${y}px)`,
-      background: '#4b5563', // gray-600
+      background: isHighlighted ? '#60a5fa' : '#4b5563',
       color: 'white',
       fontSize: '10px',
       fontWeight: 'bold',
@@ -18,6 +18,7 @@ const EdgeIndicator = ({ x, y, label }: { x: number; y: number; label: string })
       zIndex: 1,
       lineHeight: '1',
       paddingBottom: '1px',
+      transition: 'background-color 0.2s ease-in-out',
     }}
     className="nodrag nopan"
   >
@@ -58,7 +59,7 @@ export default function CustomEdge({
     default: sourceLabel = '1'; targetLabel = 'n'; break;
   }
 
-  const labelOffset = 28;
+  const labelOffset = 40;
   let sourceLabelX = sourceX;
   let sourceLabelY = sourceY;
   let targetLabelX = targetX;
@@ -96,8 +97,8 @@ export default function CustomEdge({
         />
       )}
       <EdgeLabelRenderer>
-        <EdgeIndicator x={sourceLabelX} y={sourceLabelY} label={sourceLabel} />
-        <EdgeIndicator x={targetLabelX} y={targetLabelY} label={targetLabel} />
+        <EdgeIndicator x={sourceLabelX} y={sourceLabelY} label={sourceLabel} isHighlighted={isHighlighted} />
+        <EdgeIndicator x={targetLabelX} y={targetLabelY} label={targetLabel} isHighlighted={isHighlighted} />
       </EdgeLabelRenderer>
     </>
   );
