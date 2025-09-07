@@ -1,4 +1,4 @@
-import { Edge, Node } from "reactflow";
+import { Edge, Node } from "@xyflow/react";
 import { Button } from "./ui/button";
 import { Trash2 } from "lucide-react";
 import { Separator } from "./ui/separator";

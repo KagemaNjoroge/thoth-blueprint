@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Node } from "reactflow";
+import { Node } from "@xyflow/react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Trash2, Plus, Key, MoreHorizontal, HelpCircle, GripVertical, Check, X, Edit, ChevronsUpDown } from "lucide-react";
@@ -65,25 +65,23 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
     const needsPrecisionScale = ['DECIMAL', 'NUMERIC'].includes(upperType);
 
     return (
-        <div ref={setNodeRef} style={style} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 p-2 border rounded-md bg-background">
-            <div className="flex items-center gap-2 flex-grow min-w-[120px]">
+        <div ref={setNodeRef} style={style} className="p-2 border rounded-md bg-background space-y-2">
+            <div className="flex items-center gap-2">
                 <div {...attributes} {...(isLocked ? {} : listeners)} className={isLocked ? "cursor-not-allowed p-1 -ml-1" : "cursor-grab p-1 -ml-1"}>
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <Input 
                     value={col.name} 
                     onChange={(e) => handleColumnUpdate(index, 'name', e.target.value)}
-                    className="h-8 flex-1"
+                    className="h-8 flex-grow"
                     disabled={isLocked}
                 />
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
                 <Popover open={isTypePopoverOpen} onOpenChange={setIsTypePopoverOpen}>
                     <PopoverTrigger asChild>
                         <Button
                             variant="outline"
                             role="combobox"
-                            className="h-8 w-[120px] justify-between font-normal"
+                            className="h-8 w-[120px] justify-between font-normal flex-shrink-0"
                             disabled={isLocked}
                         >
                             <span className="truncate">{col.type}</span>
@@ -119,7 +117,8 @@ function SortableColumnItem({ col, index, availableTypes, handleColumnUpdate, ha
                         </Command>
                     </PopoverContent>
                 </Popover>
-
+            </div>
+            <div className="flex items-center gap-1 justify-end pl-8">
                 {needsLength && (
                     <Input
                         type="number"

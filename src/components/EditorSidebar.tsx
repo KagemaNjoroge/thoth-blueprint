@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Diagram } from "@/lib/db";
-import { Node, Edge } from "reactflow";
+import { Node, Edge } from "@xyflow/react";
 import { useTheme } from "next-themes";
 import {
   Menubar,
