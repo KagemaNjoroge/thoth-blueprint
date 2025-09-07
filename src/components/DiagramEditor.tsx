@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Controls,
   Background,
   applyNodeChanges,
