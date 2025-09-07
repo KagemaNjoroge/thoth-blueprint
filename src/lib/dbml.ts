@@ -1,6 +1,6 @@
 import { Diagram } from './db';
 import { exporter } from '@dbml/core';
-import { AppNode, Column } from './types';
+import { AppNode, Column, Index } from './types';
 
 const diagramToDbml = (diagram: Diagram): string => {
     const { nodes, edges } = diagram.data;
@@ -89,7 +89,7 @@ const diagramToDbml = (diagram: Diagram): string => {
 
         if (node.data.indices && node.data.indices.length > 0) {
             tableDbml += `\n  Indexes {\n`;
-            node.data.indices.forEach((index: any) => {
+            node.data.indices.forEach((index: Index) => {
                 const columnNames = index.columns.map((colId: string) => (node.data.columns as Column[]).find((c: Column) => c.id === colId)?.name).filter(Boolean);
                 if (columnNames.length > 0) {
                     tableDbml += `    (${columnNames.join(', ')}) [name: '${index.name}'${index.isUnique ? ', unique' : ''}]\n`;

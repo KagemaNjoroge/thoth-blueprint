@@ -4,17 +4,17 @@ export interface Column {
     id: string;
     name: string;
     type: string;
-    pk?: boolean;
-    nullable?: boolean;
-    defaultValue?: any;
-    isUnique?: boolean;
-    isAutoIncrement?: boolean;
-    comment?: string;
-    enumValues?: string;
-    length?: number;
-    precision?: number;
-    scale?: number;
-    isUnsigned?: boolean;
+    pk?: boolean | undefined;
+    nullable?: boolean | undefined;
+    defaultValue?: string | number | boolean | null | undefined;
+    isUnique?: boolean | undefined;
+    isAutoIncrement?: boolean | undefined;
+    comment?: string | undefined;
+    enumValues?: string | undefined;
+    length?: number | undefined;
+    precision?: number | undefined;
+    scale?: number | undefined;
+    isUnsigned?: boolean | undefined;
 }
 
 export interface Index {
@@ -24,7 +24,7 @@ export interface Index {
     isUnique?: boolean;
 }
 
-export interface TableNodeData {
+export interface TableNodeData extends Record<string, unknown> {
     label: string;
     columns: Column[];
     indices?: Index[];
@@ -35,7 +35,7 @@ export interface TableNodeData {
     order?: number;
 }
 
-export interface EdgeData {
+export interface EdgeData extends Record<string, unknown> {
     relationship: string;
     isHighlighted?: boolean;
 }

@@ -10,7 +10,7 @@ export interface Diagram {
   data: {
     nodes: AppNode[];
     edges: AppEdge[];
-    viewport: any;
+    viewport: { x: number; y: number; zoom: number };
     isLocked?: boolean;
   };
   createdAt: Date;
