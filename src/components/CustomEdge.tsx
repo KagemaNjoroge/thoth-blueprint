@@ -58,7 +58,7 @@ export default function CustomEdge({
     default: sourceLabel = '1'; targetLabel = 'n'; break;
   }
 
-  const labelOffset = 18;
+  const labelOffset = 28;
   let sourceLabelX = sourceX;
   let sourceLabelY = sourceY;
   let targetLabelX = targetX;
