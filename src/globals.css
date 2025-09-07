@@ -108,3 +108,21 @@
     stroke-dashoffset: 0;
   }
 }
+
+@layer components {
+  .react-flow__controls {
+    @apply bg-card border border-border rounded-lg shadow-md;
+  }
+  .react-flow__controls-button {
+    @apply bg-card text-foreground border-b border-border p-2;
+  }
+  .react-flow__controls-button:hover {
+    @apply bg-accent;
+  }
+  .react-flow__controls-button svg {
+    @apply fill-current;
+  }
+  .react-flow__controls-button:last-child {
+    @apply border-b-0;
+  }
+}
