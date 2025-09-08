@@ -99,13 +99,15 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
   return (
     <div className="p-8 h-full w-full bg-background overflow-y-auto">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center">
           <AppIntro />
         </div>
 
-        <Features />
+        <div className="my-12">
+          <Features />
+        </div>
 
-        <div className="flex justify-between items-center mb-8 mt-16">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold tracking-tight">My Diagrams</h1>
           <div className="flex gap-2">
             <ThemeToggle />

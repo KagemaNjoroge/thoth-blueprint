@@ -20,7 +20,7 @@ export const Features = () => {
   ];
 
   return (
-    <div className="mt-16 mb-12">
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
         {features.map((feature) => (
           <div key={feature.title} className="flex flex-col items-center p-4">
