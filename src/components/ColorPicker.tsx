@@ -1,7 +1,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { tableColors } from "@/lib/colors";
 import { useState } from "react";
+import { SketchPicker, type ColorResult } from 'react-color';
 
 interface ColorPickerProps {
   color: string;
@@ -12,9 +12,8 @@ interface ColorPickerProps {
 export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleColorSelect = (newColor: string) => {
-    onColorChange(newColor);
-    setIsOpen(false);
+  const handleColorChange = (colorResult: ColorResult) => {
+    onColorChange(colorResult.hex);
   };
 
   return (
@@ -30,17 +29,11 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-2">
-        <div className="grid grid-cols-10 gap-1">
-          {tableColors.map((c) => (
-            <button
-              key={c}
-              className="h-5 w-5 rounded-full border transition-transform hover:scale-110"
-              style={{ backgroundColor: c }}
-              onClick={() => handleColorSelect(c)}
-            />
-          ))}
-        </div>
+      <PopoverContent className="w-auto p-0 border-none">
+        <SketchPicker
+          color={color}
+          onChangeComplete={handleColorChange}
+        />
       </PopoverContent>
     </Popover>
   );
