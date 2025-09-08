@@ -8,7 +8,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
     // Tables and columns
     nodes.filter(n => !n.data.isDeleted).forEach((node: AppNode) => {
         const tableName = node.data.label.trim();
-        mermaidString += `    "${tableName}" {\n`;
+        mermaidString += `    ${tableName} {\n`;
         node.data.columns.forEach((col: Column) => {
             const columnName = col.name.trim();
             const type = col.type.replace(/\s/g, '_');
@@ -16,7 +16,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
             const unique = col.isUnique ? ' UK' : '';
             
             // Dropping comments to fix parsing issue with some Mermaid renderers.
-            mermaidString += `        ${type} "${columnName}"${pk}${unique}\n`;
+            mermaidString += `        ${type} ${columnName}${pk}${unique}\n`;
         });
         mermaidString += `    }\n\n`;
     });
@@ -47,7 +47,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
                     relationshipSymbol = '||--o{'; // Default to one-to-many
             }
             
-            mermaidString += `    "${sourceTableName}" ${relationshipSymbol} "${targetTableName}" : ""\n`;
+            mermaidString += `    ${sourceTableName} ${relationshipSymbol} ${targetTableName} : ""\n`;
         }
     });
 
