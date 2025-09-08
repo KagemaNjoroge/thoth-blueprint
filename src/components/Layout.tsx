@@ -165,11 +165,9 @@ export default function Layout() {
   const handleDeleteDiagram = async () => {
     if (
       diagram &&
-      confirm(
-        "Are you sure you want to delete this diagram? This action cannot be undone."
-      )
+      confirm("Are you sure you want to move this diagram to the trash?")
     ) {
-      await db.diagrams.delete(diagram.id!);
+      await db.diagrams.update(diagram.id!, { deletedAt: new Date(), updatedAt: new Date() });
       setSelectedDiagramId(null);
     }
   };

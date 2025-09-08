@@ -15,6 +15,7 @@ export interface Diagram {
   };
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export class Database extends Dexie {
@@ -38,6 +39,13 @@ export class Database extends Dexie {
                 diagram.data.isLocked = false;
             }
         });
+    });
+    this.version(4).stores({
+      diagrams: '++id, name, dbType, createdAt, updatedAt, deletedAt'
+    }).upgrade(tx => {
+      return tx.table('diagrams').toCollection().modify(diagram => {
+        diagram.deletedAt = null;
+      });
     });
   }
 }
