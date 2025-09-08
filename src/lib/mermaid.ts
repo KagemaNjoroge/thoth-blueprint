@@ -11,11 +11,21 @@ const diagramToMermaid = (diagram: Diagram): string => {
         node.data.columns.forEach((col: Column) => {
             const type = col.type.replace(/\s/g, '_'); // Mermaid doesn't like spaces in types
             const pk = col.pk ? ' PK' : '';
-            const unique = col.isUnique ? ' UK' : ''; // Mermaid uses UK for unique keys
-            const notNull = col.nullable === false ? ' "NN"' : ''; // Using comment for NOT NULL
-            const comment = col.comment ? ` "${col.comment}"` : '';
+            const unique = col.isUnique ? ' UK' : '';
+
+            const comments = [];
+            if (col.nullable === false) {
+                comments.push('NOT NULL');
+            }
+            if (col.comment) {
+                // Sanitize comment to remove double quotes that would break the syntax
+                const sanitizedComment = col.comment.replace(/"/g, "'");
+                comments.push(sanitizedComment);
+            }
             
-            mermaidString += `        ${type} ${col.name}${pk}${unique}${notNull}${comment}\n`;
+            const commentString = comments.length > 0 ? ` "${comments.join(', ')}"` : '';
+            
+            mermaidString += `        ${type} ${col.name}${pk}${unique}${commentString}\n`;
         });
         mermaidString += `    }\n\n`;
     });
