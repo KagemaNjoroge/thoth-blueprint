@@ -97,25 +97,25 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
   };
 
   return (
-    <div className="p-8 h-full w-full bg-background overflow-y-auto">
+    <div className="p-4 md:p-8 h-full w-full bg-background overflow-y-auto">
       <div className="max-w-6xl mx-auto">
         <AppIntro />
 
-        <div className="my-8">
+        <div className="my-6 md:my-8">
           <Features />
         </div>
 
-        <div className="flex justify-between items-center mb-8 mt-12">
-          <h1 className="text-3xl font-bold tracking-tight">My Diagrams</h1>
-          <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 mt-8 md:mt-12">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Diagrams</h1>
+          <div className="flex gap-2 items-center self-end md:self-center">
             <ThemeToggle />
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-              <Import className="h-4 w-4 mr-2" />
-              Import Diagram
+              <Import className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Import Diagram</span>
             </Button>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Create New Diagram
+              <PlusCircle className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Create New</span>
             </Button>
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         isOpen={isRenameDialogOpen}
         onOpenChange={setIsRenameDialogOpen}
         onRenameDiagram={handleRenameDiagram}
-        diagram={diagramToEdit}
+        diagram={diagramToedit}
       />
     </div>
   );
