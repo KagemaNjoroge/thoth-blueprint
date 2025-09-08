@@ -74,6 +74,7 @@ function SortableColumnItem({
   handleColumnUpdate,
   handleDeleteColumn,
   isLocked,
+  dbType,
 }: {
   col: Column;
   index: number;
@@ -85,6 +86,7 @@ function SortableColumnItem({
   ) => void;
   handleDeleteColumn: (index: number) => void;
   isLocked: boolean;
+  dbType: DatabaseType;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: col.id });
@@ -95,13 +97,9 @@ function SortableColumnItem({
   const [isTypePopoverOpen, setIsTypePopoverOpen] = useState(false);
 
   const upperType = col.type.toUpperCase();
-  const needsLength = [
-    "VARCHAR",
-    "CHAR",
-    "BINARY",
-    "VARBINARY",
-    "BIT",
-  ].includes(upperType);
+  const needsLength =
+    ["VARCHAR", "CHAR", "BINARY", "VARBINARY", "BIT"].includes(upperType) &&
+    !(dbType === "postgres" && upperType === "VARCHAR");
   const needsPrecisionScale = ["DECIMAL", "NUMERIC"].includes(upperType);
 
   return (
@@ -509,6 +507,7 @@ export default function TableAccordionContent({
                   handleColumnUpdate={handleColumnUpdate}
                   handleDeleteColumn={handleDeleteColumn}
                   isLocked={isLocked}
+                  dbType={dbType}
                 />
               ))}
             </div>
