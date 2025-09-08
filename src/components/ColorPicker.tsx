@@ -33,27 +33,27 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
     debouncedOnColorChange(colorResult.hex);
   };
 
-  // Custom styles for the picker to support dark mode
+  // Custom styles for the picker to support dark mode using app's theme
   const pickerStyles = {
     default: {
       picker: {
-        background: resolvedTheme === 'dark' ? '#0f172a' : '#fff',
+        background: resolvedTheme === 'dark' ? 'hsl(0 0% 8%)' : 'hsl(0 0% 100%)',
         border: '1px solid',
-        borderColor: resolvedTheme === 'dark' ? '#334155' : '#e2e8f0',
+        borderColor: resolvedTheme === 'dark' ? 'hsl(0 0% 15%)' : 'hsl(214.3 31.8% 91.4%)',
         boxShadow: 'none',
         fontFamily: 'inherit',
       },
       // This targets the input fields (Hex, R, G, B, A)
       "input": {
-        background: resolvedTheme === 'dark' ? '#1e293b' : '#fff',
-        color: resolvedTheme === 'dark' ? '#f8fafc' : '#020817',
-        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? '#475569' : '#ccc'}`,
+        background: resolvedTheme === 'dark' ? 'hsl(0 0% 15%)' : 'hsl(0 0% 100%)',
+        color: resolvedTheme === 'dark' ? 'hsl(210 40% 98%)' : 'hsl(222.2 84% 4.9%)',
+        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? 'hsl(0 0% 25%)' : 'hsl(0 0% 80%)'}`,
         height: '24px',
         padding: '4px',
       },
       // This targets the labels for the input fields
       "label": {
-        color: resolvedTheme === 'dark' ? '#94a3b8' : '#222',
+        color: resolvedTheme === 'dark' ? 'hsl(0 0% 65.1%)' : 'hsl(215.4 16.3% 46.9%)',
         fontSize: '12px',
       }
     },
