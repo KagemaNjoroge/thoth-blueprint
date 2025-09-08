@@ -57,6 +57,7 @@ import {
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { type AppNode, type Column, type Index } from "@/lib/types";
+import { ColorPicker } from "./ColorPicker";
 
 interface TableAccordionContentProps {
   node: AppNode;
@@ -484,6 +485,10 @@ export default function TableAccordionContent({
     onNodeUpdate({ ...node, data: { ...node.data, comment: tableComment } });
   };
 
+  const handleColorChange = (newColor: string) => {
+    onNodeUpdate({ ...node, data: { ...node.data, color: newColor } });
+  };
+
   return (
     <div className="space-y-4 px-1">
       <div>
@@ -683,7 +688,7 @@ export default function TableAccordionContent({
       <Separator />
       <div>
         <h4 className="font-semibold mb-2">Actions</h4>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="outline"
             className="flex-grow"
@@ -692,9 +697,14 @@ export default function TableAccordionContent({
           >
             <Edit className="h-4 w-4 mr-2" /> Rename
           </Button>
+          <ColorPicker
+            color={node.data.color || "#60A5FA"}
+            onColorChange={handleColorChange}
+            disabled={isLocked}
+          />
           <Button
             variant="destructive"
-            className="flex-grow"
+            className="flex-grow col-span-2"
             onClick={() => onNodeDelete(node.id)}
             disabled={isLocked}
           >
