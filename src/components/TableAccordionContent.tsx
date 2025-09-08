@@ -121,7 +121,7 @@ function SortableColumnItem({
         <Input
           value={col.name}
           onChange={(e) => handleColumnUpdate(index, "name", e.target.value)}
-          className="h-8 flex-grow"
+          className="h-8 w-3/5"
           disabled={isLocked}
         />
         <Popover open={isTypePopoverOpen} onOpenChange={setIsTypePopoverOpen}>
@@ -129,7 +129,7 @@ function SortableColumnItem({
             <Button
               variant="outline"
               role="combobox"
-              className="h-8 w-[120px] justify-between font-normal flex-shrink-0"
+              className="h-8 w-2/5 justify-between font-normal"
               disabled={isLocked}
             >
               <span className="truncate">{col.type}</span>
