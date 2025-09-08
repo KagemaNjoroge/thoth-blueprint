@@ -21,12 +21,16 @@ export const Features = () => {
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 text-center">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
         {features.map((feature) => (
-          <div key={feature.title} className="flex flex-col items-center p-2 md:p-4">
-            {feature.icon}
-            <h3 className="mt-2 md:mt-4 text-base md:text-lg font-semibold">{feature.title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>
+          <div key={feature.title} className="flex flex-row items-center gap-4 text-left md:flex-col md:text-center p-2">
+            <div className="flex-shrink-0 p-2 bg-muted rounded-full">
+              {feature.icon}
+            </div>
+            <div>
+              <h3 className="text-base font-semibold">{feature.title}</h3>
+              <p className="text-sm text-muted-foreground">{feature.description}</p>
+            </div>
           </div>
         ))}
       </div>
