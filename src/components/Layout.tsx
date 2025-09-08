@@ -163,10 +163,7 @@ export default function Layout() {
   };
 
   const handleDeleteDiagram = async () => {
-    if (
-      diagram &&
-      confirm("Are you sure you want to move this diagram to the trash?")
-    ) {
+    if (diagram) {
       await db.diagrams.update(diagram.id!, { deletedAt: new Date(), updatedAt: new Date() });
       setSelectedDiagramId(null);
     }

@@ -13,6 +13,17 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from "@/components/ui/menubar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Accordion,
@@ -217,13 +228,29 @@ export default function EditorSidebar({
               <MenubarSeparator />
               <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
               <MenubarSeparator />
-              <MenubarItem
-                onClick={onDeleteDiagram}
-                className="text-destructive focus:text-destructive"
-                disabled={isLocked}
-              >
-                Delete Diagram
-              </MenubarItem>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <MenubarItem
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-destructive focus:text-destructive"
+                    disabled={isLocked}
+                  >
+                    Delete Diagram
+                  </MenubarItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will move the "{diagram.name}" diagram to the trash. You can restore it later from the gallery.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDeleteDiagram}>Move to Trash</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </MenubarContent>
           </MenubarMenu>
           <MenubarMenu>
