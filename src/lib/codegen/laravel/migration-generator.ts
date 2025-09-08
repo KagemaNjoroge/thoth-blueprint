@@ -29,16 +29,23 @@ export function generateLaravelMigration(
   const migrationFiles: LaravelMigrationFile[] = [];
   
   // Generate migrations for each table (each file is independent with all constraints)
-  nodes
+  // Sort nodes by their order property to respect table serial from inspector
+  const sortedNodes = nodes
     .filter((n) => !n.data.isDeleted)
-    .forEach((node, index) => {
-      const tableName = toLaravelTableName(node.data.label.trim());
-      const migrationTimestamp = timestamp + String(index).padStart(2, '0');
-      const filename = `${migrationTimestamp}_create_${tableName}_table.php`;
-      const content = generateSingleTableMigration(node, tableName, edges, nodes);
-      
-      migrationFiles.push({ filename, content });
+    .sort((a, b) => {
+      const orderA = a.data.order ?? 0;
+      const orderB = b.data.order ?? 0;
+      return orderA - orderB;
     });
+
+  sortedNodes.forEach((node, index) => {
+    const tableName = toLaravelTableName(node.data.label.trim());
+    const migrationTimestamp = timestamp + String(index).padStart(2, '0');
+    const filename = `${migrationTimestamp}_create_${tableName}_table.php`;
+    const content = generateSingleTableMigration(node, tableName, edges, nodes);
+    
+    migrationFiles.push({ filename, content });
+  });
   
   return migrationFiles;
 }
