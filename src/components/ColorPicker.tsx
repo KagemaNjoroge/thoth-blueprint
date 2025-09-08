@@ -1,7 +1,11 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import ColorPickerComponent, { themes, type Color } from 'react-pick-color';
+import ColorPickerComponent, { themes, type Color, type ColorObject } from "react-pick-color";
 import { useTheme } from "next-themes";
 import { useDebouncedCallback } from "use-debounce";
 
@@ -11,7 +15,11 @@ interface ColorPickerProps {
   disabled?: boolean;
 }
 
-export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps) {
+export function ColorPicker({
+  color,
+  onColorChange,
+  disabled,
+}: ColorPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentColor, setCurrentColor] = useState(color);
   const { resolvedTheme } = useTheme();
@@ -26,11 +34,36 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
     onColorChange(newColor);
   }, 200);
 
-  const handleColorChange = (color: Color) => {
+  const handleColorChange = (color: ColorObject) => {
+    // Handle both string and object color formats
+    let colorValue: string;
+
+    if (typeof color === "string") {
+      colorValue = color;
+    } else if (typeof color === "object" && color !== null && "hex" in color) {
+      colorValue = (color as { hex: string }).hex;
+    } else if (
+      typeof color === "object" &&
+      color !== null &&
+      "r" in color &&
+      "g" in color &&
+      "b" in color
+    ) {
+      // Convert RGB to hex
+      const rgbColor = color as { r: number; g: number; b: number };
+      const toHex = (n: number) => Math.round(n).toString(16).padStart(2, "0");
+      colorValue = `#${toHex(rgbColor.r)}${toHex(rgbColor.g)}${toHex(
+        rgbColor.b
+      )}`;
+    } else {
+      // Fallback to current color if we can't determine the format
+      colorValue = currentColor;
+    }
+
     // Update local state immediately for a responsive UI
-    setCurrentColor(color.hex);
+    setCurrentColor(colorValue);
     // Call the debounced function to update the diagram state
-    debouncedOnColorChange(color.hex);
+    debouncedOnColorChange(colorValue);
   };
 
   return (
@@ -50,7 +83,7 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
         <ColorPickerComponent
           color={currentColor}
           onChange={handleColorChange}
-          theme={resolvedTheme === 'dark' ? themes.dark : themes.light}
+          theme={resolvedTheme === "dark" ? themes.dark : themes.light}
           hideAlpha={true}
         />
       </PopoverContent>
