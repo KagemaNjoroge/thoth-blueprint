@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileJson, Image as ImageIcon, Database, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { exportToDbml, exportToSql, exportToJson } from '@/lib/dbml';
+import { exportToMermaid } from '@/lib/mermaid';
 import { toSvg } from 'html-to-image';
 import { saveAs } from 'file-saver';
 import { ReactFlowInstance, getNodesBounds, getViewportForBounds } from '@xyflow/react';
 import { showError } from '@/utils/toast';
 
-type ExportFormat = 'sql' | 'dbml' | 'json' | 'svg';
+type ExportFormat = 'sql' | 'dbml' | 'json' | 'svg' | 'mermaid';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
   const handleExport = async () => {
     if (!diagram || !selectedFormat) return;
 
-    const filename = `${diagram.name.replace(/\s+/g, '_')}.${selectedFormat === 'sql' ? 'sql' : selectedFormat}`;
+    const filename = `${diagram.name.replace(/\s+/g, '_')}.${selectedFormat === 'sql' ? 'sql' : selectedFormat === 'mermaid' ? 'mmd' : selectedFormat}`;
     let data: string | Blob = '';
 
     try {
@@ -39,6 +40,9 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
                 break;
             case 'json':
                 data = exportToJson(diagram);
+                break;
+            case 'mermaid':
+                data = exportToMermaid(diagram);
                 break;
             case 'svg':
                 if (rfInstance) {
@@ -92,6 +96,7 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
     { id: 'dbml', title: 'DBML', icon: FileText, description: 'Export a DBML representation.' },
     { id: 'json', title: 'JSON', icon: FileJson, description: 'Export a JSON representation.' },
     { id: 'svg', title: 'SVG', icon: ImageIcon, description: 'Export diagram as a .svg image.' },
+    { id: 'mermaid', title: 'Mermaid', icon: FileText, description: 'Export as Mermaid syntax.' },
   ];
 
   return (
@@ -103,7 +108,7 @@ export function ExportDialog({ isOpen, onOpenChange, diagram, rfInstance }: Expo
         </DialogHeader>
         <div className="py-4">
             <h3 className="text-lg font-semibold mb-4">General</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {options.map(opt => (
                     <Card
                         key={opt.id}
