@@ -11,23 +11,12 @@ const diagramToMermaid = (diagram: Diagram): string => {
         mermaidString += `    "${tableName}" {\n`;
         node.data.columns.forEach((col: Column) => {
             const columnName = col.name.trim();
-            const type = col.type.replace(/\s/g, '_'); // Mermaid doesn't like spaces in types
+            const type = col.type.replace(/\s/g, '_');
             const pk = col.pk ? ' PK' : '';
             const unique = col.isUnique ? ' UK' : '';
-
-            const comments = [];
-            if (col.nullable === false) {
-                comments.push('NOT NULL');
-            }
-            if (col.comment) {
-                // Sanitize comment to remove double quotes that would break the syntax
-                const sanitizedComment = col.comment.replace(/"/g, "'");
-                comments.push(sanitizedComment);
-            }
             
-            const commentString = comments.length > 0 ? ` "${comments.join(', ')}"` : '';
-            
-            mermaidString += `        ${type} "${columnName}"${pk}${unique}${commentString}\n`;
+            // Dropping comments to fix parsing issue with some Mermaid renderers.
+            mermaidString += `        ${type} "${columnName}"${pk}${unique}\n`;
         });
         mermaidString += `    }\n\n`;
     });
