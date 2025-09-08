@@ -263,7 +263,7 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         isOpen={isRenameDialogOpen}
         onOpenChange={setIsRenameDialogOpen}
         onRenameDiagram={handleRenameDiagram}
-        diagram={diagramToedit}
+        diagram={diagramToEdit}
       />
     </div>
   );
