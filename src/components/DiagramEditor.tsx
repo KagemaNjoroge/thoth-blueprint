@@ -38,6 +38,7 @@ import { relationshipTypes } from "./EdgeInspectorPanel";
 import CustomEdge from "./CustomEdge";
 import { Lock, Unlock } from "lucide-react";
 import { type AppNode, type AppEdge, type TableNodeData } from "@/lib/types";
+import { tableColors } from "@/lib/colors";
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -46,19 +47,6 @@ interface DiagramEditorProps {
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
 }
-
-const tableColors = [
-  "#34D399",
-  "#60A5FA",
-  "#FBBF24",
-  "#F87171",
-  "#A78BFA",
-  "#2DD4BF",
-  "#F472B6",
-  "#FB923C",
-  "#818CF8",
-  "#4ADE80",
-];
 
 const DiagramEditor = forwardRef(
   (

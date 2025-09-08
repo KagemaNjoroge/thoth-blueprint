@@ -21,19 +21,7 @@ import { AddTableDialog } from "./AddTableDialog";
 import { ExportDialog } from "./ExportDialog";
 import { cn } from "@/lib/utils";
 import { type AppNode, type AppEdge } from "@/lib/types";
-
-const tableColors = [
-  "#34D399",
-  "#60A5FA",
-  "#FBBF24",
-  "#F87171",
-  "#A78BFA",
-  "#2DD4BF",
-  "#F472B6",
-  "#FB923C",
-  "#818CF8",
-  "#4ADE80",
-];
+import { tableColors } from "@/lib/colors";
 
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(
