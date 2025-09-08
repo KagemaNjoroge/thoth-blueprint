@@ -7,8 +7,10 @@ const diagramToMermaid = (diagram: Diagram): string => {
 
     // Tables and columns
     nodes.filter(n => !n.data.isDeleted).forEach((node: AppNode) => {
-        mermaidString += `    "${node.data.label}" {\n`;
+        const tableName = node.data.label.trim();
+        mermaidString += `    "${tableName}" {\n`;
         node.data.columns.forEach((col: Column) => {
+            const columnName = col.name.trim();
             const type = col.type.replace(/\s/g, '_'); // Mermaid doesn't like spaces in types
             const pk = col.pk ? ' PK' : '';
             const unique = col.isUnique ? ' UK' : '';
@@ -25,7 +27,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
             
             const commentString = comments.length > 0 ? ` "${comments.join(', ')}"` : '';
             
-            mermaidString += `        ${type} "${col.name}"${pk}${unique}${commentString}\n`;
+            mermaidString += `        ${type} "${columnName}"${pk}${unique}${commentString}\n`;
         });
         mermaidString += `    }\n\n`;
     });
@@ -36,6 +38,8 @@ const diagramToMermaid = (diagram: Diagram): string => {
         const targetNode = nodes.find(n => n.id === edge.target);
 
         if (sourceNode && targetNode) {
+            const sourceTableName = sourceNode.data.label.trim();
+            const targetTableName = targetNode.data.label.trim();
             let relationshipSymbol = '';
             switch (edge.data?.relationship) {
                 case 'one-to-one':
@@ -54,7 +58,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
                     relationshipSymbol = '||--o{'; // Default to one-to-many
             }
             
-            mermaidString += `    "${sourceNode.data.label}" ${relationshipSymbol} "${targetNode.data.label}" : ""\n`;
+            mermaidString += `    "${sourceTableName}" ${relationshipSymbol} "${targetTableName}" : ""\n`;
         }
     });
 
