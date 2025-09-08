@@ -1,7 +1,9 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SketchPicker, type ColorResult } from 'react-color';
+import { useTheme } from "next-themes";
+import { useDebouncedCallback } from "use-debounce";
 
 interface ColorPickerProps {
   color: string;
@@ -11,9 +13,50 @@ interface ColorPickerProps {
 
 export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [currentColor, setCurrentColor] = useState(color);
+  const { resolvedTheme } = useTheme();
+
+  // Update internal state if the prop changes from outside
+  useEffect(() => {
+    setCurrentColor(color);
+  }, [color]);
+
+  // Debounce the callback that updates the parent component's state to improve performance
+  const debouncedOnColorChange = useDebouncedCallback((newColor: string) => {
+    onColorChange(newColor);
+  }, 200);
 
   const handleColorChange = (colorResult: ColorResult) => {
-    onColorChange(colorResult.hex);
+    // Update local state immediately for a responsive UI
+    setCurrentColor(colorResult.hex);
+    // Call the debounced function to update the diagram state
+    debouncedOnColorChange(colorResult.hex);
+  };
+
+  // Custom styles for the picker to support dark mode
+  const pickerStyles = {
+    default: {
+      picker: {
+        background: resolvedTheme === 'dark' ? '#0f172a' : '#fff',
+        border: '1px solid',
+        borderColor: resolvedTheme === 'dark' ? '#334155' : '#e2e8f0',
+        boxShadow: 'none',
+        fontFamily: 'inherit',
+      },
+      // This targets the input fields (Hex, R, G, B, A)
+      "input": {
+        background: resolvedTheme === 'dark' ? '#1e293b' : '#fff',
+        color: resolvedTheme === 'dark' ? '#f8fafc' : '#020817',
+        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? '#475569' : '#ccc'}`,
+        height: '24px',
+        padding: '4px',
+      },
+      // This targets the labels for the input fields
+      "label": {
+        color: resolvedTheme === 'dark' ? '#94a3b8' : '#222',
+        fontSize: '12px',
+      }
+    },
   };
 
   return (
@@ -31,8 +74,9 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-none">
         <SketchPicker
-          color={color}
-          onChangeComplete={handleColorChange}
+          color={currentColor}
+          onChange={handleColorChange}
+          styles={pickerStyles}
         />
       </PopoverContent>
     </Popover>
