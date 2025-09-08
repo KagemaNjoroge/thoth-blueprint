@@ -47,7 +47,7 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
       "input": {
         background: resolvedTheme === 'dark' ? 'hsl(0 0% 15%)' : 'hsl(0 0% 100%)',
         color: resolvedTheme === 'dark' ? 'hsl(210 40% 98%)' : 'hsl(222.2 84% 4.9%)',
-        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? 'hsl(0 0% 25%)' : 'hsl(0 0% 80%)'}`,
+        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? 'hsl(0 0% 15%)' : 'hsl(214.3 31.8% 91.4%)'}`,
         height: '24px',
         padding: '4px',
       },
