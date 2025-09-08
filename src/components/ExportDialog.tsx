@@ -151,19 +151,7 @@ export function ExportDialog({
 
   const dbTypeDisplay = diagram?.dbType === "mysql" ? "MySQL" : "PostgreSQL";
 
-  const generalOptions = [
-    {
-      id: "sql",
-      title: dbTypeDisplay,
-      icon: Database,
-      description: `Export schema as ${dbTypeDisplay} DDL.`,
-    },
-    {
-      id: "dbml",
-      title: "DBML",
-      icon: FileText,
-      description: "Export a DBML representation.",
-    },
+  const shareOptions = [
     {
       id: "json",
       title: "JSON",
@@ -175,6 +163,21 @@ export function ExportDialog({
       title: "SVG",
       icon: ImageIcon,
       description: "Export diagram as a .svg image.",
+    },
+  ];
+
+  const queryOptions = [
+    {
+      id: "sql",
+      title: dbTypeDisplay,
+      icon: Database,
+      description: `Export schema as ${dbTypeDisplay} DDL.`,
+    },
+    {
+      id: "dbml",
+      title: "DBML",
+      icon: FileText,
+      description: "Export a DBML representation.",
     },
     {
       id: "mermaid",
@@ -195,7 +198,7 @@ export function ExportDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Export Diagram</DialogTitle>
           <DialogDescription>
@@ -204,9 +207,37 @@ export function ExportDialog({
         </DialogHeader>
         <div className="py-4 space-y-6">
           <div>
-            <h3 className="text-lg font-semibold mb-4">General</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {generalOptions.map((opt) => (
+            <h3 className="text-lg font-semibold mb-4">Share</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {shareOptions.map((opt) => (
+                <Card
+                  key={opt.id}
+                  onClick={() => setSelectedFormat(opt.id as ExportFormat)}
+                  className={cn(
+                    "cursor-pointer transition-all",
+                    selectedFormat === opt.id
+                      ? "border-primary ring-2 ring-primary"
+                      : "hover:border-primary/50"
+                  )}
+                >
+                  <CardHeader className="items-center p-4">
+                    <opt.icon className="h-8 w-8 mb-2" />
+                    <CardTitle className="text-base text-center">
+                      {opt.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center text-xs text-muted-foreground p-4 pt-0">
+                    {opt.description}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-semibold mb-4">General / Query</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {queryOptions.map((opt) => (
                 <Card
                   key={opt.id}
                   onClick={() => setSelectedFormat(opt.id as ExportFormat)}
@@ -233,7 +264,7 @@ export function ExportDialog({
 
           <div>
             <h3 className="text-lg font-semibold mb-4">Code Generation</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {codegenOptions.map((opt) => (
                 <Card
                   key={opt.id}
