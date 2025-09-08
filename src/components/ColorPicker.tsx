@@ -37,23 +37,23 @@ export function ColorPicker({ color, onColorChange, disabled }: ColorPickerProps
   const pickerStyles = {
     default: {
       picker: {
-        background: resolvedTheme === 'dark' ? 'hsl(0 0% 8%)' : 'hsl(0 0% 100%)',
+        background: resolvedTheme === 'dark' ? '#141414' : '#ffffff',
         border: '1px solid',
-        borderColor: resolvedTheme === 'dark' ? 'hsl(0 0% 15%)' : 'hsl(214.3 31.8% 91.4%)',
+        borderColor: resolvedTheme === 'dark' ? '#262626' : '#e2e8f0',
         boxShadow: 'none',
         fontFamily: 'inherit',
       },
       // This targets the input fields (Hex, R, G, B, A)
       "input": {
-        background: resolvedTheme === 'dark' ? 'hsl(0 0% 15%)' : 'hsl(0 0% 100%)',
-        color: resolvedTheme === 'dark' ? 'hsl(210 40% 98%)' : 'hsl(222.2 84% 4.9%)',
-        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? 'hsl(0 0% 30%)' : 'hsl(214.3 31.8% 91.4%)'}`,
+        background: resolvedTheme === 'dark' ? '#262626' : '#ffffff',
+        color: resolvedTheme === 'dark' ? '#f8fafc' : '#0f172a',
+        boxShadow: `inset 0 0 0 1px ${resolvedTheme === 'dark' ? '#4d4d4d' : '#cbd5e1'}`,
         height: '24px',
         padding: '4px',
       },
       // This targets the labels for the input fields
       "label": {
-        color: resolvedTheme === 'dark' ? 'hsl(210 40% 98%)' : 'hsl(215.4 16.3% 46.9%)',
+        color: resolvedTheme === 'dark' ? '#f8fafc' : '#64748b',
         fontSize: '12px',
       }
     },
