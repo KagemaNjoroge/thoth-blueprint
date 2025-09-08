@@ -7,7 +7,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
 
     // Tables and columns
     nodes.filter(n => !n.data.isDeleted).forEach((node: AppNode) => {
-        mermaidString += `    ${node.data.label} {\n`;
+        mermaidString += `    "${node.data.label}" {\n`;
         node.data.columns.forEach((col: Column) => {
             const type = col.type.replace(/\s/g, '_'); // Mermaid doesn't like spaces in types
             const pk = col.pk ? ' PK' : '';
@@ -25,7 +25,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
             
             const commentString = comments.length > 0 ? ` "${comments.join(', ')}"` : '';
             
-            mermaidString += `        ${type} ${col.name}${pk}${unique}${commentString}\n`;
+            mermaidString += `        ${type} "${col.name}"${pk}${unique}${commentString}\n`;
         });
         mermaidString += `    }\n\n`;
     });
@@ -54,7 +54,7 @@ const diagramToMermaid = (diagram: Diagram): string => {
                     relationshipSymbol = '||--o{'; // Default to one-to-many
             }
             
-            mermaidString += `    ${sourceNode.data.label} ${relationshipSymbol} ${targetNode.data.label} : ""\n`;
+            mermaidString += `    "${sourceNode.data.label}" ${relationshipSymbol} "${targetNode.data.label}" : ""\n`;
         }
     });
 
