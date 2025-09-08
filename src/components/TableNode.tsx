@@ -152,7 +152,7 @@ function TableNode({
                   <Handle
                     type="target"
                     position={Position.Left}
-                    id={col.id}
+                    id={`${col.id}-left-target`}
                     style={{
                       ...handleStyle,
                       top: "50%",
@@ -164,7 +164,7 @@ function TableNode({
                   <Handle
                     type="source"
                     position={Position.Left}
-                    id={col.id}
+                    id={`${col.id}-left-source`}
                     style={{
                       ...handleStyle,
                       top: "50%",
@@ -190,7 +190,7 @@ function TableNode({
                   <Handle
                     type="target"
                     position={Position.Right}
-                    id={col.id}
+                    id={`${col.id}-right-target`}
                     style={{
                       ...handleStyle,
                       top: "50%",
@@ -202,7 +202,7 @@ function TableNode({
                   <Handle
                     type="source"
                     position={Position.Right}
-                    id={col.id}
+                    id={`${col.id}-right-source`}
                     style={{
                       ...handleStyle,
                       top: "50%",

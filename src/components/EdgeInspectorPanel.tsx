@@ -45,8 +45,20 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
 
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
-    const sourceColumn = sourceNode?.data.columns.find((c) => c.id === edge.sourceHandle);
-    const targetColumn = targetNode?.data.columns.find((c) => c.id === edge.targetHandle);
+    
+    // Extract column ID from handle ID (format: "columnId-side-type")
+    const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
+      if (!handleId) return null;
+      // Handle both old format (just column ID) and new format (columnId-side-type)
+      const parts = handleId.split('-');
+      return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
+    };
+    
+    const sourceColumnId = getColumnIdFromHandle(edge.sourceHandle);
+    const targetColumnId = getColumnIdFromHandle(edge.targetHandle);
+    
+    const sourceColumn = sourceNode?.data.columns.find((c) => c.id === sourceColumnId);
+    const targetColumn = targetNode?.data.columns.find((c) => c.id === targetColumnId);
 
     const handleTypeChange = (value: string) => {
         setRelationshipType(value);
