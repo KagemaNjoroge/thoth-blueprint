@@ -131,7 +131,7 @@ function generateCreateModelOperation(
   
   // Add fields
   for (const column of node.data.columns) {
-    const field = generateFieldDefinition(column, node, edges, diagram.dbType);
+    const field = generateFieldDefinition(column, node, edges, diagram);
     fields.push(field);
   }
   
@@ -161,8 +161,9 @@ function generateFieldDefinition(
   column: Column,
   node: AppNode,
   edges: AppEdge[],
-  dbType: 'mysql' | 'postgres'
+  diagram: Diagram
 ): string {
+  const dbType = diagram.dbType;
   // Handle primary key field
   if (column.pk) {
     // Check if it's an auto increment field
@@ -234,7 +235,7 @@ function generateFieldDefinition(
         }
       }
       
-      return `('${column.name}', models.ForeignKey(${onDeleteAction}${defaultValue}, to='${targetModelName.toLowerCase()}.${targetColumn.name}'))`;
+      return `('${column.name}', models.ForeignKey(${onDeleteAction}${defaultValue}, to='your_app.${targetModelName}'))`;
     }
   }
   
@@ -258,10 +259,6 @@ function generateAdditionalOperations(diagram: Diagram): string[] {
   
   // This function should be extended to handle user-defined operations
   // For now, we'll provide a way to add example operations for testing
-  
-  // Example operations based on your examples:
-  // These would typically come from a separate configuration or user actions
-  // that modify existing models rather than initial creation
   
   // Check if this is a test scenario where we want to add example operations
   // In a real implementation, this would be controlled by user input or diagram metadata
