@@ -24,6 +24,7 @@ export default defineConfig(() => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/_/, /\/[^/?]+\.[^/]+$/],
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
