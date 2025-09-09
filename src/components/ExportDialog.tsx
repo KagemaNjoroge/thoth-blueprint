@@ -15,9 +15,11 @@ import { exportToDbml, exportToSql, exportToJson } from "@/lib/dbml";
 import { exportToMermaid } from "@/lib/mermaid";
 import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-generator";
 import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
+import { generateDjangoMigration } from "@/lib/codegen/django/migration-generator";
 import JSZip from "jszip";
 import { LaravelIcon } from "@/components/icons/LaravelIcon";
 import { TypeOrmIcon } from "@/components/icons/TypeOrmIcon";
+import { DjangoIcon } from "@/components/icons/DjangoIcon";
 import { toSvg } from "html-to-image";
 import { saveAs } from "file-saver";
 import {
@@ -27,7 +29,7 @@ import {
 } from "@xyflow/react";
 import { showError } from "@/utils/toast";
 
-type ExportFormat = "sql" | "dbml" | "json" | "svg" | "mermaid" | "laravel" | "typeorm";
+type ExportFormat = "sql" | "dbml" | "json" | "svg" | "mermaid" | "laravel" | "typeorm" | "django";
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -109,6 +111,27 @@ export function ExportDialog({
           saveAs(
             zipBlob,
             `${diagram.name.replace(/\s+/g, "_")}_typeorm_migrations.zip`
+          );
+          onOpenChange(false);
+          setSelectedFormat(null);
+          return;
+        }
+        case "django": { // Generate Django migration files and create a zip
+          const migrationFiles = generateDjangoMigration(diagram);
+          if (migrationFiles.length === 0) {
+            showError("No tables found to generate migrations.");
+            return;
+          }
+
+          const zip = new JSZip();
+          migrationFiles.forEach((file) => {
+            zip.file(file.filename, file.content);
+          });
+
+          const zipBlob = await zip.generateAsync({ type: "blob" });
+          saveAs(
+            zipBlob,
+            `${diagram.name.replace(/\s+/g, "_")}_django_migrations.zip`
           );
           onOpenChange(false);
           setSelectedFormat(null);
@@ -223,6 +246,12 @@ export function ExportDialog({
       icon: TypeOrmIcon,
       description: "Generate TypeORM migration files.",
     },
+    {
+      id: "django",
+      title: "Django",
+      icon: DjangoIcon,
+      description: "Generate Django project with models and migrations.",
+    },
   ];
 
   return (
@@ -308,7 +337,9 @@ export function ExportDialog({
                   <CardHeader className="items-center p-4">
                     <opt.icon className={cn(
                       "h-8 w-8 mb-2",
-                      opt.id === "laravel" ? "text-red-500" : opt.id === "typeorm" ? "text-orange-500" : ""
+                      opt.id === "laravel" ? "text-red-500" : 
+                      opt.id === "typeorm" ? "text-orange-500" : 
+                      opt.id === "django" ? "text-green-600" : ""
                     )} />
                     <CardTitle className="text-base text-center">
                       {opt.title}
