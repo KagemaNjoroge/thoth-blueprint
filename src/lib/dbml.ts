@@ -148,16 +148,18 @@ const diagramToDbml = (diagram: Diagram): string => {
       | AppNode
       | undefined;
     // Extract column ID from handle ID (format: "columnId-side-type")
-    const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
+    const getColumnIdFromHandle = (
+      handleId: string | null | undefined
+    ): string | null => {
       if (!handleId) return null;
       // Handle both old format (just column ID) and new format (columnId-side-type)
-      const parts = handleId.split('-');
-      return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
+      const parts = handleId.split("-");
+      return parts.length >= 3 ? parts.slice(0, -2).join("-") : handleId;
     };
-    
+
     const sourceColumnId = getColumnIdFromHandle(edge.sourceHandle);
     const targetColumnId = getColumnIdFromHandle(edge.targetHandle);
-    
+
     const sourceColumn = sourceNode?.data.columns.find(
       (c: Column) => c.id === sourceColumnId
     );

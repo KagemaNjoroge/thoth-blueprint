@@ -14,8 +14,10 @@ import { cn } from "@/lib/utils";
 import { exportToDbml, exportToSql, exportToJson } from "@/lib/dbml";
 import { exportToMermaid } from "@/lib/mermaid";
 import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-generator";
+import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
 import JSZip from "jszip";
 import { LaravelIcon } from "@/components/icons/LaravelIcon";
+import { TypeOrmIcon } from "@/components/icons/TypeOrmIcon";
 import { toSvg } from "html-to-image";
 import { saveAs } from "file-saver";
 import {
@@ -25,7 +27,7 @@ import {
 } from "@xyflow/react";
 import { showError } from "@/utils/toast";
 
-type ExportFormat = "sql" | "dbml" | "json" | "svg" | "mermaid" | "laravel";
+type ExportFormat = "sql" | "dbml" | "json" | "svg" | "mermaid" | "laravel" | "typeorm";
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -86,6 +88,27 @@ export function ExportDialog({
           saveAs(
             zipBlob,
             `${diagram.name.replace(/\s+/g, "_")}_laravel_migrations.zip`
+          );
+          onOpenChange(false);
+          setSelectedFormat(null);
+          return;
+        }
+        case "typeorm": { // Generate TypeORM migration files and create a zip
+          const migrationFiles = generateTypeOrmMigration(diagram);
+          if (migrationFiles.length === 0) {
+            showError("No tables found to generate migrations.");
+            return;
+          }
+
+          const zip = new JSZip();
+          migrationFiles.forEach((file) => {
+            zip.file(file.filename, file.content);
+          });
+
+          const zipBlob = await zip.generateAsync({ type: "blob" });
+          saveAs(
+            zipBlob,
+            `${diagram.name.replace(/\s+/g, "_")}_typeorm_migrations.zip`
           );
           onOpenChange(false);
           setSelectedFormat(null);
@@ -194,6 +217,12 @@ export function ExportDialog({
       icon: LaravelIcon,
       description: "Generate Laravel migration files.",
     },
+    {
+      id: "typeorm",
+      title: "TypeORM",
+      icon: TypeOrmIcon,
+      description: "Generate TypeORM migration files.",
+    },
   ];
 
   return (
@@ -277,7 +306,10 @@ export function ExportDialog({
                   )}
                 >
                   <CardHeader className="items-center p-4">
-                    <opt.icon className="h-8 w-8 mb-2 text-red-500" />
+                    <opt.icon className={cn(
+                      "h-8 w-8 mb-2",
+                      opt.id === "laravel" ? "text-red-500" : opt.id === "typeorm" ? "text-orange-500" : ""
+                    )} />
                     <CardTitle className="text-base text-center">
                       {opt.title}
                     </CardTitle>
