@@ -51,7 +51,7 @@ function TableNode({
     boxShadow: selected
       ? `0 0 8px ${data.color || "#60A5FA"}40`
       : "var(--tw-shadow, 0 0 #0000)",
-    width: 320,
+    width: 288,
   };
 
   const handleStyle = {
