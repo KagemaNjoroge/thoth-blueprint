@@ -74,7 +74,7 @@ export function generateTypeOrmMigrationString(
   }
 
   const output = `/*
- * TypeORM Migration Files Generated from Database Diagram
+ * TypeORM Migration Files Generated from ThothBlueprint
  * Generated on: ${new Date().toLocaleString()}
  * 
  * Instructions:

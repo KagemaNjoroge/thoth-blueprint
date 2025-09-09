@@ -62,7 +62,7 @@ export function generateLaravelMigrationString(
   }
   
   const output = `/*
- * Laravel Migration Files Generated from Database Diagram
+ * Laravel Migration Files Generated from ThothBlueprint
  * Generated on: ${new Date().toLocaleString()}
  * 
  * Instructions:
@@ -320,6 +320,3 @@ function generateIndexDefinition(index: Index, columns: Column[], indent: string
 
   return definition;
 }
-
-
-
