@@ -256,17 +256,17 @@ export function ExportDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Export Diagram</DialogTitle>
           <DialogDescription>
             Select a format to export your diagram.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-6">
+        <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto pr-4">
           <div>
             <h3 className="text-lg font-semibold mb-4">Share</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {shareOptions.map((opt) => (
                 <Card
                   key={opt.id}
@@ -294,7 +294,7 @@ export function ExportDialog({
 
           <div>
             <h3 className="text-lg font-semibold mb-4">General / Query</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {queryOptions.map((opt) => (
                 <Card
                   key={opt.id}
@@ -322,7 +322,7 @@ export function ExportDialog({
 
           <div>
             <h3 className="text-lg font-semibold mb-4">Code Generation</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {codegenOptions.map((opt) => (
                 <Card
                   key={opt.id}
