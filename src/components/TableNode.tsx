@@ -51,6 +51,7 @@ function TableNode({
     boxShadow: selected
       ? `0 0 8px ${data.color || "#60A5FA"}40`
       : "var(--tw-shadow, 0 0 #0000)",
+    width: 320,
   };
 
   const handleStyle = {
@@ -64,7 +65,7 @@ function TableNode({
 
   return (
     <Card
-      className="w-80 shadow-md react-flow__node-default bg-card group"
+      className="shadow-md react-flow__node-default bg-card group"
       style={cardStyle}
     >
       <CardHeader className="p-0 cursor-move relative">
