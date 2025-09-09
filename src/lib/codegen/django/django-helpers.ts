@@ -1,3 +1,5 @@
+import { Column } from "@/lib/types";
+
 export function toDjangoTableName(tableName: string): string {
   return tableName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 }
@@ -9,206 +11,121 @@ export function toDjangoModelName(tableName: string): string {
     .join('');
 }
 
-export function toDjangoAppName(tableName: string): string {
-  // Convert table name to app name (singular, lowercase)
-  const name = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-  // Remove common plural suffixes
-  return name.replace(/s$/, '').replace(/_table$/, '');
-}
-
 export function generateTimestamp(): string {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  
-  return `${year}${month}${day}${hours}${minutes}${seconds}`;
+  return now.toISOString().replace(/[-:.]/g, '').slice(0, 14);
 }
 
 export function escapeString(str: string): string {
-  return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+  return str.replace(/'/g, "\\'").replace(/\n/g, '\\n');
 }
 
-// MySQL to Django field type mapping
 const MYSQL_TO_DJANGO: Record<string, string> = {
-  'int': 'models.IntegerField',
-  'integer': 'models.IntegerField',
-  'bigint': 'models.BigIntegerField',
-  'smallint': 'models.SmallIntegerField',
-  'tinyint': 'models.SmallIntegerField',
-  'mediumint': 'models.IntegerField',
-  'varchar': 'models.CharField',
-  'char': 'models.CharField',
-  'text': 'models.TextField',
-  'longtext': 'models.TextField',
-  'mediumtext': 'models.TextField',
-  'tinytext': 'models.CharField',
-  'decimal': 'models.DecimalField',
-  'numeric': 'models.DecimalField',
-  'float': 'models.FloatField',
-  'double': 'models.FloatField',
-  'real': 'models.FloatField',
-  'boolean': 'models.BooleanField',
-  'bool': 'models.BooleanField',
-  'date': 'models.DateField',
-  'time': 'models.TimeField',
-  'datetime': 'models.DateTimeField',
-  'timestamp': 'models.DateTimeField',
-  'json': 'models.JSONField',
-  'enum': 'models.CharField',
-  'set': 'models.CharField',
-  'uuid': 'models.UUIDField',
-  'binary': 'models.BinaryField',
-  'varbinary': 'models.BinaryField',
-  'blob': 'models.BinaryField',
-  'longblob': 'models.BinaryField',
-  'mediumblob': 'models.BinaryField',
-  'tinyblob': 'models.BinaryField'
+  'INT': 'models.IntegerField', 'INTEGER': 'models.IntegerField', 'BIGINT': 'models.BigIntegerField',
+  'SMALLINT': 'models.SmallIntegerField', 'TINYINT': 'models.SmallIntegerField', 'MEDIUMINT': 'models.IntegerField',
+  'VARCHAR': 'models.CharField', 'CHAR': 'models.CharField', 'TEXT': 'models.TextField',
+  'LONGTEXT': 'models.TextField', 'MEDIUMTEXT': 'models.TextField', 'TINYTEXT': 'models.TextField',
+  'DECIMAL': 'models.DecimalField', 'NUMERIC': 'models.DecimalField', 'FLOAT': 'models.FloatField',
+  'DOUBLE': 'models.FloatField', 'REAL': 'models.FloatField', 'BOOLEAN': 'models.BooleanField',
+  'BOOL': 'models.BooleanField', 'DATE': 'models.DateField', 'TIME': 'models.TimeField',
+  'DATETIME': 'models.DateTimeField', 'TIMESTAMP': 'models.DateTimeField', 'JSON': 'models.JSONField',
+  'ENUM': 'models.CharField', 'SET': 'models.CharField', 'UUID': 'models.UUIDField',
+  'BINARY': 'models.BinaryField', 'VARBINARY': 'models.BinaryField', 'BLOB': 'models.BinaryField',
 };
 
-// PostgreSQL to Django field type mapping
 const POSTGRES_TO_DJANGO: Record<string, string> = {
-  'integer': 'models.IntegerField',
-  'int': 'models.IntegerField',
-  'int4': 'models.IntegerField',
-  'bigint': 'models.BigIntegerField',
-  'int8': 'models.BigIntegerField',
-  'smallint': 'models.SmallIntegerField',
-  'int2': 'models.SmallIntegerField',
-  'varchar': 'models.CharField',
-  'character varying': 'models.CharField',
-  'char': 'models.CharField',
-  'character': 'models.CharField',
-  'text': 'models.TextField',
-  'decimal': 'models.DecimalField',
-  'numeric': 'models.DecimalField',
-  'real': 'models.FloatField',
-  'float4': 'models.FloatField',
-  'double precision': 'models.FloatField',
-  'float8': 'models.FloatField',
-  'boolean': 'models.BooleanField',
-  'bool': 'models.BooleanField',
-  'date': 'models.DateField',
-  'time': 'models.TimeField',
-  'timestamp': 'models.DateTimeField',
-  'timestamptz': 'models.DateTimeField',
-  'json': 'models.JSONField',
-  'jsonb': 'models.JSONField',
-  'uuid': 'models.UUIDField',
-  'bytea': 'models.BinaryField',
-  'serial': 'models.AutoField',
-  'bigserial': 'models.BigAutoField',
-  'smallserial': 'models.SmallAutoField'
+  'INTEGER': 'models.IntegerField', 'INT': 'models.IntegerField', 'INT4': 'models.IntegerField',
+  'BIGINT': 'models.BigIntegerField', 'INT8': 'models.BigIntegerField', 'SMALLINT': 'models.SmallIntegerField',
+  'INT2': 'models.SmallIntegerField', 'VARCHAR': 'models.CharField', 'CHARACTER VARYING': 'models.CharField',
+  'CHAR': 'models.CharField', 'CHARACTER': 'models.CharField', 'TEXT': 'models.TextField',
+  'DECIMAL': 'models.DecimalField', 'NUMERIC': 'models.DecimalField', 'REAL': 'models.FloatField',
+  'FLOAT4': 'models.FloatField', 'DOUBLE PRECISION': 'models.FloatField', 'FLOAT8': 'models.FloatField',
+  'BOOLEAN': 'models.BooleanField', 'BOOL': 'models.BooleanField', 'DATE': 'models.DateField',
+  'TIME': 'models.TimeField', 'TIMESTAMP': 'models.DateTimeField', 'TIMESTAMPTZ': 'models.DateTimeField',
+  'JSON': 'models.JSONField', 'JSONB': 'models.JSONField', 'UUID': 'models.UUIDField',
+  'BYTEA': 'models.BinaryField', 'SERIAL': 'models.AutoField', 'BIGSERIAL': 'models.BigAutoField',
+  'SMALLSERIAL': 'models.SmallAutoField',
 };
 
-export function getDjangoFieldType(columnType: string, databaseType: 'mysql' | 'postgresql' = 'mysql'): string {
-  const type = columnType.toLowerCase().trim();
-  
-  // Handle auto increment fields
-  if (type.includes('auto_increment') || type.includes('serial')) {
-    if (type.includes('bigint') || type.includes('bigserial')) {
-      return 'models.BigAutoField';
+export function getDjangoFieldType(col: Column, dbType: 'mysql' | 'postgres'): string {
+    const type = col.type.toUpperCase();
+
+    if (col.pk && col.isAutoIncrement) {
+        if (type.includes('BIGINT') || type.includes('BIGSERIAL')) return 'models.BigAutoField';
+        if (type.includes('SMALLINT') || type.includes('SMALLSERIAL')) return 'models.SmallAutoField';
+        return 'models.AutoField';
     }
-    if (type.includes('smallint') || type.includes('smallserial')) {
-      return 'models.SmallAutoField';
-    }
-    return 'models.AutoField';
-  }
-  
-  // Extract base type (remove size specifications)
-  const baseType = type.replace(/\([^)]*\)/g, '').trim();
-  
-  const mapping = databaseType === 'postgresql' ? POSTGRES_TO_DJANGO : MYSQL_TO_DJANGO;
-  
-  return mapping[baseType] || 'models.CharField';
+
+    const mapping = dbType === 'postgres' ? POSTGRES_TO_DJANGO : MYSQL_TO_DJANGO;
+    const baseType = type.split('(')[0].trim();
+    return mapping[baseType] || 'models.TextField';
 }
 
-export function extractFieldOptions(columnType: string, columnInfo: any): string[] {
-  const options: string[] = [];
-  const type = columnType.toLowerCase();
-  
-  // Extract max_length for CharField
-  if (type.includes('varchar') || type.includes('char')) {
-    const lengthMatch = type.match(/\((\d+)\)/);
-    if (lengthMatch) {
-      options.push(`max_length=${lengthMatch[1]}`);
-    } else if (type.includes('varchar')) {
-      options.push('max_length=255'); // Default for varchar without length
+export function getDjangoFieldOptions(col: Column, fieldType: string): string[] {
+    const options: string[] = [];
+    const type = col.type.toUpperCase();
+
+    if (col.pk) {
+        options.push('primary_key=True');
+        if (!col.isAutoIncrement) {
+            options.push('serialize=False');
+        } else {
+            options.push('auto_created=True', 'serialize=False', "verbose_name='ID'");
+        }
     }
-  }
-  
-  // Extract max_digits and decimal_places for DecimalField
-  if (type.includes('decimal') || type.includes('numeric')) {
-    const decimalMatch = type.match(/\((\d+),\s*(\d+)\)/);
-    if (decimalMatch) {
-      options.push(`max_digits=${decimalMatch[1]}`);
-      options.push(`decimal_places=${decimalMatch[2]}`);
+
+    if (fieldType === 'models.CharField') {
+        const length = col.length || 255;
+        options.push(`max_length=${length}`);
     }
-  }
-  
-  // Handle nullable fields
-  if (columnInfo?.nullable === false) {
-    options.push('null=False');
-  } else if (columnInfo?.nullable === true) {
-    options.push('null=True');
-  }
-  
-  // Handle unique constraints
-  if (columnInfo?.isUnique) {
-    options.push('unique=True');
-  }
-  
-  // Handle default values
-  if (columnInfo?.defaultValue !== undefined && columnInfo?.defaultValue !== null) {
-    const defaultVal = columnInfo.defaultValue;
-    if (typeof defaultVal === 'string') {
-      options.push(`default='${escapeString(defaultVal)}'`);
-    } else {
-      options.push(`default=${defaultVal}`);
+
+    if (fieldType === 'models.DecimalField') {
+        options.push(`max_digits=${col.precision || 10}`);
+        options.push(`decimal_places=${col.scale || 2}`);
     }
-  }
-  
-  // Handle choices for ENUM fields
-  if (type.includes('enum')) {
-    const enumMatch = type.match(/enum\s*\((.*)\)/i);
-    if (enumMatch) {
-      const values = enumMatch[1]
-        .split(',')
-        .map(v => v.trim().replace(/['"]/g, ''))
-        .filter(v => v.length > 0);
-      
-      const choices = values.map(v => `('${v}', '${v}')`).join(', ');
-      options.push(`choices=[${choices}]`);
-      
-      // Set max_length for enum fields
-      const maxLength = Math.max(...values.map(v => v.length));
-      options.push(`max_length=${maxLength}`);
+
+    if (col.nullable) {
+        options.push('null=True');
+        if (fieldType === 'models.CharField' || fieldType === 'models.TextField') {
+            options.push('blank=True');
+        }
     }
-  }
-  
-  return options;
+
+    if (col.isUnique && !col.pk) {
+        options.push('unique=True');
+    }
+
+    if (col.defaultValue !== undefined && col.defaultValue !== null && String(col.defaultValue).trim() !== '') {
+        const val = col.defaultValue;
+        if (typeof val === 'string') {
+            options.push(`default='${escapeString(val)}'`);
+        } else if (typeof val === 'boolean') {
+            options.push(`default=${val ? 'True' : 'False'}`);
+        } else {
+            options.push(`default=${val}`);
+        }
+    }
+
+    if (col.comment) {
+        options.push(`help_text='${escapeString(col.comment)}'`);
+    }
+
+    if (type === 'ENUM' && col.enumValues) {
+        const choices = col.enumValues.split(',').map(v => v.trim()).map(v => `('${v}', '${v.charAt(0).toUpperCase() + v.slice(1).toLowerCase()}')`).join(', ');
+        options.push(`choices=[${choices}]`);
+    }
+
+    return options;
 }
 
-export function getDjangoOnDeleteAction(onDelete?: string): string {
-  switch (onDelete?.toUpperCase()) {
-    case 'CASCADE':
-      return 'models.CASCADE';
-    case 'SET NULL':
-      return 'models.SET_NULL';
+export function getDjangoOnDeleteAction(relationship?: string): string {
+  switch (relationship?.toUpperCase()) {
+    case 'CASCADE': return 'django.db.models.deletion.CASCADE';
+    case 'SET NULL': return 'django.db.models.deletion.SET_NULL';
     case 'RESTRICT':
     case 'NO ACTION':
-      return 'models.PROTECT';
-    case 'SET DEFAULT':
-      return 'models.SET_DEFAULT';
-    default:
-      return 'models.CASCADE'; // Default behavior
+    case 'PROTECT': return 'django.db.models.deletion.PROTECT';
+    case 'SET DEFAULT': return 'django.db.models.deletion.SET_DEFAULT';
+    default: return 'django.db.models.deletion.CASCADE';
   }
-}
-
-export function formatPythonString(str: string): string {
-  // Escape quotes and format for Python string literals
-  return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 }

@@ -1,14 +1,13 @@
-import type { Diagram, AppNode, AppEdge, Column } from "../../types";
+import { Diagram, AppNode, AppEdge, Column } from "@/lib/types";
 import {
   toDjangoTableName,
   toDjangoModelName,
   generateTimestamp,
   getDjangoFieldType,
-  extractFieldOptions,
+  getDjangoFieldOptions,
   getDjangoOnDeleteAction,
   escapeString,
 } from "./django-helpers";
-import { exportToSql } from "@/lib/dbml";
 
 export interface DjangoMigrationOptions {
   timestamp?: string;
@@ -19,88 +18,79 @@ export interface DjangoMigrationFile {
   content: string;
 }
 
-function generateDjangoMigration(
-  diagram: Diagram,
-  options: DjangoMigrationOptions = {}
-): DjangoMigrationFile[] {
-  const { nodes, edges } = diagram.data;
-  const timestamp = options.timestamp || generateTimestamp();
-
-  // Generate single migration file with all tables
-  const filename = `0001_initial.py`;
-  const content = generateInitialMigration(diagram, timestamp);
-
-  return [{ filename, content }];
+export function generateDjangoMigration(diagram: Diagram, options: DjangoMigrationOptions = {}): DjangoMigrationFile[] {
+  const content = generateInitialMigrationContent(diagram);
+  return [{
+    filename: `0001_initial.py`,
+    content
+  }];
 }
 
-function generateDjangoMigrationString(
-  diagram: Diagram,
-  options: DjangoMigrationOptions = {}
-): string {
+export function generateDjangoMigrationString(diagram: Diagram, options: DjangoMigrationOptions = {}): string {
   const files = generateDjangoMigration(diagram, options);
+  return files.map(f => `# File: ${f.filename}\n\n${f.content}`).join('\n\n');
+}
 
-  if (files.length === 0) {
-    return "# No tables found to generate migrations";
+function topologicalSort(nodes: AppNode[], edges: AppEdge[]): AppNode[] {
+  const sorted: AppNode[] = [];
+  const inDegree = new Map<string, number>();
+  const adj = new Map<string, string[]>();
+
+  for (const node of nodes) {
+    inDegree.set(node.id, 0);
+    adj.set(node.id, []);
   }
 
-  const output = `"""
-Django Migration Files Generated from Database Diagram
-Generated on: ${new Date().toLocaleString()}
-Database Type: ${diagram.dbType === 'postgres' ? 'PostgreSQL' : 'MySQL'}
+  for (const edge of edges) {
+    const source = edge.source;
+    const target = edge.target;
+    if (!adj.has(target)) adj.set(target, []);
+    adj.get(target)!.push(source);
+    inDegree.set(source, (inDegree.get(source) || 0) + 1);
+  }
 
-Instructions:
-1. Copy each migration block below into separate files in your Django app
-2. Place them in the migrations/ directory of your Django app
-3. Run 'python manage.py migrate' to execute the migrations
+  const queue = nodes.filter(node => inDegree.get(node.id) === 0);
 
-Note: Each migration file is independent and includes all table structure
-"""
+  while (queue.length > 0) {
+    const u = queue.shift()!;
+    sorted.push(u);
+    for (const v of adj.get(u.id) || []) {
+      inDegree.set(v, inDegree.get(v)! - 1);
+      if (inDegree.get(v) === 0) {
+        const node = nodes.find(n => n.id === v);
+        if (node) queue.push(node);
+      }
+    }
+  }
 
-`;
+  if (sorted.length !== nodes.length) {
+    console.warn("Circular dependency detected in tables. Migration order may be incorrect.");
+    return nodes.filter(n => !sorted.find(s => s.id === n.id)).concat(sorted);
+  }
 
-  return (
-    output +
-    files
-      .map((f) => `# File: ${f.filename}\n${f.content}`)
-      .join("\n\n" + "=".repeat(80) + "\n\n")
-  );
+  return sorted;
 }
 
-function generateInitialMigration(
-  diagram: Diagram,
-  timestamp: string
-): string {
+function generateInitialMigrationContent(diagram: Diagram): string {
   const { nodes, edges } = diagram.data;
-  
-  // Sort nodes by their order property to respect table serial from inspector
-  const sortedNodes = nodes
-    .filter((n) => !n.data.isDeleted)
-    .sort((a, b) => {
-      const orderA = a.data.order ?? 0;
-      const orderB = b.data.order ?? 0;
-      return orderA - orderB;
-    });
+  const appName = 'yourapp'; // Placeholder as requested
+
+  const sortedNodes = topologicalSort(nodes.filter(n => !n.data.isDeleted), edges);
 
   const operations: string[] = [];
+  const enumOperations = generateEnumOperations(sortedNodes, diagram.dbType);
+  operations.push(...enumOperations);
 
-  // Generate CreateModel operations for each table
-  for (const node of sortedNodes) {
-    const operation = generateCreateModelOperation(node, diagram, edges);
-    operations.push(operation);
-  }
+  const createModelOperations = sortedNodes.map(node => generateCreateModelOperation(node, nodes, edges, diagram.dbType, appName));
+  operations.push(...createModelOperations);
 
-  // Generate additional operations (AlterModelOptions, RenameField, etc.)
-  const additionalOperations = generateAdditionalOperations(diagram);
-  operations.push(...additionalOperations);
+  const postOperations = generatePostOperations(sortedNodes, diagram.dbType);
+  operations.push(...postOperations);
 
-  const operationsStr = operations.map(op => `        ${op}`).join(',\n');
+  const operationsStr = operations.join(',\n\n        ');
+  const dateStr = new Date().toISOString().split('T')[0];
 
-  const currentDate = new Date();
-  const dateStr = currentDate.toISOString().split('T')[0];
-  const timeStr = currentDate.toTimeString().split(' ')[0].replace(/:/g, '');
-
-  return `# Generated by Database Designer on ${dateStr} ${timeStr.slice(0, 4)}
-
+  return `# Generated by ThothBlueprint on ${dateStr}
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -113,306 +103,104 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-${operationsStr}
+        ${operationsStr}
     ]
 `;
 }
 
-function generateCreateModelOperation(
-  node: AppNode,
-  diagram: Diagram,
-  edges: AppEdge[]
-): string {
-  const modelName = toDjangoModelName(node.data.label);
-  const tableName = toDjangoTableName(node.data.label);
-  
-  // Generate fields
-  const fields: string[] = [];
-  
-  // Add fields
-  for (const column of node.data.columns) {
-    const field = generateFieldDefinition(column, node, edges, diagram);
-    fields.push(field);
-  }
-  
-  // Format fields
-  const fieldsStr = fields.map(f => `                ${f}`).join(',\n');
-  
-  // Generate model options
-  let optionsStr = '';
-  // Add default ordering by primary key if exists
-  const pkColumn = node.data.columns.find(col => col.pk);
-  if (pkColumn) {
-    optionsStr = `            options={
-                'ordering': ('-${pkColumn.name}',),
-            },`;
-  }
-  
-  return `migrations.CreateModel(
-            name='${modelName}',
-            fields=[
-${fieldsStr}
-            ],
-${optionsStr}
-        )`;
-}
-
-function generateFieldDefinition(
-  column: Column,
-  node: AppNode,
-  edges: AppEdge[],
-  diagram: Diagram
-): string {
-  const dbType = diagram.dbType;
-  // Handle primary key field
-  if (column.pk) {
-    // Check if it's an auto increment field
-    if (column.isAutoIncrement) {
-      return `('${column.name}', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID'))`;
-    }
-    // For non-auto increment primary keys, use the appropriate field type
-    const fieldType = getDjangoFieldType(column.type, dbType);
-    const options = extractFieldOptions(column.type, column);
-    const optionsStr = options.length > 0 ? `, ${options.join(', ')}` : '';
-    return `('${column.name}', ${fieldType}(primary_key=True${optionsStr}))`;
-  }
-  
-  // Handle foreign key relationships
-  const fkEdge = edges.find(edge => {
-    // Extract column ID from handle ID
-    const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
-      if (!handleId) return null;
-      const parts = handleId.split('-');
-      return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
-    };
-    
-    const sourceColumnId = getColumnIdFromHandle(edge.sourceHandle);
-    const targetColumnId = getColumnIdFromHandle(edge.targetHandle);
-    
-    // Check if this column is part of a foreign key relationship
-    return sourceColumnId === column.id || targetColumnId === column.id;
-  });
-  
-  if (fkEdge) {
-    // Determine the target table and column
-    let targetNode, targetColumn;
-    
-    // Extract column ID from handle ID
-    const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
-      if (!handleId) return null;
-      const parts = handleId.split('-');
-      return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
-    };
-    
-    const sourceColumnId = getColumnIdFromHandle(fkEdge.sourceHandle);
-    const targetColumnId = getColumnIdFromHandle(fkEdge.targetHandle);
-    
-    if (sourceColumnId === column.id) {
-      // This node is the source (referencing table)
-      targetNode = diagram.data.nodes.find(n => n.id === fkEdge.target);
-      if (targetNode) {
-        targetColumn = targetNode.data.columns.find(c => c.id === targetColumnId);
-      }
-    } else if (targetColumnId === column.id) {
-      // This node is the target (referenced table)
-      targetNode = diagram.data.nodes.find(n => n.id === fkEdge.source);
-      if (targetNode) {
-        targetColumn = targetNode.data.columns.find(c => c.id === sourceColumnId);
-      }
-    }
-    
-    if (targetNode && targetColumn) {
-      const targetModelName = toDjangoModelName(targetNode.data.label);
-      const onDeleteAction = getDjangoOnDeleteAction(fkEdge.data?.relationship);
-      
-      // Add default value if specified
-      let defaultValue = '';
-      if (column.defaultValue !== undefined && column.defaultValue !== null) {
-        if (typeof column.defaultValue === 'string') {
-          defaultValue = `, default='${escapeString(String(column.defaultValue))}'`;
-        } else {
-          defaultValue = `, default=${column.defaultValue}`;
-        }
-      }
-      
-      return `('${column.name}', models.ForeignKey(${onDeleteAction}${defaultValue}, to='your_app.${targetModelName}'))`;
-    }
-  }
-  
-  // Handle regular fields
-  const fieldType = getDjangoFieldType(column.type, dbType);
-  const options = extractFieldOptions(column.type, column);
-  
-  // Add null=False for non-nullable fields (except primary keys which are handled separately)
-  if (column.nullable === false && !column.pk) {
-    options.push('null=False');
-  } else if (column.nullable === true) {
-    options.push('null=True');
-  }
-  
-  const optionsStr = options.length > 0 ? `, ${options.join(', ')}` : '';
-  return `('${column.name}', ${fieldType}(${optionsStr.slice(2)}))`;
-}
-
-function generateAdditionalOperations(diagram: Diagram): string[] {
+function generateEnumOperations(nodes: AppNode[], dbType: 'mysql' | 'postgres'): string[] {
+  if (dbType !== 'postgres') return [];
   const operations: string[] = [];
-  
-  // This function should be extended to handle user-defined operations
-  // For now, we'll provide a way to add example operations for testing
-  
-  // Check if this is a test scenario where we want to add example operations
-  // In a real implementation, this would be controlled by user input or diagram metadata
-  const addExampleOperations = process.env.ADD_DJANGO_EXAMPLE_OPERATIONS === 'true';
-  
-  if (addExampleOperations) {
-    // Add AlterModelOptions operation to change Post model ordering
-    operations.push(`migrations.AlterModelOptions(
-            name='post',
-            options={'ordering': ('-name',)},
+  const createdEnums = new Set<string>();
+
+  for (const node of nodes) {
+    for (const col of node.data.columns) {
+      if (col.type.toUpperCase() === 'ENUM' && col.enumValues) {
+        const enumTypeName = `${toDjangoTableName(node.data.label)}_${col.name}_enum`;
+        if (createdEnums.has(enumTypeName)) continue;
+
+        const values = col.enumValues.split(',').map(v => `'${escapeString(v.trim())}'`).join(', ');
+        operations.push(`migrations.RunSQL(
+            "CREATE TYPE ${enumTypeName} AS ENUM (${values});",
+            reverse_sql="DROP TYPE IF EXISTS ${enumTypeName};"
         )`);
-    
-    // Add RenameField operation to rename title to name in Post model
-    operations.push(`migrations.RenameField(
-            model_name='post',
-            old_name='title',
-            new_name='name',
-        )`);
+        createdEnums.add(enumTypeName);
+      }
+    }
   }
-  
   return operations;
 }
 
-function generateForeignKeyMigration(
-  timestamp: string,
-  diagram: Diagram
-): string {
-  const sql = exportToSql(diagram);
-  
-  // Split SQL into individual statements and clean them
-  const statements = sql
-    .split(";")
-    .map((stmt) => stmt.trim())
-    .filter((stmt) => stmt.length > 0);
+function generateCreateModelOperation(node: AppNode, allNodes: AppNode[], edges: AppEdge[], dbType: 'mysql' | 'postgres', appName: string): string {
+  const modelName = toDjangoModelName(node.data.label);
+  const fields = node.data.columns.map(col => generateFieldDefinition(col, node, allNodes, edges, dbType, appName)).join(',\n                ');
 
-  // Find ALTER TABLE statements that add foreign key constraints
-  const alterTableStatements = statements.filter((stmt) =>
-    stmt.toUpperCase().includes("ADD CONSTRAINT") &&
-    stmt.toUpperCase().includes("FOREIGN KEY")
-  );
-
-  if (alterTableStatements.length === 0) {
-    return "";
+  const options: string[] = [`'db_table': '${toDjangoTableName(node.data.label)}'`];
+  if (node.data.comment && dbType === 'postgres') {
+    options.push(`'db_table_comment': '${escapeString(node.data.comment)}'`);
   }
 
-  let migration = `# Generated by Database Designer
-# Foreign Key Constraints Migration
-
-from django.db import migrations
-
-
-class Migration(migrations.Migration):
-
-    dependencies = [
-        # Add your app dependencies here
-    ]
-
-    operations = [`;
-
-  alterTableStatements.forEach((alterSql) => {
-    const formattedAlterSql = formatSqlForDjango(alterSql);
-    const dropFkSql = generateDropForeignKeyStatement(alterSql, diagram.dbType);
-    
-    migration += `
-        migrations.RunSQL(
-            "${formattedAlterSql}",
-            reverse_sql="${dropFkSql}"
-        ),`;
-  });
-
-  migration += `
-    ]
-`;
-
-  return migration;
+  return `migrations.CreateModel(
+            name='${modelName}',
+            fields=[
+                ${fields}
+            ],
+            options={
+                ${options.join(',\n                ')}
+            },
+        )`;
 }
 
-function formatSqlForDjango(sql: string): string {
-  if (!sql) return "";
+function generateFieldDefinition(col: Column, currentNode: AppNode, allNodes: AppNode[], edges: AppEdge[], dbType: 'mysql' | 'postgres', appName: string): string {
+  const getColumnId = (handleId?: string | null) => handleId?.split('-')[0];
 
-  // Escape quotes for Django string literals
-  let formatted = sql.replace(/"/g, '\\"');
+  const edge = edges.find(e => e.source === currentNode.id && getColumnId(e.sourceHandle) === col.id);
 
-  // Clean up extra whitespace but preserve structure
-  formatted = formatted
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .replace(/;\s*$/, "") // Remove trailing semicolon
-    .trim(); // Remove leading/trailing whitespace
+  if (edge) {
+    const targetNode = allNodes.find(n => n.id === edge.target);
+    if (!targetNode) return `('ERROR_unknown_fk_${col.name}', models.TextField())`;
 
-  return formatted;
-}
+    const targetModelName = toDjangoModelName(targetNode.data.label);
+    const onDelete = getDjangoOnDeleteAction(edge.data?.relationship);
+    const fieldClass = col.isUnique ? 'models.OneToOneField' : 'models.ForeignKey';
 
-function generateDropTypeStatement(createTypeSql: string): string {
-  // Extract type name from CREATE TYPE statement
-  const typeMatch = createTypeSql.match(/CREATE\s+TYPE\s+([^\s]+)/i);
-  if (typeMatch) {
-    const typeName = typeMatch[1];
-    return `DROP TYPE IF EXISTS ${typeName};`;
+    const options: string[] = [
+      `to='${appName}.${targetModelName}'`,
+      `on_delete=${onDelete}`,
+      `db_column='${col.name}'`,
+    ];
+    if (col.nullable) options.push('null=True', 'blank=True');
+
+    return `('${col.name}', ${fieldClass}(${options.join(', ')}))`;
   }
-  return "";
+
+  const fieldType = getDjangoFieldType(col, dbType);
+  const options = getDjangoFieldOptions(col, fieldType);
+  return `('${col.name}', ${fieldType}(${options.join(', ')}))`;
 }
 
-function generateDropIndexStatement(indexSql: string, dbType: string): string {
-  // Extract index name from CREATE INDEX statement
-  const indexMatch = indexSql.match(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+([^\s]+)/i);
-  if (indexMatch) {
-    const indexName = indexMatch[1];
-    if (dbType === 'postgres') {
-      return `DROP INDEX IF EXISTS ${indexName};`;
-    } else {
-      // MySQL - need to extract table name
-      const tableMatch = indexSql.match(/ON\s+([^\s(]+)/i);
-      if (tableMatch) {
-        const tableName = tableMatch[1];
-        return `DROP INDEX ${indexName} ON ${tableName};`;
+function generatePostOperations(nodes: AppNode[], dbType: 'mysql' | 'postgres'): string[] {
+  const operations: string[] = [];
+  for (const node of nodes) {
+    const tableName = toDjangoTableName(node.data.label);
+    const quote = dbType === 'postgres' ? '"' : '`';
+
+    if (node.data.indices) {
+      for (const index of node.data.indices) {
+        const columns = index.columns.map(colId => {
+          const col = node.data.columns.find(c => c.id === colId);
+          return col ? `${quote}${col.name}${quote}` : '';
+        }).filter(Boolean).join(', ');
+
+        if (columns) {
+          const unique = index.isUnique ? 'UNIQUE' : '';
+          operations.push(`migrations.RunSQL(
+            'CREATE ${unique} INDEX ${quote}${index.name}${quote} ON ${quote}${tableName}${quote} (${columns});',
+            reverse_sql='DROP INDEX IF EXISTS ${quote}${index.name}${quote};'
+        )`);
+        }
       }
     }
   }
-  return "";
+  return operations;
 }
-
-function generateDropCommentStatement(commentSql: string): string {
-  // Extract table and column from COMMENT statement
-  const commentMatch = commentSql.match(/COMMENT\s+ON\s+COLUMN\s+([^.]+)\.([^\s]+)/i);
-  if (commentMatch) {
-    const tableName = commentMatch[1];
-    const columnName = commentMatch[2];
-    return `COMMENT ON COLUMN ${tableName}.${columnName} IS NULL;`;
-  }
-  return "";
-}
-
-function generateDropForeignKeyStatement(
-  alterSql: string,
-  dbType: string
-): string {
-  // Extract foreign key constraint name and table from ALTER TABLE statement
-  const tableMatch = alterSql.match(/ALTER\s+TABLE\s+([^\s]+)/i);
-  const fkMatch = alterSql.match(/CONSTRAINT\s+([^\s]+)\s+FOREIGN\s+KEY/i);
-  
-  if (tableMatch && fkMatch) {
-    const tableName = tableMatch[1];
-    const constraintName = fkMatch[1];
-    
-    if (dbType === 'postgres') {
-      return `ALTER TABLE ${tableName} DROP CONSTRAINT ${constraintName};`;
-    } else {
-      return `ALTER TABLE ${tableName} DROP FOREIGN KEY ${constraintName};`;
-    }
-  }
-  return "";
-}
-
-export {
-  generateDjangoMigration,
-  generateDjangoMigrationString,
-};
