@@ -64,7 +64,7 @@ function TableNode({
 
   return (
     <Card
-      className="w-64 shadow-md react-flow__node-default bg-card group"
+      className="w-80 shadow-md react-flow__node-default bg-card group"
       style={cardStyle}
     >
       <CardHeader className="p-0 cursor-move relative">
