@@ -86,39 +86,21 @@ const DiagramEditor = forwardRef(
 
     const processedEdges = useMemo(() => {
       return edges.map((edge) => {
-        const sourceNode = allNodes.find((n) => n.id === edge.source);
-        const targetNode = allNodes.find((n) => n.id === edge.target);
-
-        let sourcePosition = Position.Right;
-        let targetPosition = Position.Left;
-
-        if (sourceNode && targetNode) {
-          const sourceNodeCenter =
-            sourceNode.position.x + (sourceNode.width ?? 256) / 2;
-          const targetNodeCenter =
-            targetNode.position.x + (targetNode.width ?? 256) / 2;
-
-          if (sourceNodeCenter > targetNodeCenter) {
-            sourcePosition = Position.Left;
-            targetPosition = Position.Right;
-          }
-        }
+        const isHighlighted =
+          edge.source === selectedNodeId ||
+          edge.target === selectedNodeId ||
+          edge.id === selectedEdgeId ||
+          edge.id === hoveredEdgeId;
 
         return {
           ...edge,
-          sourcePosition,
-          targetPosition,
           data: {
             ...edge.data,
-            isHighlighted:
-              edge.source === selectedNodeId ||
-              edge.target === selectedNodeId ||
-              edge.id === selectedEdgeId ||
-              edge.id === hoveredEdgeId,
+            isHighlighted,
           },
         };
       });
-    }, [edges, allNodes, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
+    }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
 
     const handleLockChange = useCallback(() => {
       if (diagram && diagram.id) {
