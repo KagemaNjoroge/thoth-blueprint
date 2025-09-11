@@ -18,8 +18,14 @@ export interface Diagram {
   deletedAt?: Date | null;
 }
 
+export interface AppState {
+  key: string;
+  value: any;
+}
+
 export class Database extends Dexie {
   diagrams!: Table<Diagram>;
+  appState!: Table<AppState>;
 
   constructor() {
     super('DatabaseDesignerDB');
@@ -46,6 +52,10 @@ export class Database extends Dexie {
       return tx.table('diagrams').toCollection().modify(diagram => {
         diagram.deletedAt = null;
       });
+    });
+    this.version(5).stores({
+      diagrams: '++id, name, dbType, createdAt, updatedAt, deletedAt',
+      appState: 'key',
     });
   }
 }
