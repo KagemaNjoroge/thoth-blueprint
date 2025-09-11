@@ -7,6 +7,14 @@ import {
 } from "@xyflow/react";
 import { type EdgeData } from "@/lib/types";
 
+// Color constants
+const COLORS = {
+  HIGHLIGHT: "#60a5fa",
+  DEFAULT_STROKE: "#a1a1aa",
+  DEFAULT_INDICATOR: "#4b5563",
+  WHITE: "#FFFFFF",
+} as const;
+
 const EdgeIndicator = ({
   x,
   y,
@@ -22,7 +30,7 @@ const EdgeIndicator = ({
     style={{
       position: "absolute",
       transform: `translate(-50%, -50%) translate(${x}px,${y}px)`,
-      background: isHighlighted ? "#60a5fa" : "#4b5563",
+      background: isHighlighted ? COLORS.HIGHLIGHT : COLORS.DEFAULT_INDICATOR,
       color: "white",
       fontSize: "10px",
       fontWeight: "bold",
@@ -131,7 +139,7 @@ export default function CustomEdge(props: EdgeProps) {
       <BaseEdge
         path={edgePath}
         style={{
-          stroke: isHighlighted ? "#60a5fa" : "#a1a1aa",
+          stroke: isHighlighted ? COLORS.HIGHLIGHT : COLORS.DEFAULT_STROKE,
           strokeWidth: isHighlighted ? 2 : 1.5,
           ...style,
         }}
@@ -140,7 +148,7 @@ export default function CustomEdge(props: EdgeProps) {
         <BaseEdge
           path={edgePath}
           style={{
-            stroke: "#FFFFFF",
+            stroke: COLORS.WHITE,
             strokeWidth: 2,
             strokeDasharray: "10, 20",
             animation: "flow 2s linear infinite",

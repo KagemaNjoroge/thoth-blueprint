@@ -19,7 +19,7 @@ export interface Diagram {
 }
 
 export class Database extends Dexie {
-  diagrams!: Table<Diagram>; 
+  diagrams!: Table<Diagram>;
 
   constructor() {
     super('DatabaseDesignerDB');

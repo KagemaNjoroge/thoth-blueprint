@@ -7,7 +7,7 @@ import { type ImperativePanelHandle } from "react-resizable-panels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-import DiagramEditor from "./DiagramEditor";
+import DiagramEditor from "./DiagramEditor-refactored";
 import EditorSidebar from "./EditorSidebar";
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
