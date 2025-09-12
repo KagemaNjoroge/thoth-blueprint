@@ -1,27 +1,27 @@
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { type ImperativePanelHandle } from "react-resizable-panels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-import DiagramEditor from "./DiagramEditor";
-import EditorSidebar from "./EditorSidebar";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { tableColors } from "@/lib/colors";
+import { db } from "@/lib/db";
+import { type AppEdge, type AppNode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import {
   type OnSelectionChangeParams,
   type ReactFlowInstance,
 } from "@xyflow/react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
-import DiagramGallery from "./DiagramGallery";
+import { Menu } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { type ImperativePanelHandle } from "react-resizable-panels";
 import { AddTableDialog } from "./AddTableDialog";
+import DiagramEditor from "./DiagramEditor";
+import DiagramGallery from "./DiagramGallery";
+import EditorSidebar from "./EditorSidebar";
 import { ExportDialog } from "./ExportDialog";
-import { cn } from "@/lib/utils";
-import { type AppNode, type AppEdge } from "@/lib/types";
-import { tableColors } from "@/lib/colors";
 
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(
@@ -193,11 +193,13 @@ export default function Layout() {
     if (!diagram) return;
     const visibleNodes = diagram.data.nodes.filter(n => !n.data.isDeleted) || [];
     const tableName = `new_table_${visibleNodes.length + 1}`;
-    
+
+    // Center the node on the cursor position
     const nodeWidth = 288; // As defined in TableNode.tsx
+    const nodeHeight = 100; // Approximate default height
     const adjustedPosition = {
       x: position.x - nodeWidth / 2,
-      y: position.y,
+      y: position.y - nodeHeight / 2,
     };
 
     const newNode: AppNode = {

@@ -1,3 +1,9 @@
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { db, type Diagram } from "@/lib/db";
 import { type AppEdge, type AppNode, type TableNodeData } from "@/lib/types";
@@ -25,6 +31,7 @@ import {
   type ReactFlowInstance
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -39,13 +46,6 @@ import { IoLockClosedOutline, IoLockOpenOutline } from "react-icons/io5";
 import CustomEdge from "./CustomEdge";
 import { relationshipTypes } from "./EdgeInspectorPanel";
 import TableNode from "./TableNode";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { Plus } from "lucide-react";
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -358,23 +358,23 @@ const DiagramEditor = forwardRef(
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       if (!rfInstance) return;
-      
+
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
       if (!pane) return;
 
       const position = rfInstance.screenToFlowPosition({
-          x: event.clientX - pane.left,
-          y: event.clientY - pane.top,
+        x: event.clientX,
+        y: event.clientY,
       });
       clickPositionRef.current = position;
     }, [rfInstance]);
 
     const onNodeContextMenu = (event: React.MouseEvent, _node: Node) => {
-        event.preventDefault();
+      event.preventDefault();
     };
 
     const onEdgeContextMenu = (event: React.MouseEvent, _edge: Edge) => {
-        event.preventDefault();
+      event.preventDefault();
     };
 
     // Expose methods to parent
@@ -457,7 +457,7 @@ const DiagramEditor = forwardRef(
                 onCreateTableAtPosition(clickPositionRef.current);
               }
             }}
-            disabled={isLocked}
+              disabled={isLocked}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add New Table
