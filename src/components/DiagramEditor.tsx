@@ -356,7 +356,7 @@ const DiagramEditor = forwardRef(
       setRfInstance(instance as ReactFlowInstance<AppNode, AppEdge>);
     }, [setRfInstance]);
 
-    const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+    const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       if (!rfInstance) return;
       
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
