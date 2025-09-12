@@ -228,7 +228,7 @@ export default function EditorSidebar({
               </MenubarItem>
               <MenubarSeparator />
               <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
-              <MenubarItem onClick={exportDbToJson}>Save Project</MenubarItem>
+              <MenubarItem onClick={exportDbToJson}>Save Data</MenubarItem>
               <MenubarSeparator />
               <AlertDialog>
                 <AlertDialogTrigger asChild>

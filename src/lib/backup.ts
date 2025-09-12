@@ -16,11 +16,11 @@ export async function exportDbToJson() {
     const blob = new Blob([jsonString], { type: 'application/json' });
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    saveAs(blob, `thothblueprint_backup_${timestamp}.json`);
-    showSuccess('Project saved successfully!');
+    saveAs(blob, `thothblueprint_backup_${timestamp}.thot`);
+    showSuccess('Project data saved successfully!');
   } catch (error) {
-    console.error('Failed to save project:', error);
-    showError('Failed to save project.');
+    console.error('Failed to save project data:', error);
+    showError('Failed to save project data.');
   }
 }
 
@@ -29,7 +29,7 @@ export async function importJsonToDb(jsonString: string) {
     const backupData = JSON.parse(jsonString);
 
     if (!backupData.diagrams || !Array.isArray(backupData.diagrams)) {
-      throw new Error('Invalid backup file format. Missing "diagrams" array.');
+      throw new Error('Invalid save file format. Missing "diagrams" array.');
     }
 
     await db.transaction('rw', db.diagrams, db.appState, async () => {
@@ -52,7 +52,7 @@ export async function importJsonToDb(jsonString: string) {
       }
     });
 
-    showSuccess('Project loaded successfully! The page will now reload.');
+    showSuccess('Save loaded successfully! The page will now reload.');
     
     // Reload the page to reflect the new state
     setTimeout(() => {
@@ -60,8 +60,8 @@ export async function importJsonToDb(jsonString: string) {
     }, 1500);
 
   } catch (error) {
-    console.error('Failed to load project:', error);
+    console.error('Failed to load save:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-    showError(`Failed to load project: ${errorMessage}`);
+    showError(`Failed to load save: ${errorMessage}`);
   }
 }

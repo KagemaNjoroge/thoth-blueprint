@@ -114,11 +114,11 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
             <ThemeToggle />
             <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>
               <Upload className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Load Project</span>
+              <span className="hidden md:inline">Load Save</span>
             </Button>
             <Button variant="outline" onClick={exportDbToJson}>
               <Save className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Save Project</span>
+              <span className="hidden md:inline">Save Data</span>
             </Button>
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Import className="h-4 w-4 md:mr-2" />

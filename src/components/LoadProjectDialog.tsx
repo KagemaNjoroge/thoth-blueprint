@@ -26,10 +26,10 @@ export function LoadProjectDialog({ isOpen, onOpenChange }: LoadProjectDialogPro
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type === 'application/json') {
+      if (selectedFile.name.endsWith('.thot')) {
         setFile(selectedFile);
       } else {
-        showError("Please select a valid JSON backup file.");
+        showError("Please select a valid .thot save file.");
         setFile(null);
         if (event.target) event.target.value = "";
       }
@@ -62,15 +62,15 @@ export function LoadProjectDialog({ isOpen, onOpenChange }: LoadProjectDialogPro
     }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Load Project</DialogTitle>
+          <DialogTitle>Load Save</DialogTitle>
           <DialogDescription>
-            Select a ThothBlueprint backup file (.json) to load. This will overwrite all current data.
+            Select a ThothBlueprint save file (.thot) to load. This will overwrite all current data.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="backup-file" className="text-right">
-              Backup File
+              Save File
             </Label>
             <div className="col-span-3">
                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-start">
@@ -83,13 +83,13 @@ export function LoadProjectDialog({ isOpen, onOpenChange }: LoadProjectDialogPro
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept=".json"
+                    accept=".thot"
                 />
             </div>
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleLoad} disabled={!file}>Load Project</Button>
+          <Button onClick={handleLoad} disabled={!file}>Load Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
