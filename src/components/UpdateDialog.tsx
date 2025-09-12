@@ -39,17 +39,19 @@ export function UpdateDialog({ isOpen, onOpenChange }: UpdateDialogProps) {
       return;
     }
 
-    const timeout = setTimeout(() => {
-      if (status === 'checking') {
-        setStatus('no-update');
-      }
-    }, 7000);
+    let timeoutId: NodeJS.Timeout;
 
     const handleUpdateFound = () => {
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
+      setStatus('update-found');
     };
 
     window.addEventListener('sw-update-available', handleUpdateFound, { once: true });
+
+    timeoutId = setTimeout(() => {
+      setStatus('no-update');
+      window.removeEventListener('sw-update-available', handleUpdateFound);
+    }, 7000);
 
     updateSW(false);
   };
@@ -93,9 +95,11 @@ export function UpdateDialog({ isOpen, onOpenChange }: UpdateDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          <div className="text-sm text-center">
-            Current Version: <span className="font-semibold">{appVersion}</span>
-          </div>
+          {appVersion && appVersion !== '0.0.0' && (
+            <div className="text-sm text-center">
+              Current Version: <span className="font-semibold">{appVersion}</span>
+            </div>
+          )}
           <div className="h-6 flex items-center justify-center">
             {renderStatus()}
           </div>
