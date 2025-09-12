@@ -20,7 +20,7 @@ import JSZip from "jszip";
 import { LaravelIcon } from "@/components/icons/LaravelIcon";
 import { TypeOrmIcon } from "@/components/icons/TypeOrmIcon";
 import { DjangoIcon } from "@/components/icons/DjangoIcon";
-import { toSvg } from "html-to-image";
+import { toSvg, toPng } from "html-to-image";
 import { saveAs } from "file-saver";
 import {
   ReactFlowInstance,
@@ -29,7 +29,7 @@ import {
 } from "@xyflow/react";
 import { showError } from "@/utils/toast";
 
-type ExportFormat = "sql" | "dbml" | "json" | "svg" | "mermaid" | "laravel" | "typeorm" | "django";
+type ExportFormat = "sql" | "dbml" | "json" | "svg" | "png" | "mermaid" | "laravel" | "typeorm" | "django";
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -179,6 +179,48 @@ export function ExportDialog({
           onOpenChange(false);
           setSelectedFormat(null);
           return;
+        case "png":
+          if (rfInstance) {
+            const PADDING = 40;
+            const nodes = rfInstance.getNodes();
+            if (nodes.length === 0) {
+              showError("Cannot export an empty diagram.");
+              return;
+            }
+            const nodesBounds = getNodesBounds(nodes);
+            const imageWidth = nodesBounds.width + PADDING * 2;
+            const imageHeight = nodesBounds.height + PADDING * 2;
+
+            const viewport = getViewportForBounds(
+              nodesBounds,
+              imageWidth,
+              imageHeight,
+              0.5,
+              2,
+              PADDING
+            );
+
+            const viewportEl = document.querySelector(
+              ".react-flow__viewport"
+            ) as HTMLElement;
+            if (!viewportEl) throw new Error("React Flow viewport not found.");
+
+            const dataUrl = await toPng(viewportEl, {
+              width: imageWidth,
+              height: imageHeight,
+              style: {
+                width: `${imageWidth}px`,
+                height: `${imageHeight}px`,
+                transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+              },
+              backgroundColor: "white",
+            });
+            const blob = await (await fetch(dataUrl)).blob();
+            saveAs(blob, `${diagram.name.replace(/\s+/g, "_")}.png`);
+          }
+          onOpenChange(false);
+          setSelectedFormat(null);
+          return;
       }
       const blob = new Blob([data], { type: "text/plain;charset=utf-8" });
       saveAs(blob, filename);
@@ -209,6 +251,12 @@ export function ExportDialog({
       title: "SVG",
       icon: ImageIcon,
       description: "Export diagram as a .svg image.",
+    },
+    {
+      id: "png",
+      title: "PNG",
+      icon: ImageIcon,
+      description: "Export diagram as a .png image.",
     },
   ];
 
@@ -266,7 +314,7 @@ export function ExportDialog({
         <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto pr-4">
           <div>
             <h3 className="text-lg font-semibold mb-4">Share</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {shareOptions.map((opt) => (
                 <Card
                   key={opt.id}
