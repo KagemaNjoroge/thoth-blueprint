@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePWA } from '@/hooks/usePWA';
-import { Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
 const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : '';

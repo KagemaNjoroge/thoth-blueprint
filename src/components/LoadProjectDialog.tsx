@@ -1,18 +1,18 @@
-import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload } from "lucide-react";
 import { importJsonToDb } from "@/lib/backup";
 import { showError } from "@/utils/toast";
+import { Upload } from "lucide-react";
+import { useRef, useState } from "react";
 
 interface LoadProjectDialogProps {
   isOpen: boolean;
@@ -50,15 +50,15 @@ export function LoadProjectDialog({ isOpen, onOpenChange }: LoadProjectDialogPro
       setFile(null);
     };
     reader.onerror = () => {
-        showError("Failed to read the file.");
+      showError("Failed to read the file.");
     };
     reader.readAsText(file);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
-        onOpenChange(open);
-        if (!open) setFile(null);
+      onOpenChange(open);
+      if (!open) setFile(null);
     }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -73,18 +73,18 @@ export function LoadProjectDialog({ isOpen, onOpenChange }: LoadProjectDialogPro
               Save File
             </Label>
             <div className="col-span-3">
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-start">
-                    <Upload className="h-4 w-4 mr-2" />
-                    {file ? file.name : "Choose a file..."}
-                </Button>
-                <Input
-                    id="backup-file"
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".thot"
-                />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-start">
+                <Upload className="h-4 w-4 mr-2" />
+                {file ? file.name : "Choose a file..."}
+              </Button>
+              <Input
+                id="backup-file"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".thot"
+              />
             </div>
           </div>
         </div>

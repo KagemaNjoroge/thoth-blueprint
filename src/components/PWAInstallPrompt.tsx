@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Download, X } from 'lucide-react';
 import { usePWA } from '@/hooks/usePWA';
-import { shouldShowInstallPrompt, getPromptState, savePromptState, type PromptState } from '@/utils/pwaUtils';
+import { getPromptState, savePromptState, shouldShowInstallPrompt, type PromptState } from '@/utils/pwaUtils';
+import { Download, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function PWAInstallPrompt() {
   const { isInstallable, isInstalled, installApp } = usePWA();

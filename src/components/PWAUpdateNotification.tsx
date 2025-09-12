@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { RefreshCw, X } from 'lucide-react';
 import { usePWA } from '@/hooks/usePWA';
+import { RefreshCw, X } from 'lucide-react';
+import { useState } from 'react';
 
 export function PWAUpdateNotification() {
   const { updateAvailable, reloadApp } = usePWA();

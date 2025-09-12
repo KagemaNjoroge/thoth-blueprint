@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function PWAStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
