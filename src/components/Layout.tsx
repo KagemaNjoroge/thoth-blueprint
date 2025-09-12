@@ -7,7 +7,7 @@ import { type ImperativePanelHandle } from "react-resizable-panels";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-import DiagramEditor from "./DiagramEditor";
+import DiagramEditor from "./DiagramEditor-refactored";
 import EditorSidebar from "./EditorSidebar";
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
@@ -53,6 +53,45 @@ export default function Layout() {
     undoDelete: () => void;
     batchUpdateNodes: (nodes: AppNode[]) => void;
   }>(null);
+
+  // Load selected diagram ID on mount
+  useEffect(() => {
+    const loadSelectedDiagram = async () => {
+      try {
+        const state = await db.appState.get('selectedDiagramId');
+        if (state && typeof state.value === 'number') {
+          const diagramExists = await db.diagrams.get(state.value);
+          if (diagramExists && !diagramExists.deletedAt) {
+            setSelectedDiagramId(state.value);
+          } else {
+            await db.appState.delete('selectedDiagramId');
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load selected diagram:", error);
+      }
+    };
+    loadSelectedDiagram();
+  }, []);
+
+  // Save selected diagram ID when it changes
+  useEffect(() => {
+    const saveSelectedDiagram = async () => {
+      try {
+        if (selectedDiagramId !== null) {
+          await db.appState.put({ key: 'selectedDiagramId', value: selectedDiagramId });
+        } else {
+          const state = await db.appState.get('selectedDiagramId');
+          if (state) {
+            await db.appState.delete('selectedDiagramId');
+          }
+        }
+      } catch (error) {
+        console.error("Failed to save selected diagram:", error);
+      }
+    };
+    saveSelectedDiagram();
+  }, [selectedDiagramId]);
 
   const diagram = useLiveQuery(
     () => (selectedDiagramId ? db.diagrams.get(selectedDiagramId) : undefined),

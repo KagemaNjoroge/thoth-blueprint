@@ -70,11 +70,13 @@ const DiagramEditor = forwardRef(
     const { theme } = useTheme();
 
     const edgeTypes: EdgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
+
     const visibleNodes = useMemo(
       () => allNodes.filter((n) => !n.data.isDeleted),
       [allNodes]
     );
-    const isLocked = diagram.data.isLocked ?? false;
+
+    const isLocked = useMemo(() => diagram.data.isLocked ?? false, [diagram.data.isLocked]);
 
     const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
       setHoveredEdgeId(edge.id);
@@ -92,6 +94,10 @@ const DiagramEditor = forwardRef(
           edge.id === selectedEdgeId ||
           edge.id === hoveredEdgeId;
 
+        if (edge.data?.isHighlighted === isHighlighted) {
+          return edge;
+        }
+
         return {
           ...edge,
           data: {
@@ -103,74 +109,87 @@ const DiagramEditor = forwardRef(
     }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
 
     const handleLockChange = useCallback(() => {
-      if (diagram && diagram.id) {
-        db.diagrams.update(diagram.id, {
-          "data.isLocked": !isLocked,
-          updatedAt: new Date(),
-        });
-      }
-    }, [diagram, isLocked]);
+      if (!diagram?.id) return;
+
+      db.diagrams.update(diagram.id, {
+        "data.isLocked": !isLocked,
+        updatedAt: new Date(),
+      }).catch(error => {
+        console.error("Failed to update lock status:", error);
+      });
+    }, [diagram?.id, isLocked]);
 
     useEffect(() => {
-      if (diagram?.data) {
-        let wasModified = false;
-        const initialNodes: AppNode[] = (diagram.data.nodes ?? []).map(
-          (node: AppNode, index: number) => {
-            if (node.data.order === undefined || node.data.order === null) {
-              wasModified = true;
-            }
+      if (!diagram?.data) return;
 
-            const newData: TableNodeData = {
-              ...node.data,
-              order: node.data.order ?? index,
-              color:
-                node.data.color ??
-                tableColors[Math.floor(Math.random() * tableColors.length)]!,
-            };
-
-            // Only add deletedAt if it exists
-            if (node.data.deletedAt) {
-              newData.deletedAt = new Date(node.data.deletedAt);
-            }
-
-            return {
-              ...node,
-              data: newData,
-            };
+      let wasModified = false;
+      const initialNodes: AppNode[] = (diagram.data.nodes ?? []).map(
+        (node: AppNode, index: number) => {
+          if (node.data.order === undefined || node.data.order === null) {
+            wasModified = true;
           }
-        );
-        const initialEdges: AppEdge[] = (diagram.data.edges ?? []).map(
-          (edge) => ({ ...edge, type: "custom" })
-        );
 
-        setAllNodes(initialNodes);
-        setEdges(initialEdges);
+          const newData: TableNodeData = {
+            ...node.data,
+            order: node.data.order ?? index,
+            color:
+              node.data.color ??
+              tableColors[Math.floor(Math.random() * tableColors.length)]!,
+          };
 
-        if (wasModified && diagram.id) {
-          db.diagrams.update(diagram.id, {
-            data: { ...diagram.data, nodes: initialNodes, edges: initialEdges },
-            updatedAt: new Date(),
-          });
+          if (node.data.deletedAt) {
+            newData.deletedAt = new Date(node.data.deletedAt);
+          }
+
+          return {
+            ...node,
+            data: newData,
+          };
         }
+      );
+
+      const initialEdges: AppEdge[] = (diagram.data.edges ?? []).map(
+        (edge) => ({ ...edge, type: "custom" })
+      );
+
+      setAllNodes(initialNodes);
+      setEdges(initialEdges);
+
+      if (wasModified && diagram.id) {
+        db.diagrams.update(diagram.id, {
+          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges },
+          updatedAt: new Date(),
+        }).catch(error => {
+          console.error("Failed to update diagram:", error);
+        });
       }
     }, [diagram]);
 
+    // Reset selection when diagram changes
     useEffect(() => {
       onSelectionChange({ nodes: [], edges: [] });
     }, [diagram.id, onSelectionChange]);
 
+    // Fit view when diagram or instance changes
     useEffect(() => {
       if (rfInstance) {
         // Use a timeout to ensure nodes have been rendered before fitting view
-        setTimeout(() => {
-          rfInstance.fitView({ duration: 200 });
+        const timer = setTimeout(() => {
+          rfInstance.fitView({ duration: 200 }).catch(error => {
+            console.error("Failed to fit view:", error);
+          });
         }, 0);
+
+        return () => clearTimeout(timer);
       }
+      return undefined;
     }, [diagram.id, rfInstance]);
 
     const saveDiagram = useCallback(async () => {
-      if (diagram && rfInstance) {
-        await db.diagrams.update(diagram.id!, {
+      if (!diagram?.id || !rfInstance) return;
+
+      try {
+        await db.diagrams.update(diagram.id, {
           data: {
             ...diagram.data,
             nodes: allNodes,
@@ -179,9 +198,12 @@ const DiagramEditor = forwardRef(
           },
           updatedAt: new Date(),
         });
+      } catch (error) {
+        console.error("Failed to save diagram:", error);
       }
     }, [diagram, allNodes, edges, rfInstance]);
 
+    // Debounced saving
     useEffect(() => {
       const handler = setTimeout(() => saveDiagram(), 1000);
       return () => clearTimeout(handler);
@@ -211,6 +233,7 @@ const DiagramEditor = forwardRef(
       });
     }, []);
 
+    // Keyboard shortcut handling
     useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
         if ((event.metaKey || event.ctrlKey) && event.key === "z") {
@@ -218,11 +241,12 @@ const DiagramEditor = forwardRef(
           undoDelete();
         }
       };
+
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }, [undoDelete]);
 
-    const performSoftDelete = (
+    const performSoftDelete = useCallback((
       nodeIds: string[],
       currentNodes: AppNode[]
     ): AppNode[] => {
@@ -234,6 +258,7 @@ const DiagramEditor = forwardRef(
         return n;
       });
 
+      // Limit deleted nodes to 10 to prevent memory issues
       const deletedNodes = newNodes
         .filter((n) => n.data.isDeleted && n.data.deletedAt)
         .sort(
@@ -241,6 +266,7 @@ const DiagramEditor = forwardRef(
             (a.data.deletedAt?.getTime() ?? 0) -
             (b.data.deletedAt?.getTime() ?? 0)
         );
+
       if (deletedNodes.length > 10) {
         const oldestNode = deletedNodes[0];
         if (oldestNode) {
@@ -248,8 +274,9 @@ const DiagramEditor = forwardRef(
         }
       }
       return newNodes;
-    };
+    }, []);
 
+    // Node change handling
     const onNodesChange: OnNodesChange = useCallback(
       (changes: NodeChange[]) => {
         const removeChangeIds = changes
@@ -271,7 +298,7 @@ const DiagramEditor = forwardRef(
           );
         }
       },
-      []
+      [performSoftDelete]
     );
 
     const onEdgesChange: OnEdgesChange = useCallback(
@@ -296,9 +323,10 @@ const DiagramEditor = forwardRef(
         );
         onSelectionChange({ nodes: [], edges: [] });
       },
-      [onSelectionChange]
+      [onSelectionChange, performSoftDelete]
     );
 
+    // Node types
     const nodeTypes: NodeTypes = useMemo(
       () => ({
         table: (props: NodeProps) => (
@@ -312,11 +340,13 @@ const DiagramEditor = forwardRef(
       [deleteNode]
     );
 
-    const onInit = (instance: unknown) => {
+    // Initialization
+    const onInit = useCallback((instance: unknown) => {
       setRfInstanceLocal(instance as ReactFlowInstance<AppNode, AppEdge>);
       setRfInstance(instance as ReactFlowInstance<AppNode, AppEdge>);
-    };
+    }, [setRfInstance]);
 
+    // Expose methods to parent
     useImperativeHandle(ref, () => ({
       updateNode: (updatedNode: AppNode) => {
         setAllNodes((nds) =>
@@ -347,7 +377,7 @@ const DiagramEditor = forwardRef(
           currentNodes.map((node) => nodeUpdateMap.get(node.id) || node)
         );
       },
-    }));
+    }), [deleteNode, undoDelete, onSelectionChange]);
 
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>

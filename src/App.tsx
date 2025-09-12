@@ -7,6 +7,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { PWAStatus } from "./components/PWAStatus";
 import { Suspense, lazy } from "react";
+import { LoadingSpinner } from "./components/LoadingSpinner";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +23,7 @@ const App = () => (
       <PWAUpdateNotification />
       <PWAInstallPrompt />
       <BrowserRouter>
-        <Suspense fallback={<div className="w-screen h-screen flex items-center justify-center bg-background">Loading...</div>}>
+        <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

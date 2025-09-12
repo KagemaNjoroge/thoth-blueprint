@@ -24,7 +24,6 @@ export function ColorPicker({
   const [currentColor, setCurrentColor] = useState(color);
   const { resolvedTheme } = useTheme();
 
-  // Update internal state if the prop changes from outside
   useEffect(() => {
     setCurrentColor(color);
   }, [color]);
@@ -32,10 +31,9 @@ export function ColorPicker({
   // Debounce the callback that updates the parent component's state to improve performance
   const debouncedOnColorChange = useDebouncedCallback((newColor: string) => {
     onColorChange(newColor);
-  }, 200);
+  }, 20);
 
   const handleColorChange = (color: ColorObject) => {
-    // Handle both string and object color formats
     let colorValue: string;
 
     if (typeof color === "string") {
@@ -49,20 +47,15 @@ export function ColorPicker({
       "g" in color &&
       "b" in color
     ) {
-      // Convert RGB to hex
       const rgbColor = color as { r: number; g: number; b: number };
       const toHex = (n: number) => Math.round(n).toString(16).padStart(2, "0");
       colorValue = `#${toHex(rgbColor.r)}${toHex(rgbColor.g)}${toHex(
         rgbColor.b
       )}`;
     } else {
-      // Fallback to current color if we can't determine the format
       colorValue = currentColor;
     }
-
-    // Update local state immediately for a responsive UI
     setCurrentColor(colorValue);
-    // Call the debounced function to update the diagram state
     debouncedOnColorChange(colorValue);
   };
 
