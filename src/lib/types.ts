@@ -38,6 +38,8 @@ export interface TableNodeData extends Record<string, unknown> {
 export interface NoteNodeData extends Record<string, unknown> {
     text: string;
     color?: string;
+    onUpdate?: (id: string, data: Partial<NoteNodeData>) => void;
+    onDelete?: (ids: string[]) => void;
 }
 
 export interface EdgeData extends Record<string, unknown> {

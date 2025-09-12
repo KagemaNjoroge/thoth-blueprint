@@ -1,21 +1,18 @@
-import { type NodeProps, NodeResizer } from "@xyflow/react";
-import { type NoteNodeData } from "@/lib/types";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { type AppNoteNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { type NodeProps, NodeResizer } from "@xyflow/react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Trash2 } from "lucide-react";
 
-type NoteNodeComponentData = NoteNodeData & {
-  onUpdate: (id: string, data: Partial<NoteNodeData>) => void;
-  onDelete: (ids: string[]) => void;
-};
-
-export default function NoteNode({ id, data, selected }: NodeProps<NoteNodeComponentData>) {
+export default function NoteNode({ id, data, selected }: NodeProps<AppNoteNode>) {
   const [text, setText] = useState(data.text);
 
   const debouncedUpdate = useDebouncedCallback((newText: string) => {
-    data.onUpdate(id, { text: newText });
+    if (data.onUpdate) {
+      data.onUpdate(id, { text: newText });
+    }
   }, 300);
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -51,9 +48,16 @@ export default function NoteNode({ id, data, selected }: NodeProps<NoteNodeCompo
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onSelect={() => data.onDelete([id])} className="text-destructive focus:text-destructive">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Note
+        <ContextMenuItem
+          onSelect={() => {
+            if (data.onDelete) {
+              data.onDelete([id]);
+            }
+          }}
+          className="text-destructive focus:text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete Note
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
