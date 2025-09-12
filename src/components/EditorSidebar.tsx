@@ -59,6 +59,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { type AppNode, type AppEdge } from "@/lib/types";
+import { exportDbToJson } from "@/lib/backup";
 
 interface EditorSidebarProps {
   diagram: Diagram;
@@ -227,6 +228,7 @@ export default function EditorSidebar({
               </MenubarItem>
               <MenubarSeparator />
               <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
+              <MenubarItem onClick={exportDbToJson}>Save Data</MenubarItem>
               <MenubarSeparator />
               <AlertDialog>
                 <AlertDialogTrigger asChild>

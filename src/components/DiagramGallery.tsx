@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Database, Table, GitCommitHorizontal, Pencil, Trash2, Import, RotateCcw } from "lucide-react";
+import { PlusCircle, Database, Table, GitCommitHorizontal, Pencil, Trash2, Import, RotateCcw, Save, Upload } from "lucide-react";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
 import {
@@ -31,6 +31,8 @@ import { ThemeToggle } from "./theme-toggle";
 import { Features } from "./Features";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { LoadProjectDialog } from "./LoadProjectDialog";
+import { exportDbToJson } from "@/lib/backup";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;
@@ -40,6 +42,7 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isLoadProjectDialogOpen, setIsLoadProjectDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
   const diagrams = useLiveQuery(() => db.diagrams.orderBy("updatedAt").reverse().toArray());
 
@@ -109,6 +112,14 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Diagrams</h1>
           <div className="flex gap-2 items-center self-end md:self-center">
             <ThemeToggle />
+            <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>
+              <Upload className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Load Save</span>
+            </Button>
+            <Button variant="outline" onClick={exportDbToJson}>
+              <Save className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Save Data</span>
+            </Button>
             <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
               <Import className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Import Diagram</span>
@@ -264,6 +275,10 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         onOpenChange={setIsRenameDialogOpen}
         onRenameDiagram={handleRenameDiagram}
         diagram={diagramToEdit}
+      />
+      <LoadProjectDialog
+        isOpen={isLoadProjectDialogOpen}
+        onOpenChange={setIsLoadProjectDialogOpen}
       />
     </div>
   );
