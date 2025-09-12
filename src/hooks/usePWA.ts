@@ -18,7 +18,7 @@ export function usePWA() {
 
   useEffect(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInWebAppiOS = (window.navigator as any).standalone === true;
+    const isInWebAppiOS = window.navigator.standalone === true;
     const installed = isStandalone || isInWebAppiOS;
     
     setIsInstalled(installed);

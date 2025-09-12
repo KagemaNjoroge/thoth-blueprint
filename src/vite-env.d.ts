@@ -7,3 +7,7 @@ declare const __GIT_HASH__: string;
 interface Window {
   updateSW: (reloadPage?: boolean) => Promise<void>;
 }
+
+interface Navigator {
+  standalone?: boolean;
+}
