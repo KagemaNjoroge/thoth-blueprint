@@ -56,8 +56,6 @@ export default defineConfig(() => ({
       includeAssets: [
         "ThothBlueprint-icon.svg",
         "robots.txt",
-        "pwa-192x192.svg",
-        "pwa-512x512.svg",
         "browserconfig.xml",
         "offline.html",
       ],
@@ -74,17 +72,17 @@ export default defineConfig(() => ({
         categories: ["productivity", "utilities", "developer", "design"],
         icons: [
           {
-            src: "pwa-192x192.svg",
+            src: "ThothBlueprint-icon.svg",
             sizes: "192x192",
             type: "image/svg+xml",
           },
           {
-            src: "pwa-512x512.svg",
+            src: "ThothBlueprint-icon.svg",
             sizes: "512x512",
             type: "image/svg+xml",
           },
           {
-            src: "pwa-512x512.svg",
+            src: "ThothBlueprint-icon.svg",
             sizes: "512x512",
             type: "image/svg+xml",
             purpose: "any maskable",
