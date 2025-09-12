@@ -4,6 +4,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 import { execSync } from "child_process";
+import { readFileSync } from "fs";
+
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf-8"));
 
 let gitHash = '';
 try {
@@ -15,7 +18,7 @@ try {
 
 export default defineConfig(() => ({
   define: {
-    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version),
+    '__APP_VERSION__': JSON.stringify(pkg.version),
     '__GIT_HASH__': JSON.stringify(gitHash),
   },
   server: {

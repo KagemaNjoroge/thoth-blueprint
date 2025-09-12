@@ -31,7 +31,7 @@ export function UpdateDialog({ isOpen, onOpenChange }: UpdateDialogProps) {
     }
   }, [isOpen]);
 
-  const handleCheckForUpdate = () => {
+  const handleCheckForUpdate = async () => {
     setStatus('checking');
     const updateSW = (window as any).updateSW;
 
@@ -41,21 +41,27 @@ export function UpdateDialog({ isOpen, onOpenChange }: UpdateDialogProps) {
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
-
+    let updateFound = false;
     const handleUpdateFound = () => {
-      clearTimeout(timeoutId);
+      updateFound = true;
       setStatus('update-found');
     };
 
     window.addEventListener('sw-update-available', handleUpdateFound, { once: true });
 
-    timeoutId = setTimeout(() => {
+    try {
+      await updateSW(false);
+      // If updateSW() completes and the event hasn't fired, there's no update.
+      if (!updateFound) {
+        setStatus('no-update');
+      }
+    } catch (error) {
+      console.error("Error checking for PWA update:", error);
       setStatus('no-update');
+    } finally {
+      // Clean up the listener regardless of outcome
       window.removeEventListener('sw-update-available', handleUpdateFound);
-    }, 7000);
-
-    updateSW(false);
+    }
   };
 
   const renderStatus = () => {
