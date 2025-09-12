@@ -80,7 +80,7 @@ export function usePWA() {
   };
 
   const reloadApp = () => {
-    const updateSW = (window as any).updateSW;
+    const updateSW = window.updateSW;
     if (updateSW) {
       updateSW(true);
     } else {

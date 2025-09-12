@@ -33,7 +33,7 @@ export function UpdateDialog({ isOpen, onOpenChange }: UpdateDialogProps) {
 
   const handleCheckForUpdate = async () => {
     setStatus('checking');
-    const updateSW = (window as any).updateSW;
+    const updateSW = (window).updateSW;
 
     if (!updateSW) {
       console.error("Service worker update function not found.");
