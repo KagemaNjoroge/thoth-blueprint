@@ -404,6 +404,8 @@ const DiagramEditor = forwardRef(
             id: `note-${+new Date()}`,
             type: 'note',
             position,
+            width: 192,
+            height: 192,
             data: {
                 text: 'New Note',
             },

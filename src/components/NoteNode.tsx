@@ -1,4 +1,4 @@
-import { type NodeProps } from "@xyflow/react";
+import { type NodeProps, NodeResizer } from "@xyflow/react";
 import { type NoteNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -28,18 +28,24 @@ export default function NoteNode({ id, data, selected }: NodeProps<NoteNodeCompo
       <ContextMenuTrigger>
         <div
           className={cn(
-            "w-48 h-48 p-3 shadow-md rounded-md font-sans text-sm bg-yellow-200 text-yellow-900 border-2 border-transparent transition-colors",
-            "dark:bg-yellow-800 dark:text-yellow-100",
-            selected && "border-blue-500 dark:border-blue-400"
+            "w-full h-full p-3 shadow-md rounded-md font-sans text-sm bg-yellow-200 text-yellow-900 border-2 border-transparent transition-colors",
+            selected && "border-blue-500"
           )}
           style={{
             transform: "rotate(-2deg)",
           }}
         >
+          <NodeResizer
+            minWidth={120}
+            minHeight={120}
+            isVisible={selected}
+            lineClassName="border-blue-400"
+            handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
+          />
           <textarea
             value={text}
             onChange={handleChange}
-            className="w-full h-full bg-transparent border-none outline-none p-0 m-0"
+            className="w-full h-full bg-transparent border-none outline-none p-0 m-0 resize-none"
             placeholder="Type your note..."
           />
         </div>
