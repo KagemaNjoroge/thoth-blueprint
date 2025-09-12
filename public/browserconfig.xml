@@ -2,7 +2,7 @@
 <browserconfig>
     <msapplication>
         <tile>
-            <square150x150logo src="/pwa-192x192.svg"/>
+            <square150x150logo src="/ThothBlueprint-icon.svg"/>
             <TileColor>#ffffff</TileColor>
         </tile>
     </msapplication>

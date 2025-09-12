@@ -77,6 +77,7 @@ interface EditorSidebarProps {
   isLocked: boolean;
   onSetSidebarState: (state: "docked" | "hidden") => void;
   onExport: () => void;
+  onCheckForUpdate: () => void;
 }
 
 function SortableAccordionItem({
@@ -122,6 +123,7 @@ export default function EditorSidebar({
   isLocked,
   onSetSidebarState,
   onExport,
+  onCheckForUpdate,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
@@ -208,7 +210,7 @@ export default function EditorSidebar({
   const inspectingEdge = edges.find((e) => e.id === activeItemId);
 
   return (
-    <div className="h-full w-full flex flex-col bg-card">
+    <div className="h-full w-full flex flex-col bg-card" onContextMenu={(e) => e.preventDefault()}>
       <div className="flex items-center border-b pl-2 flex-shrink-0">
         <img
           src="/ThothBlueprint-icon.svg"
@@ -288,6 +290,14 @@ export default function EditorSidebar({
                   </MenubarItem>
                 </MenubarSubContent>
               </MenubarSub>
+            </MenubarContent>
+          </MenubarMenu>
+          <MenubarMenu>
+            <MenubarTrigger>Help</MenubarTrigger>
+            <MenubarContent>
+              <MenubarItem onClick={onCheckForUpdate}>
+                Check for Updates
+              </MenubarItem>
             </MenubarContent>
           </MenubarMenu>
         </Menubar>

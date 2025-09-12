@@ -1,3 +1,9 @@
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { db, type Diagram } from "@/lib/db";
 import { type AppEdge, type AppNode, type TableNodeData } from "@/lib/types";
@@ -14,6 +20,7 @@ import {
   type Edge,
   type EdgeChange,
   type EdgeTypes,
+  type Node,
   type NodeChange,
   type NodeProps,
   type NodeTypes,
@@ -24,6 +31,7 @@ import {
   type ReactFlowInstance
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { Plus } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -45,6 +53,7 @@ interface DiagramEditorProps {
   setRfInstance: (instance: ReactFlowInstance<AppNode, AppEdge> | null) => void;
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
+  onCreateTableAtPosition: (position: { x: number; y: number }) => void;
 }
 
 const DiagramEditor = forwardRef(
@@ -55,6 +64,7 @@ const DiagramEditor = forwardRef(
       setRfInstance,
       selectedNodeId,
       selectedEdgeId,
+      onCreateTableAtPosition,
     }: DiagramEditorProps,
     ref
   ) => {
@@ -67,6 +77,7 @@ const DiagramEditor = forwardRef(
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
+    const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
 
     const edgeTypes: EdgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
@@ -345,6 +356,27 @@ const DiagramEditor = forwardRef(
       setRfInstance(instance as ReactFlowInstance<AppNode, AppEdge>);
     }, [setRfInstance]);
 
+    const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+      if (!rfInstance) return;
+
+      const pane = reactFlowWrapper.current?.getBoundingClientRect();
+      if (!pane) return;
+
+      const position = rfInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      clickPositionRef.current = position;
+    }, [rfInstance]);
+
+    const onNodeContextMenu = (event: React.MouseEvent, _node: Node) => {
+      event.preventDefault();
+    };
+
+    const onEdgeContextMenu = (event: React.MouseEvent, _edge: Edge) => {
+      event.preventDefault();
+    };
+
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
       updateNode: (updatedNode: AppNode) => {
@@ -380,39 +412,58 @@ const DiagramEditor = forwardRef(
 
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>
-        <ReactFlow
-          nodes={visibleNodes}
-          edges={processedEdges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onSelectionChange={onSelectionChange}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onInit={onInit}
-          onEdgeMouseEnter={onEdgeMouseEnter}
-          onEdgeMouseLeave={onEdgeMouseLeave}
-          nodesDraggable={!isLocked}
-          nodesConnectable={!isLocked}
-          elementsSelectable={true}
-          panOnDrag={true}
-          zoomOnScroll={true}
-          zoomOnDoubleClick={true}
-          deleteKeyCode={isLocked ? null : ["Backspace", "Delete"]}
-          fitView
-          colorMode={theme as ColorMode}
-        >
-          <Controls showInteractive={false}>
-            <ControlButton
-              onClick={handleLockChange}
-              title={isLocked ? "Unlock" : "Lock"}
-              className="flex items-center justify-center"
+        <ContextMenu>
+          <ContextMenuTrigger>
+            <ReactFlow
+              nodes={visibleNodes}
+              edges={processedEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onSelectionChange={onSelectionChange}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onInit={onInit}
+              onEdgeMouseEnter={onEdgeMouseEnter}
+              onEdgeMouseLeave={onEdgeMouseLeave}
+              onPaneContextMenu={onPaneContextMenu}
+              onNodeContextMenu={onNodeContextMenu}
+              onEdgeContextMenu={onEdgeContextMenu}
+              nodesDraggable={!isLocked}
+              nodesConnectable={!isLocked}
+              elementsSelectable={true}
+              panOnDrag={true}
+              zoomOnScroll={true}
+              zoomOnDoubleClick={true}
+              deleteKeyCode={isLocked ? null : ["Backspace", "Delete"]}
+              fitView
+              colorMode={theme as ColorMode}
             >
-              {isLocked ? <IoLockClosedOutline size={18} /> : <IoLockOpenOutline size={18} />}
-            </ControlButton>
-          </Controls>
-          <Background />
-        </ReactFlow>
+              <Controls showInteractive={false}>
+                <ControlButton
+                  onClick={handleLockChange}
+                  title={isLocked ? "Unlock" : "Lock"}
+                  className="flex items-center justify-center"
+                >
+                  {isLocked ? <IoLockClosedOutline size={18} /> : <IoLockOpenOutline size={18} />}
+                </ControlButton>
+              </Controls>
+              <Background />
+            </ReactFlow>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem onSelect={() => {
+              if (clickPositionRef.current) {
+                onCreateTableAtPosition(clickPositionRef.current);
+              }
+            }}
+              disabled={isLocked}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Table
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       </div>
     );
   }

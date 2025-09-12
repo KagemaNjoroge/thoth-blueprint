@@ -1,27 +1,27 @@
-import { useEffect, useRef } from "react";
-import {
-  Handle,
-  Position,
-  type NodeProps,
-  useUpdateNodeInternals,
-} from "@xyflow/react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Key, Trash2, MoreHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { type TableNodeData } from "@/lib/types";
+import {
+  Handle,
+  Position,
+  useUpdateNodeInternals,
+  type NodeProps,
+} from "@xyflow/react";
+import { Key, MoreHorizontal, Trash2 } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Button } from "./ui/button";
 import {
   PopoverWithArrow,
   PopoverWithArrowContent,
   PopoverWithArrowTrigger,
 } from "./ui/popover-with-arrow";
-import { Button } from "./ui/button";
-import { type TableNodeData } from "@/lib/types";
 
 interface CustomTableNodeProps extends NodeProps {
   data: TableNodeData;
@@ -45,9 +45,8 @@ function TableNode({
   }, [id, data.columns, updateNodeInternals]);
 
   const cardStyle = {
-    border: `1px solid ${
-      selected ? data.color || "#60A5FA" : "hsl(var(--border))"
-    }`,
+    border: `1px solid ${selected ? data.color || "#60A5FA" : "hsl(var(--border))"
+      }`,
     boxShadow: selected
       ? `0 0 8px ${data.color || "#60A5FA"}40`
       : "var(--tw-shadow, 0 0 #0000)",

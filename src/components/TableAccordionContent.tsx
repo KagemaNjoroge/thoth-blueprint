@@ -1,32 +1,10 @@
-import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import {
-  Trash2,
-  Plus,
-  Key,
-  MoreHorizontal,
-  HelpCircle,
-  GripVertical,
-  Check,
-  X,
-  Edit,
-  ChevronsUpDown,
-} from "lucide-react";
-import { Separator } from "./ui/separator";
 import { type DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
+import { type AppNode, type Column, type Index } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Checkbox } from "./ui/checkbox";
-import { Textarea } from "./ui/textarea";
-import { Label } from "./ui/label";
-import {
-  DndContext,
   closestCenter,
+  DndContext,
   PointerSensor,
   useSensor,
   useSensors,
@@ -40,12 +18,28 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  Check,
+  ChevronsUpDown,
+  Edit,
+  GripVertical,
+  HelpCircle,
+  Key,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { ColorPicker } from "./ColorPicker";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "./ui/accordion";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import {
   Command,
   CommandEmpty,
@@ -54,10 +48,16 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
-import { Badge } from "./ui/badge";
-import { cn } from "@/lib/utils";
-import { type AppNode, type Column, type Index } from "@/lib/types";
-import { ColorPicker } from "./ColorPicker";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Separator } from "./ui/separator";
+import { Textarea } from "./ui/textarea";
 
 interface TableAccordionContentProps {
   node: AppNode;
@@ -232,9 +232,8 @@ function SortableColumnItem({
           disabled={isLocked}
         >
           <HelpCircle
-            className={`h-4 w-4 ${
-              col.nullable ? "text-blue-500" : "text-muted-foreground"
-            }`}
+            className={`h-4 w-4 ${col.nullable ? "text-blue-500" : "text-muted-foreground"
+              }`}
           />
         </Button>
         <Button
@@ -245,9 +244,8 @@ function SortableColumnItem({
           disabled={isLocked}
         >
           <Key
-            className={`h-4 w-4 ${
-              col.pk ? "text-yellow-500" : "text-muted-foreground"
-            }`}
+            className={`h-4 w-4 ${col.pk ? "text-yellow-500" : "text-muted-foreground"
+              }`}
           />
         </Button>
 
