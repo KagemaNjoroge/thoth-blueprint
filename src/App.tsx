@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
-import { PWAUpdateNotification } from "./components/PWAUpdateNotification";
 import { PWAStatus } from "./components/PWAStatus";
 import { Suspense, lazy } from "react";
 import { LoadingSpinner } from "./components/LoadingSpinner";
@@ -20,7 +19,6 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PWAStatus />
-      <PWAUpdateNotification />
       <PWAInstallPrompt />
       <BrowserRouter>
         <Suspense fallback={<LoadingSpinner />}>

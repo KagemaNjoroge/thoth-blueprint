@@ -22,6 +22,7 @@ import DiagramEditor from "./DiagramEditor";
 import DiagramGallery from "./DiagramGallery";
 import EditorSidebar from "./EditorSidebar";
 import { ExportDialog } from "./ExportDialog";
+import { PWAUpdateNotification } from "./PWAUpdateNotification";
 import { UpdateDialog } from "./UpdateDialog";
 
 export default function Layout() {
@@ -301,6 +302,7 @@ export default function Layout() {
 
   return (
     <>
+      <PWAUpdateNotification onUpdateNow={() => setIsUpdateDialogOpen(true)} />
       <div className="lg:hidden">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetContent side="left" className="p-0 w-[350px] sm:w-[400px] flex">

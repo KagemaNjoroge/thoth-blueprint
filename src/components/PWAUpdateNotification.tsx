@@ -2,14 +2,19 @@ import { usePWA } from '@/hooks/usePWA';
 import { RefreshCw, X } from 'lucide-react';
 import { useState } from 'react';
 
-export function PWAUpdateNotification() {
-  const { updateAvailable, reloadApp } = usePWA();
+interface PWAUpdateNotificationProps {
+  onUpdateNow: () => void;
+}
+
+export function PWAUpdateNotification({ onUpdateNow }: PWAUpdateNotificationProps) {
+  const { updateAvailable } = usePWA();
   const [dismissed, setDismissed] = useState(false);
 
   if (!updateAvailable || dismissed) return null;
 
   const handleUpdate = () => {
-    reloadApp();
+    onUpdateNow();
+    setDismissed(true);
   };
 
   return (
