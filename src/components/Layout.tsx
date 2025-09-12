@@ -269,6 +269,14 @@ export default function Layout() {
     []
   );
 
+  const handleOpenSidebar = () => {
+    if (sidebarState === 'hidden') {
+      setSidebarState('docked');
+    } else {
+      sidebarPanelRef.current?.expand();
+    }
+  };
+
   const isLocked = diagram?.data?.isLocked ?? false;
 
   const sidebarContent = diagram ? (
@@ -314,10 +322,11 @@ export default function Layout() {
       <ResizablePanelGroup
         direction="horizontal"
         className="min-h-screen w-full"
+        autoSaveId="sidebar-layout"
       >
         <ResizablePanel
           ref={sidebarPanelRef}
-          defaultSize={0}
+          defaultSize={25}
           collapsible
           collapsedSize={0}
           minSize={20}
@@ -332,7 +341,7 @@ export default function Layout() {
           withHandle
           className={cn("hidden lg:flex", isSidebarCollapsed && "hidden")}
         />
-        <ResizablePanel defaultSize={100}>
+        <ResizablePanel defaultSize={75}>
           <div className="flex h-full items-center justify-center relative">
             {diagram && (
               <div className="absolute top-4 left-4 z-10 lg:hidden">
@@ -346,12 +355,12 @@ export default function Layout() {
               </div>
             )}
 
-            {diagram && sidebarState === "hidden" && (
+            {diagram && isSidebarCollapsed && (
               <div className="absolute top-4 left-4 z-10 hidden lg:block">
                 <Button
                   size="icon"
                   variant="outline"
-                  onClick={() => setSidebarState("docked")}
+                  onClick={handleOpenSidebar}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
