@@ -6,10 +6,12 @@ import { VitePWA } from "vite-plugin-pwa";
 import { execSync } from "child_process";
 import { readFileSync } from "fs";
 
+// Step 1a: Read package.json to get the version number
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, "package.json"), "utf-8"));
 
 let gitHash = '';
 try {
+  // Step 1b: Run a git command to get the latest commit hash
   gitHash = execSync('git rev-parse --short HEAD').toString().trim();
 } catch (e) {
   console.warn('Could not get git hash', e);
@@ -17,10 +19,12 @@ try {
 }
 
 export default defineConfig(() => ({
+  // Step 2: Define global variables to be replaced in the code
   define: {
-    '__APP_VERSION__': JSON.stringify(pkg.version),
-    '__GIT_HASH__': JSON.stringify(gitHash),
+    '__APP_VERSION__': JSON.stringify(pkg.version), // Becomes "1.0.0"
+    '__GIT_HASH__': JSON.stringify(gitHash),       // Becomes "(ae04737)"
   },
+  // ... rest of the config
   server: {
     host: "::",
     port: 8080,
