@@ -193,10 +193,17 @@ export default function Layout() {
     if (!diagram) return;
     const visibleNodes = diagram.data.nodes.filter(n => !n.data.isDeleted) || [];
     const tableName = `new_table_${visibleNodes.length + 1}`;
+    
+    const nodeWidth = 288; // As defined in TableNode.tsx
+    const adjustedPosition = {
+      x: position.x - nodeWidth / 2,
+      y: position.y,
+    };
+
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,
       type: 'table',
-      position: position,
+      position: adjustedPosition,
       data: {
         label: tableName,
         color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? '#60A5FA',
