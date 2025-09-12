@@ -45,7 +45,7 @@ export default function NoteNode({ id, data, selected }: NodeProps<NoteNodeCompo
           <textarea
             value={text}
             onChange={handleChange}
-            className="w-full h-full bg-transparent border-none outline-none p-0 m-0 resize-none"
+            className="w-full h-full bg-transparent border-none outline-none p-0 m-0 resize-none no-scrollbar break-words"
             placeholder="Type your note..."
           />
         </div>
