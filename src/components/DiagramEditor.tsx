@@ -76,7 +76,11 @@ const DiagramEditor = forwardRef(
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
-    const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
+    const mousePositionRef = useRef({ x: 0, y: 0 });
+
+    const handleMouseMove = (event: React.MouseEvent) => {
+      mousePositionRef.current = { x: event.clientX, y: event.clientY };
+    };
 
     const edgeTypes: EdgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
 
@@ -355,20 +359,6 @@ const DiagramEditor = forwardRef(
       setRfInstance(instance as ReactFlowInstance<AppNode, AppEdge>);
     }, [setRfInstance]);
 
-    const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
-        event.preventDefault();
-        if (!rfInstance) return;
-        
-        const pane = reactFlowWrapper.current?.getBoundingClientRect();
-        if (!pane) return;
-
-        const position = rfInstance.screenToFlowPosition({
-            x: event.clientX - pane.left,
-            y: event.clientY - pane.top,
-        });
-        clickPositionRef.current = position;
-    }, [rfInstance]);
-
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
       updateNode: (updatedNode: AppNode) => {
@@ -403,9 +393,9 @@ const DiagramEditor = forwardRef(
     }), [deleteNode, undoDelete, onSelectionChange]);
 
     return (
-      <div className="w-full h-full" ref={reactFlowWrapper}>
+      <div className="w-full h-full" ref={reactFlowWrapper} onMouseMove={handleMouseMove}>
         <ContextMenu>
-          <ContextMenuTrigger>
+          <ContextMenuTrigger className="w-full h-full block">
             <ReactFlow
               nodes={visibleNodes}
               edges={processedEdges}
@@ -418,7 +408,6 @@ const DiagramEditor = forwardRef(
               onInit={onInit}
               onEdgeMouseEnter={onEdgeMouseEnter}
               onEdgeMouseLeave={onEdgeMouseLeave}
-              onPaneContextMenu={onPaneContextMenu}
               nodesDraggable={!isLocked}
               nodesConnectable={!isLocked}
               elementsSelectable={true}
@@ -443,9 +432,14 @@ const DiagramEditor = forwardRef(
           </ContextMenuTrigger>
           <ContextMenuContent>
             <ContextMenuItem onSelect={() => {
-              if (clickPositionRef.current) {
-                onCreateTableAtPosition(clickPositionRef.current);
-              }
+              if (!rfInstance) return;
+              const pane = reactFlowWrapper.current?.getBoundingClientRect();
+              if (!pane) return;
+              const position = rfInstance.screenToFlowPosition({
+                x: mousePositionRef.current.x - pane.left,
+                y: mousePositionRef.current.y - pane.top,
+              });
+              onCreateTableAtPosition(position);
             }}
             disabled={isLocked}
             >
