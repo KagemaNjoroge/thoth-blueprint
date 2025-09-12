@@ -161,7 +161,7 @@ export default function Layout() {
         x: window.innerWidth * 0.6,
         y: window.innerHeight / 2,
       });
-      position = { x: flowPosition.x - 128, y: flowPosition.y - 50 };
+      position = { x: flowPosition.x - 144, y: flowPosition.y - 50 };
     }
     const visibleNodes =
       diagram?.data.nodes.filter((n) => !n.data.isDeleted) || [];
@@ -189,8 +189,9 @@ export default function Layout() {
     editorRef.current?.addNode(newNode);
   };
 
-  const handleCreateTableAtPosition = (position: { x: number; y: number }) => {
-    const visibleNodes = diagram?.data.nodes.filter(n => !n.data.isDeleted) || [];
+  const handleCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
+    if (!diagram) return;
+    const visibleNodes = diagram.data.nodes.filter(n => !n.data.isDeleted) || [];
     const tableName = `new_table_${visibleNodes.length + 1}`;
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,
@@ -206,7 +207,7 @@ export default function Layout() {
       },
     };
     editorRef.current?.addNode(newNode);
-  };
+  }, [diagram]);
 
   const handleDeleteDiagram = async () => {
     if (diagram) {
