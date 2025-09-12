@@ -195,7 +195,7 @@ export default function Layout() {
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,
       type: 'table',
-      position: { x: position.x - 144, y: position.y }, // Adjust for node width
+      position: position,
       data: {
         label: tableName,
         color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? '#60A5FA',
