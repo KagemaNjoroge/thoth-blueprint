@@ -35,10 +35,16 @@ export interface TableNodeData extends Record<string, unknown> {
     order?: number;
 }
 
+export interface NoteNodeData extends Record<string, unknown> {
+    text: string;
+    color?: string;
+}
+
 export interface EdgeData extends Record<string, unknown> {
     relationship: string;
     isHighlighted?: boolean;
 }
 
 export type AppNode = Node<TableNodeData, 'table'>;
+export type AppNoteNode = Node<NoteNodeData, 'note'>;
 export type AppEdge = Edge<EdgeData>;

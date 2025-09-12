@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { db, type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode, type TableNodeData } from "@/lib/types";
+import { type AppEdge, type AppNode, type TableNodeData, type AppNoteNode, type NoteNodeData } from "@/lib/types";
 import {
   Background,
   ControlButton,
@@ -31,7 +31,7 @@ import {
   type ReactFlowInstance
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Plus } from "lucide-react";
+import { Plus, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -46,6 +46,7 @@ import { IoLockClosedOutline, IoLockOpenOutline } from "react-icons/io5";
 import CustomEdge from "./CustomEdge";
 import { relationshipTypes } from "./EdgeInspectorPanel";
 import TableNode from "./TableNode";
+import NoteNode from "./NoteNode";
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -69,6 +70,7 @@ const DiagramEditor = forwardRef(
     ref
   ) => {
     const [allNodes, setAllNodes] = useState<AppNode[]>([]);
+    const [notes, setNotes] = useState<AppNoteNode[]>([]);
     const [edges, setEdges] = useState<AppEdge[]>([]);
     const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance<
       AppNode,
@@ -161,13 +163,18 @@ const DiagramEditor = forwardRef(
       const initialEdges: AppEdge[] = (diagram.data.edges ?? []).map(
         (edge) => ({ ...edge, type: "custom" })
       );
+      
+      const initialNotes: AppNoteNode[] = (diagram.data.notes ?? []).map(
+        (note) => ({ ...note, type: "note" })
+      );
 
       setAllNodes(initialNodes);
       setEdges(initialEdges);
+      setNotes(initialNotes);
 
       if (wasModified && diagram.id) {
         db.diagrams.update(diagram.id, {
-          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges },
+          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges, notes: initialNotes },
           updatedAt: new Date(),
         }).catch(error => {
           console.error("Failed to update diagram:", error);
@@ -204,6 +211,7 @@ const DiagramEditor = forwardRef(
             ...diagram.data,
             nodes: allNodes,
             edges,
+            notes,
             viewport: rfInstance.getViewport(),
           },
           updatedAt: new Date(),
@@ -211,13 +219,13 @@ const DiagramEditor = forwardRef(
       } catch (error) {
         console.error("Failed to save diagram:", error);
       }
-    }, [diagram, allNodes, edges, rfInstance]);
+    }, [diagram, allNodes, edges, notes, rfInstance]);
 
     // Debounced saving
     useEffect(() => {
       const handler = setTimeout(() => saveDiagram(), 1000);
       return () => clearTimeout(handler);
-    }, [allNodes, edges, saveDiagram]);
+    }, [allNodes, edges, notes, saveDiagram]);
 
     const undoDelete = useCallback(() => {
       setAllNodes((currentNodes) => {
@@ -286,29 +294,54 @@ const DiagramEditor = forwardRef(
       return newNodes;
     }, []);
 
+    const deleteNote = useCallback((nodeIds: string[]) => {
+      setNotes(nds => nds.filter(n => !nodeIds.includes(n.id)));
+    }, []);
+
     // Node change handling
     const onNodesChange: OnNodesChange = useCallback(
       (changes: NodeChange[]) => {
-        const removeChangeIds = changes
-          .filter((c: NodeChange) => c.type === "remove" && "id" in c)
-          .map((c: NodeChange) => (c as { id: string }).id);
+        const tableNodeChanges: NodeChange[] = [];
+        const noteChanges: NodeChange[] = [];
+        const noteIdSet = new Set(notes.map(n => n.id));
 
-        if (removeChangeIds.length > 0) {
-          setAllNodes((currentNodes) =>
-            performSoftDelete(removeChangeIds, currentNodes)
-          );
+        for (const change of changes) {
+            if ('id' in change && noteIdSet.has(change.id)) {
+                noteChanges.push(change);
+            } else {
+                tableNodeChanges.push(change);
+            }
         }
 
-        const nonRemoveChanges = changes.filter(
-          (c: NodeChange) => c.type !== "remove"
-        );
-        if (nonRemoveChanges.length > 0) {
-          setAllNodes(
-            (nds) => applyNodeChanges(nonRemoveChanges, nds) as AppNode[]
+        // Handle table node changes (soft delete)
+        const tableRemoveChangeIds = tableNodeChanges
+          .filter((c) => c.type === "remove" && "id" in c)
+          .map((c) => (c as { id: string }).id);
+
+        if (tableRemoveChangeIds.length > 0) {
+          setAllNodes((currentNodes) =>
+            performSoftDelete(tableRemoveChangeIds, currentNodes)
           );
+        }
+        const nonRemoveTableChanges = tableNodeChanges.filter((c) => c.type !== "remove");
+        if (nonRemoveTableChanges.length > 0) {
+          setAllNodes((nds) => applyNodeChanges(nonRemoveTableChanges, nds) as AppNode[]);
+        }
+
+        // Handle note changes (hard delete)
+        const noteRemoveChangeIds = noteChanges
+          .filter((c) => c.type === "remove" && "id" in c)
+          .map((c) => (c as { id: string }).id);
+        
+        if (noteRemoveChangeIds.length > 0) {
+            deleteNote(noteRemoveChangeIds);
+        }
+        const nonRemoveNoteChanges = noteChanges.filter((c) => c.type !== "remove");
+        if (nonRemoveNoteChanges.length > 0) {
+            setNotes(nds => applyNodeChanges(nonRemoveNoteChanges, nds) as AppNoteNode[]);
         }
       },
-      [performSoftDelete]
+      [notes, performSoftDelete, deleteNote]
     );
 
     const onEdgesChange: OnEdgesChange = useCallback(
@@ -336,6 +369,15 @@ const DiagramEditor = forwardRef(
       [onSelectionChange, performSoftDelete]
     );
 
+    const handleNoteUpdate = useCallback((nodeId: string, data: Partial<NoteNodeData>) => {
+        setNotes(nds => nds.map(n => {
+            if (n.id === nodeId) {
+                return { ...n, data: { ...n.data, ...data } };
+            }
+            return n;
+        }));
+    }, []);
+
     // Node types
     const nodeTypes: NodeTypes = useMemo(
       () => ({
@@ -346,6 +388,7 @@ const DiagramEditor = forwardRef(
             onDeleteRequest={deleteNode}
           />
         ),
+        note: NoteNode,
       }),
       [deleteNode]
     );
@@ -355,6 +398,18 @@ const DiagramEditor = forwardRef(
       setRfInstanceLocal(instance as ReactFlowInstance<AppNode, AppEdge>);
       setRfInstance(instance as ReactFlowInstance<AppNode, AppEdge>);
     }, [setRfInstance]);
+
+    const onCreateNoteAtPosition = useCallback((position: { x: number; y: number }) => {
+        const newNote: AppNoteNode = {
+            id: `note-${+new Date()}`,
+            type: 'note',
+            position,
+            data: {
+                text: 'New Note',
+            },
+        };
+        setNotes(nds => [...nds, newNote]);
+    }, []);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       if (!rfInstance) return;
@@ -369,7 +424,7 @@ const DiagramEditor = forwardRef(
       clickPositionRef.current = position;
     }, [rfInstance]);
 
-    const onNodeContextMenu = (event: React.MouseEvent, _node: Node) => {
+    const onNodeContextMenu = (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
     };
 
@@ -410,12 +465,23 @@ const DiagramEditor = forwardRef(
       },
     }), [deleteNode, undoDelete, onSelectionChange]);
 
+    const notesWithCallbacks = useMemo(() => notes.map(n => ({
+        ...n,
+        data: {
+            ...n.data,
+            onUpdate: handleNoteUpdate,
+            onDelete: deleteNote,
+        }
+    })), [notes, handleNoteUpdate, deleteNote]);
+
+    const combinedNodes = useMemo(() => [...visibleNodes, ...notesWithCallbacks], [visibleNodes, notesWithCallbacks]);
+
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>
         <ContextMenu>
           <ContextMenuTrigger>
             <ReactFlow
-              nodes={visibleNodes}
+              nodes={combinedNodes}
               edges={processedEdges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
@@ -461,6 +527,16 @@ const DiagramEditor = forwardRef(
             >
               <Plus className="h-4 w-4 mr-2" />
               Add New Table
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => {
+              if (clickPositionRef.current) {
+                onCreateNoteAtPosition(clickPositionRef.current);
+              }
+            }}
+              disabled={isLocked}
+            >
+              <StickyNote className="h-4 w-4 mr-2" />
+              Add Note
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
