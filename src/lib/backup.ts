@@ -15,8 +15,16 @@ export async function exportDbToJson() {
     const jsonString = JSON.stringify(backupData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    saveAs(blob, `thothblueprint_backup_${timestamp}.thot`);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+    
+    saveAs(blob, `thoth_backup_${timestamp}.thot`);
     showSuccess('Project data saved successfully!');
   } catch (error) {
     console.error('Failed to save project data:', error);
