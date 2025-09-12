@@ -189,6 +189,25 @@ export default function Layout() {
     editorRef.current?.addNode(newNode);
   };
 
+  const handleCreateTableAtPosition = (position: { x: number; y: number }) => {
+    const visibleNodes = diagram?.data.nodes.filter(n => !n.data.isDeleted) || [];
+    const tableName = `new_table_${visibleNodes.length + 1}`;
+    const newNode: AppNode = {
+      id: `${tableName}-${+new Date()}`,
+      type: 'table',
+      position: { x: position.x - 144, y: position.y }, // Adjust for node width
+      data: {
+        label: tableName,
+        color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? '#60A5FA',
+        columns: [
+          { id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false },
+        ],
+        order: visibleNodes.length,
+      },
+    };
+    editorRef.current?.addNode(newNode);
+  };
+
   const handleDeleteDiagram = async () => {
     if (diagram) {
       await db.diagrams.update(diagram.id!, { deletedAt: new Date(), updatedAt: new Date() });
@@ -332,6 +351,7 @@ export default function Layout() {
                 setRfInstance={handleSetRfInstance}
                 selectedNodeId={selectedNodeId}
                 selectedEdgeId={selectedEdgeId}
+                onCreateTableAtPosition={handleCreateTableAtPosition}
               />
             ) : (
               <DiagramGallery setSelectedDiagramId={setSelectedDiagramId} />

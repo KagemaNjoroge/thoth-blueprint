@@ -208,7 +208,7 @@ export default function EditorSidebar({
   const inspectingEdge = edges.find((e) => e.id === activeItemId);
 
   return (
-    <div className="h-full w-full flex flex-col bg-card">
+    <div className="h-full w-full flex flex-col bg-card" onContextMenu={(e) => e.preventDefault()}>
       <div className="flex items-center border-b pl-2 flex-shrink-0">
         <img
           src="/ThothBlueprint-icon.svg"
