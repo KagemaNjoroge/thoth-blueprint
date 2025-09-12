@@ -3,10 +3,20 @@ import dyadComponentTagger from "@dyad-sh/react-vite-component-tagger";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
+import { execSync } from "child_process";
+
+let gitHash = '';
+try {
+  gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+} catch (e) {
+  console.warn('Could not get git hash', e);
+  gitHash = 'N/A';
+}
 
 export default defineConfig(() => ({
   define: {
-    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version)
+    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version),
+    '__GIT_HASH__': JSON.stringify(gitHash),
   },
   server: {
     host: "::",

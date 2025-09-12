@@ -5,6 +5,8 @@ import { usePWA } from '@/hooks/usePWA';
 import { Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : '';
+const displayVersion = gitHash && gitHash !== 'N/A' ? `${appVersion} (${gitHash})` : appVersion;
 
 interface UpdateDialogProps {
   isOpen: boolean;
@@ -97,7 +99,7 @@ export function UpdateDialog({ isOpen, onOpenChange }: UpdateDialogProps) {
         <div className="py-4 space-y-4">
           {appVersion && appVersion !== '0.0.0' && (
             <div className="text-sm text-center">
-              Current Version: <span className="font-semibold">{appVersion}</span>
+              Current Version: <span className="font-semibold">{displayVersion}</span>
             </div>
           )}
           <div className="h-6 flex items-center justify-center">
