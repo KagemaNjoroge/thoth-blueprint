@@ -22,6 +22,7 @@ import DiagramEditor from "./DiagramEditor";
 import DiagramGallery from "./DiagramGallery";
 import EditorSidebar from "./EditorSidebar";
 import { ExportDialog } from "./ExportDialog";
+import { UpdateDialog } from "./UpdateDialog";
 
 export default function Layout() {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(
@@ -32,6 +33,7 @@ export default function Layout() {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<
     AppNode,
     AppEdge
@@ -293,6 +295,7 @@ export default function Layout() {
       isLocked={isLocked}
       onSetSidebarState={setSidebarState}
       onExport={() => setIsExportDialogOpen(true)}
+      onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
     />
   ) : null;
 
@@ -379,6 +382,10 @@ export default function Layout() {
         onOpenChange={setIsExportDialogOpen}
         diagram={diagram}
         rfInstance={rfInstance as ReactFlowInstance | null}
+      />
+      <UpdateDialog
+        isOpen={isUpdateDialogOpen}
+        onOpenChange={setIsUpdateDialogOpen}
       />
     </>
   );
