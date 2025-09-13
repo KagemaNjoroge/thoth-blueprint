@@ -33,6 +33,7 @@ export interface TableNodeData extends Record<string, unknown> {
     isDeleted?: boolean;
     deletedAt?: Date;
     order?: number;
+    isPositionLocked?: boolean;
 }
 
 export interface NoteNodeData extends Record<string, unknown> {
@@ -40,6 +41,7 @@ export interface NoteNodeData extends Record<string, unknown> {
     color?: string;
     onUpdate?: (id: string, data: Partial<NoteNodeData>) => void;
     onDelete?: (ids: string[]) => void;
+    isPositionLocked?: boolean;
 }
 
 export interface ZoneNodeData extends Record<string, unknown> {

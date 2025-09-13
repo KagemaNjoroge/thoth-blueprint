@@ -44,20 +44,19 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
       <ContextMenuTrigger onContextMenu={handleContextMenu}>
         <div
           className={cn(
-            "w-full h-full rounded-lg border-2 border-dashed bg-primary/5 group",
+            "w-full h-full rounded-lg border-2 bg-primary/5 group relative",
             selected ? "border-blue-500" : "border-primary/20",
-            isLocked && "border-solid border-destructive/50"
+            isLocked ? "border-solid border-primary/40" : "border-dashed"
           )}
         >
           <NodeResizer
             minWidth={150}
             minHeight={150}
-            isVisible={selected && !isLocked}
+            isVisible={selected && !isLocked && !isGloballyLocked}
             lineClassName="border-blue-400"
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
-          <div className="flex items-center justify-center w-full p-1">
-            {isLocked && <Lock className="h-3 w-3 mr-2 text-destructive/80 flex-shrink-0" />}
+          <div className="flex items-center justify-center w-full h-full p-1">
             <Input
               value={name}
               onChange={handleChange}
@@ -66,6 +65,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               disabled={isLocked || isGloballyLocked}
             />
           </div>
+          {isLocked && <Lock className="absolute top-2 right-2 h-3 w-3 text-foreground/50" />}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

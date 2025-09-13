@@ -397,6 +397,56 @@ const DiagramEditor = forwardRef(
       }));
     }, []);
 
+    // Sync node lock status when zones change
+    useEffect(() => {
+      const lockedZones = zones.filter(z => z.data.isLocked);
+    
+      const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
+        if (lockedZones.length === 0) return false;
+        return lockedZones.some(zone => {
+          if (!node.position || !node.width || !node.height || !zone.position || !zone.width || !zone.height) {
+            return false;
+          }
+          return (
+            node.position.x >= zone.position.x &&
+            node.position.y >= zone.position.y &&
+            (node.position.x + node.width) <= (zone.position.x + zone.width) &&
+            (node.position.y + node.height) <= (zone.position.y + zone.height)
+          );
+        });
+      };
+    
+      setAllNodes(currentNodes => {
+        const needsUpdate = currentNodes.some(node => {
+          const isCurrentlyLocked = !!node.data.isPositionLocked;
+          const shouldBeLocked = isNodeInLockedZone(node);
+          return isCurrentlyLocked !== shouldBeLocked;
+        });
+    
+        if (!needsUpdate) return currentNodes;
+    
+        return currentNodes.map(node => ({
+          ...node,
+          data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
+        }));
+      });
+    
+      setNotes(currentNotes => {
+        const needsUpdate = currentNotes.some(node => {
+          const isCurrentlyLocked = !!node.data.isPositionLocked;
+          const shouldBeLocked = isNodeInLockedZone(node);
+          return isCurrentlyLocked !== shouldBeLocked;
+        });
+    
+        if (!needsUpdate) return currentNotes;
+    
+        return currentNotes.map(node => ({
+          ...node,
+          data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
+        }));
+      });
+    }, [zones]);
+
     // Node types
     const nodeTypes: NodeTypes = useMemo(
       () => ({
@@ -524,28 +574,9 @@ const DiagramEditor = forwardRef(
     })), [zones, handleZoneUpdate, deleteZone, onCreateTableAtPosition, onCreateNoteAtPosition, isLocked]);
 
     const combinedNodes = useMemo(() => {
-      const lockedZones = zones.filter(z => z.data.isLocked);
-
-      const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
-        if (lockedZones.length === 0) return false;
-
-        return lockedZones.some(zone => {
-          if (!node.position || !node.width || !node.height || !zone.position || !zone.width || !zone.height) {
-            return false;
-          }
-          return (
-            node.position.x >= zone.position.x &&
-            node.position.y >= zone.position.y &&
-            (node.position.x + node.width) <= (zone.position.x + zone.width) &&
-            (node.position.y + node.height) <= (zone.position.y + zone.height)
-          );
-        });
-      };
-
       const processedContentNodes = [...visibleNodes, ...notesWithCallbacks].map(node => {
-        const isContainedInLockedZone = isNodeInLockedZone(node);
-        const isEffectivelyLocked = isLocked || isContainedInLockedZone;
-
+        const isEffectivelyLocked = isLocked || node.data.isPositionLocked;
+    
         return {
           ...node,
           draggable: !isEffectivelyLocked,
@@ -553,7 +584,7 @@ const DiagramEditor = forwardRef(
           connectable: !isEffectivelyLocked,
         };
       });
-
+    
       const processedZones = zonesWithCallbacks.map(zone => {
         const isDraggable = !isLocked && !zone.data.isLocked;
         return {
@@ -562,9 +593,9 @@ const DiagramEditor = forwardRef(
           selectable: !isLocked,
         };
       });
-
+    
       return [...processedContentNodes, ...processedZones];
-    }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, zones, isLocked]);
+    }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, isLocked]);
 
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>
