@@ -60,6 +60,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { type AppNode, type AppEdge } from "@/lib/types";
 import { exportDbToJson } from "@/lib/backup";
+import { usePWA } from "@/hooks/usePWA";
 
 interface EditorSidebarProps {
   diagram: Diagram;
@@ -78,6 +79,7 @@ interface EditorSidebarProps {
   onSetSidebarState: (state: "docked" | "hidden") => void;
   onExport: () => void;
   onCheckForUpdate: () => void;
+  onInstallAppRequest: () => void;
 }
 
 function SortableAccordionItem({
@@ -124,11 +126,13 @@ export default function EditorSidebar({
   onSetSidebarState,
   onExport,
   onCheckForUpdate,
+  onInstallAppRequest,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
   const { setTheme } = useTheme();
+  const { isInstalled } = usePWA();
 
   const sortedNodesFromProp = useMemo(
     () =>
@@ -298,6 +302,11 @@ export default function EditorSidebar({
               <MenubarItem onClick={onCheckForUpdate}>
                 Check for Updates
               </MenubarItem>
+              {!isInstalled && (
+                <MenubarItem onClick={onInstallAppRequest}>
+                  Install App
+                </MenubarItem>
+              )}
             </MenubarContent>
           </MenubarMenu>
         </Menubar>

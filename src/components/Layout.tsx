@@ -25,7 +25,11 @@ import { ExportDialog } from "./ExportDialog";
 import { PWAUpdateNotification } from "./PWAUpdateNotification";
 import { UpdateDialog } from "./UpdateDialog";
 
-export default function Layout() {
+interface LayoutProps {
+  onInstallAppRequest: () => void;
+}
+
+export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(
     null
   );
@@ -305,6 +309,7 @@ export default function Layout() {
       onSetSidebarState={setSidebarState}
       onExport={() => setIsExportDialogOpen(true)}
       onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
+      onInstallAppRequest={onInstallAppRequest}
     />
   ) : null;
 
