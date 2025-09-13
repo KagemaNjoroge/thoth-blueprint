@@ -389,18 +389,16 @@ const DiagramEditor = forwardRef(
     }, []);
 
     const handleZoneUpdate = useCallback((nodeId: string, data: Partial<ZoneNodeData>) => {
-      setZones(zns => zns.map(z => {
+      const newZones = zones.map(z => {
         if (z.id === nodeId) {
           return { ...z, data: { ...z.data, ...data } };
         }
         return z;
-      }));
-    }, []);
-
-    // Sync node lock status when zones change
-    useEffect(() => {
-      const lockedZones = zones.filter(z => z.data.isLocked);
+      });
+      setZones(newZones);
     
+      // After updating the zone, recalculate and update the lock status of all nodes.
+      const lockedZones = newZones.filter(z => z.data.isLocked);
       const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
         if (lockedZones.length === 0) return false;
         return lockedZones.some(zone => {
@@ -416,35 +414,15 @@ const DiagramEditor = forwardRef(
         });
       };
     
-      setAllNodes(currentNodes => {
-        const needsUpdate = currentNodes.some(node => {
-          const isCurrentlyLocked = !!node.data.isPositionLocked;
-          const shouldBeLocked = isNodeInLockedZone(node);
-          return isCurrentlyLocked !== shouldBeLocked;
-        });
+      setAllNodes(currentNodes => currentNodes.map(node => ({
+        ...node,
+        data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
+      })));
     
-        if (!needsUpdate) return currentNodes;
-    
-        return currentNodes.map(node => ({
-          ...node,
-          data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
-        }));
-      });
-    
-      setNotes(currentNotes => {
-        const needsUpdate = currentNotes.some(node => {
-          const isCurrentlyLocked = !!node.data.isPositionLocked;
-          const shouldBeLocked = isNodeInLockedZone(node);
-          return isCurrentlyLocked !== shouldBeLocked;
-        });
-    
-        if (!needsUpdate) return currentNotes;
-    
-        return currentNotes.map(node => ({
-          ...node,
-          data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
-        }));
-      });
+      setNotes(currentNotes => currentNotes.map(node => ({
+        ...node,
+        data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
+      })));
     }, [zones]);
 
     // Node types
