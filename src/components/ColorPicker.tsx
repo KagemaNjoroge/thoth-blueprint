@@ -1,12 +1,12 @@
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import ColorPickerComponent, { themes, type Color, type ColorObject } from "react-pick-color";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import ColorPickerComponent, { themes, type ColorObject } from "react-pick-color";
 import { useDebouncedCallback } from "use-debounce";
 
 interface ColorPickerProps {

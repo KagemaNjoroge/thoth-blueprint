@@ -37,7 +37,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
     }
   };
 
-  const { isGloballyLocked, isLocked } = data;
+  const { isLocked } = data;
 
   return (
     <ContextMenu>
@@ -52,7 +52,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
           <NodeResizer
             minWidth={150}
             minHeight={150}
-            isVisible={selected && !isLocked && !isGloballyLocked}
+            isVisible={selected && !isLocked}
             lineClassName="border-blue-400"
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
@@ -62,7 +62,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               onChange={handleChange}
               className="bg-transparent border-none text-foreground/80 font-semibold text-center focus-visible:ring-0 w-full"
               placeholder="Zone Name"
-              disabled={isLocked || isGloballyLocked}
+              disabled={isLocked || undefined}
             />
             {isLocked && <Lock className="h-3 w-3 text-foreground/50 ml-1 flex-shrink-0 absolute top-2 right-2" />}
           </div>
@@ -72,7 +72,6 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
       <ContextMenuContent>
         <ContextMenuItem
           onSelect={handleToggleLock}
-          disabled={isGloballyLocked}
         >
           {isLocked ? (
             <>
@@ -92,7 +91,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               data.onCreateTableAtPosition(contextMenuPositionRef.current);
             }
           }}
-          disabled={isGloballyLocked || isLocked}
+          disabled={isLocked || false}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add New Table
@@ -103,7 +102,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               data.onCreateNoteAtPosition(contextMenuPositionRef.current);
             }
           }}
-          disabled={isGloballyLocked || isLocked}
+          disabled={isLocked || false}
         >
           <StickyNote className="h-4 w-4 mr-2" />
           Add Note
@@ -115,7 +114,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
             }
           }}
           className="text-destructive focus:text-destructive"
-          disabled={isGloballyLocked || isLocked}
+          disabled={isLocked || false}
         >
           <Trash2 className="h-4 w-4 mr-2" />
           Delete Zone

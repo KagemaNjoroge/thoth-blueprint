@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { type EdgeData } from "@/lib/types";
 import {
   BaseEdge,
   EdgeLabelRenderer,
   type EdgeProps,
   getSmoothStepPath,
 } from "@xyflow/react";
-import { type EdgeData } from "@/lib/types";
+import { useMemo } from "react";
 
 // Color constants
 const COLORS = {

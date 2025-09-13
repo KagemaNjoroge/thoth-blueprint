@@ -1,4 +1,4 @@
-import { Infinity, ShieldCheck, WifiOff } from "lucide-react";
+import { Infinity as InfinityIcon, ShieldCheck, WifiOff } from "lucide-react";
 
 export const Features = () => {
   const features = [
@@ -8,7 +8,7 @@ export const Features = () => {
       description: "Work on your diagrams anytime, anywhere, with or without an internet connection.",
     },
     {
-      icon: <Infinity className="h-6 w-6 text-primary" />,
+      icon: <InfinityIcon className="h-6 w-6 text-primary" />,
       title: "No Limits",
       description: "Create and manage as many diagrams as you need, with no restrictions.",
     },

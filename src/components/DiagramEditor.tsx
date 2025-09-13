@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { db, type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode, type AppNoteNode, type NoteNodeData, type TableNodeData, type AppZoneNode, type ZoneNodeData } from "@/lib/types";
+import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type NoteNodeData, type TableNodeData, type ZoneNodeData } from "@/lib/types";
 import {
   Background,
   ControlButton,
@@ -169,7 +169,7 @@ const DiagramEditor = forwardRef(
       const initialNotes: AppNoteNode[] = (diagram.data.notes ?? []).map(
         (note) => ({ ...note, type: "note" })
       );
-      
+
       const initialZones: AppZoneNode[] = (diagram.data.zones ?? []).map(
         (zone) => ({ ...zone, type: "zone", zIndex: -1 })
       );
@@ -321,49 +321,49 @@ const DiagramEditor = forwardRef(
 
     const handleZoneUpdate = useCallback((nodeId: string, data: Partial<ZoneNodeData>) => {
       setZones(currentZones => {
-          const newZones = currentZones.map(z => 
-              z.id === nodeId ? { ...z, data: { ...z.data, ...data } } : z
-          );
+        const newZones = currentZones.map(z =>
+          z.id === nodeId ? { ...z, data: { ...z.data, ...data } } : z
+        );
 
-          const lockedZones = newZones.filter(z => z.data.isLocked);
-          const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
-              if (lockedZones.length === 0) return false;
-              return lockedZones.some(zone => {
-                  if (!node.position || !node.width || !node.height || !zone.position || !zone.width || !zone.height) {
-                      return false;
-                  }
-                  return (
-                      node.position.x >= zone.position.x &&
-                      node.position.y >= zone.position.y &&
-                      (node.position.x + node.width) <= (zone.position.x + zone.width) &&
-                      (node.position.y + node.height) <= (zone.position.y + zone.height)
-                  );
-              });
-          };
+        const lockedZones = newZones.filter(z => z.data.isLocked);
+        const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
+          if (lockedZones.length === 0) return false;
+          return lockedZones.some(zone => {
+            if (!node.position || !node.measured || !zone.position || !zone.width || !zone.height) {
+              return false;
+            }
+            return (
+              node.position.x >= zone.position.x &&
+              node.position.y >= zone.position.y &&
+              (node.position.x + (node?.measured?.width || 0)) <= (zone.position.x + zone.width) &&
+              (node.position.y + (node?.measured?.height || 0)) <= (zone.position.y + zone.height)
+            );
+          });
+        };
 
-          setAllNodes(currentNodes => 
-              currentNodes.map(node => {
-                  const shouldBeLocked = isNodeInLockedZone(node);
-                  if (!!node.data.isPositionLocked !== shouldBeLocked) {
-                      return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
-                  }
-                  return node;
-              })
-          );
-        
-          setNotes(currentNotes => 
-              currentNotes.map(node => {
-                  const shouldBeLocked = isNodeInLockedZone(node);
-                  if (!!node.data.isPositionLocked !== shouldBeLocked) {
-                      return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
-                  }
-                  return node;
-              })
-          );
+        setAllNodes(currentNodes =>
+          currentNodes.map(node => {
+            const shouldBeLocked = isNodeInLockedZone(node);
+            if (!!node.data.isPositionLocked !== shouldBeLocked) {
+              return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
+            }
+            return node;
+          })
+        );
 
-          return newZones;
+        setNotes(currentNotes =>
+          currentNotes.map(node => {
+            const shouldBeLocked = isNodeInLockedZone(node);
+            if (!!node.data.isPositionLocked !== shouldBeLocked) {
+              return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
+            }
+            return node;
+          })
+        );
+
+        return newZones;
       });
-  }, []);
+    }, []);
 
     // Node change handling
     const onNodesChange: OnNodesChange = useCallback(
@@ -371,7 +371,7 @@ const DiagramEditor = forwardRef(
         const tableNodeChanges: NodeChange[] = [];
         const noteChanges: NodeChange[] = [];
         const zoneChanges: NodeChange[] = [];
-        
+
         const noteIdSet = new Set(notes.map(n => n.id));
         const zoneIdSet = new Set(zones.map(z => z.id));
 
@@ -563,7 +563,7 @@ const DiagramEditor = forwardRef(
     const combinedNodes = useMemo(() => {
       const processedContentNodes = [...visibleNodes, ...notesWithCallbacks].map(node => {
         const isEffectivelyLocked = isLocked || node.data.isPositionLocked;
-    
+
         return {
           ...node,
           draggable: !isEffectivelyLocked,
@@ -571,7 +571,7 @@ const DiagramEditor = forwardRef(
           connectable: !isEffectivelyLocked,
         };
       });
-    
+
       const processedZones = zonesWithCallbacks.map(zone => {
         const isDraggable = !isLocked && !zone.data.isLocked;
         return {
@@ -580,7 +580,7 @@ const DiagramEditor = forwardRef(
           selectable: !isLocked,
         };
       });
-    
+
       return [...processedContentNodes, ...processedZones];
     }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, isLocked]);
 

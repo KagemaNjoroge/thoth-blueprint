@@ -1,6 +1,14 @@
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, Diagram, DatabaseType } from "@/lib/db";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,28 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Database, Table, GitCommitHorizontal, Pencil, Trash2, Import, RotateCcw, Save, Upload, Settings } from "lucide-react";
-import { CreateDiagramDialog } from "./CreateDiagramDialog";
-import { RenameDiagramDialog } from "./RenameDiagramDialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { formatDistanceToNow } from "date-fns";
-import { AppIntro } from "./AppIntro";
-import { ImportDialog } from "./ImportDialog";
-import { Features } from "./Features";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LoadProjectDialog } from "./LoadProjectDialog";
-import { exportDbToJson } from "@/lib/backup";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,8 +28,22 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTheme } from "next-themes";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table as UiTable } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePWA } from "@/hooks/usePWA";
+import { exportDbToJson } from "@/lib/backup";
+import { DatabaseType, db, Diagram } from "@/lib/db";
+import { formatDistanceToNow } from "date-fns";
+import { useLiveQuery } from "dexie-react-hooks";
+import { Database, GitCommitHorizontal, Import, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useState } from "react";
+import { AppIntro } from "./AppIntro";
+import { CreateDiagramDialog } from "./CreateDiagramDialog";
+import { Features } from "./Features";
+import { ImportDialog } from "./ImportDialog";
+import { LoadProjectDialog } from "./LoadProjectDialog";
+import { RenameDiagramDialog } from "./RenameDiagramDialog";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;

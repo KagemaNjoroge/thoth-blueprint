@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, DatabaseType } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlusCircle, ChevronsUpDown } from "lucide-react";
+import { DatabaseType, db } from "@/lib/db";
+import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronsUpDown, PlusCircle } from "lucide-react";
+import { useState } from "react";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
 
 interface DiagramSelectorProps {
@@ -59,10 +59,10 @@ export default function DiagramSelector({ selectedDiagramId, setSelectedDiagramI
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            <CreateDiagramDialog 
-                isOpen={isCreateDialogOpen} 
-                onOpenChange={setIsCreateDialogOpen} 
-                onCreateDiagram={handleCreateDiagram} 
+            <CreateDiagramDialog
+                isOpen={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                onCreateDiagram={handleCreateDiagram}
             />
         </>
     );

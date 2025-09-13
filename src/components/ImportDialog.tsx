@@ -1,15 +1,11 @@
-import { useRef } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -29,9 +25,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatabaseType, Diagram } from "@/lib/db";
-import { showError } from "@/utils/toast";
 import { importFromJson } from "@/lib/importer";
+import { showError } from "@/utils/toast";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Upload } from "lucide-react";
+import { useRef } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const formSchema = z.object({
   name: z.string().min(1, "Diagram name is required"),
@@ -76,7 +76,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
     try {
       const diagramData = importFromJson(values.content);
       const dbType = values.dbType as DatabaseType;
-      
+
       onImportDiagram({ name: values.name, dbType, data: diagramData });
       onOpenChange(false);
       form.reset();

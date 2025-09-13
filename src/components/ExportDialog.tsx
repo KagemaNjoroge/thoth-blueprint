@@ -1,33 +1,33 @@
-import { useState } from "react";
-import { Diagram } from "@/lib/db";
+import { DjangoIcon } from "@/components/icons/DjangoIcon";
+import { LaravelIcon } from "@/components/icons/LaravelIcon";
+import { TypeOrmIcon } from "@/components/icons/TypeOrmIcon";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileJson, Image as ImageIcon, Database, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { exportToDbml, exportToSql, exportToJson } from "@/lib/dbml";
-import { exportToMermaid } from "@/lib/mermaid";
+import { generateDjangoMigration } from "@/lib/codegen/django/migration-generator";
 import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-generator";
 import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
-import { generateDjangoMigration } from "@/lib/codegen/django/migration-generator";
-import JSZip from "jszip";
-import { LaravelIcon } from "@/components/icons/LaravelIcon";
-import { TypeOrmIcon } from "@/components/icons/TypeOrmIcon";
-import { DjangoIcon } from "@/components/icons/DjangoIcon";
-import { toSvg, toPng } from "html-to-image";
-import { saveAs } from "file-saver";
+import { Diagram } from "@/lib/db";
+import { exportToDbml, exportToJson, exportToSql } from "@/lib/dbml";
+import { exportToMermaid } from "@/lib/mermaid";
+import { cn } from "@/lib/utils";
+import { showError } from "@/utils/toast";
 import {
   ReactFlowInstance,
   getNodesBounds,
   getViewportForBounds,
 } from "@xyflow/react";
-import { showError } from "@/utils/toast";
+import { saveAs } from "file-saver";
+import { toPng, toSvg } from "html-to-image";
+import JSZip from "jszip";
+import { Database, FileJson, FileText, Image as ImageIcon } from "lucide-react";
+import { useState } from "react";
 
 type ExportFormat = "sql" | "dbml" | "json" | "svg" | "png" | "mermaid" | "laravel" | "typeorm" | "django";
 
@@ -51,13 +51,12 @@ export function ExportDialog({
   const handleExport = async () => {
     if (!diagram || !selectedFormat) return;
 
-    const filename = `${diagram.name.replace(/\s+/g, "_")}.${
-      selectedFormat === "sql"
+    const filename = `${diagram.name.replace(/\s+/g, "_")}.${selectedFormat === "sql"
         ? "sql"
         : selectedFormat === "mermaid"
-        ? "mmd"
-        : selectedFormat
-    }`;
+          ? "mmd"
+          : selectedFormat
+      }`;
     let data: string | Blob = "";
 
     try {
@@ -227,8 +226,7 @@ export function ExportDialog({
     } catch (error) {
       console.error("Export failed:", error);
       showError(
-        `Export failed: ${
-          error instanceof Error ? error.message : String(error)
+        `Export failed: ${error instanceof Error ? error.message : String(error)
         }`
       );
     } finally {
@@ -385,9 +383,9 @@ export function ExportDialog({
                   <CardHeader className="items-center p-4">
                     <opt.icon className={cn(
                       "h-8 w-8 mb-2",
-                      opt.id === "laravel" ? "text-red-500" : 
-                      opt.id === "typeorm" ? "text-orange-500" : 
-                      opt.id === "django" ? "text-green-600" : ""
+                      opt.id === "laravel" ? "text-red-500" :
+                        opt.id === "typeorm" ? "text-orange-500" :
+                          opt.id === "django" ? "text-green-600" : ""
                     )} />
                     <CardTitle className="text-base text-center">
                       {opt.title}
