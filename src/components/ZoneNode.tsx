@@ -44,7 +44,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
       <ContextMenuTrigger onContextMenu={handleContextMenu}>
         <div
           className={cn(
-            "w-full h-full rounded-lg border-2 bg-primary/5 group relative",
+            "w-full h-full rounded-lg border-2 bg-primary/5 group relative flex flex-col",
             selected ? "border-blue-500" : "border-primary/20",
             isLocked ? "border-solid border-primary/40" : "border-dashed"
           )}
@@ -56,7 +56,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
             lineClassName="border-blue-400"
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
-          <div className="flex items-center justify-center w-full h-full p-1">
+          <div className="flex items-center p-1 flex-shrink-0">
             <Input
               value={name}
               onChange={handleChange}
@@ -64,8 +64,9 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               placeholder="Zone Name"
               disabled={isLocked || isGloballyLocked}
             />
+            {isLocked && <Lock className="h-3 w-3 text-foreground/50 ml-1 flex-shrink-0 absolute top-2 right-2" />}
           </div>
-          {isLocked && <Lock className="absolute top-2 right-2 h-3 w-3 text-foreground/50" />}
+          <div className="flex-grow" />
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
