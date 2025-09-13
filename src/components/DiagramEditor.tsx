@@ -517,8 +517,11 @@ const DiagramEditor = forwardRef(
         ...z.data,
         onUpdate: handleZoneUpdate,
         onDelete: deleteZone,
+        onCreateTableAtPosition: onCreateTableAtPosition,
+        onCreateNoteAtPosition: onCreateNoteAtPosition,
+        isLocked: isLocked,
       }
-    })), [zones, handleZoneUpdate, deleteZone]);
+    })), [zones, handleZoneUpdate, deleteZone, onCreateTableAtPosition, onCreateNoteAtPosition, isLocked]);
 
     const combinedNodes = useMemo(() => [...visibleNodes, ...notesWithCallbacks, ...zonesWithCallbacks], [visibleNodes, notesWithCallbacks, zonesWithCallbacks]);
 

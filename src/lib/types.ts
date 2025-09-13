@@ -47,6 +47,9 @@ export interface ZoneNodeData extends Record<string, unknown> {
     color?: string;
     onUpdate?: (id: string, data: Partial<ZoneNodeData>) => void;
     onDelete?: (ids: string[]) => void;
+    onCreateTableAtPosition?: (position: { x: number; y: number }) => void;
+    onCreateNoteAtPosition?: (position: { x: number; y: number }) => void;
+    isLocked?: boolean;
 }
 
 export interface EdgeData extends Record<string, unknown> {

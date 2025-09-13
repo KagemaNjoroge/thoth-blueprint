@@ -1,14 +1,16 @@
-import { type NodeProps, NodeResizer } from "@xyflow/react";
+import { type NodeProps, NodeResizer, useReactFlow } from "@xyflow/react";
 import { type AppZoneNode } from "@/lib/types";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Trash2 } from "lucide-react";
+import { Plus, StickyNote, Trash2 } from "lucide-react";
 
 export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>) {
   const [name, setName] = useState(data.name);
+  const { screenToFlowPosition } = useReactFlow();
+  const contextMenuPositionRef = useRef<{ x: number; y: number } | null>(null);
 
   const debouncedUpdate = useDebouncedCallback((newName: string) => {
     if (data.onUpdate) {
@@ -21,9 +23,17 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
     debouncedUpdate(event.target.value);
   };
 
+  const handleContextMenu = (event: React.MouseEvent) => {
+    const position = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    contextMenuPositionRef.current = position;
+  };
+
   return (
     <ContextMenu>
-      <ContextMenuTrigger>
+      <ContextMenuTrigger onContextMenu={handleContextMenu}>
         <div
           className={cn(
             "w-full h-full rounded-lg border-2 border-dashed bg-primary/5 group",
@@ -48,11 +58,34 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
       <ContextMenuContent>
         <ContextMenuItem
           onSelect={() => {
+            if (data.onCreateTableAtPosition && contextMenuPositionRef.current) {
+              data.onCreateTableAtPosition(contextMenuPositionRef.current);
+            }
+          }}
+          disabled={data.isLocked}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Table
+        </ContextMenuItem>
+        <ContextMenuItem
+          onSelect={() => {
+            if (data.onCreateNoteAtPosition && contextMenuPositionRef.current) {
+              data.onCreateNoteAtPosition(contextMenuPositionRef.current);
+            }
+          }}
+          disabled={data.isLocked}
+        >
+          <StickyNote className="h-4 w-4 mr-2" />
+          Add Note
+        </ContextMenuItem>
+        <ContextMenuItem
+          onSelect={() => {
             if (data.onDelete) {
               data.onDelete([id]);
             }
           }}
           className="text-destructive focus:text-destructive"
+          disabled={data.isLocked}
         >
           <Trash2 className="h-4 w-4 mr-2" />
           Delete Zone
