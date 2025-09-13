@@ -383,7 +383,11 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
                 onCreateTableAtPosition={handleCreateTableAtPosition}
               />
             ) : (
-              <DiagramGallery setSelectedDiagramId={setSelectedDiagramId} />
+              <DiagramGallery
+                setSelectedDiagramId={setSelectedDiagramId}
+                onInstallAppRequest={onInstallAppRequest}
+                onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
+              />
             )}
           </div>
         </ResizablePanel>
