@@ -1,9 +1,13 @@
 import Layout from "@/components/Layout";
 
-const Index = () => {
+interface IndexProps {
+  onInstallAppRequest: () => void;
+}
+
+const Index = ({ onInstallAppRequest }: IndexProps) => {
   return (
     <div className="w-screen h-screen bg-background">
-      <Layout />
+      <Layout onInstallAppRequest={onInstallAppRequest} />
     </div>
   );
 };

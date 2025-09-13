@@ -1,6 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
-import { type Diagram } from "@/lib/db";
-import { useTheme } from "next-themes";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Menubar,
   MenubarContent,
@@ -13,39 +27,14 @@ import {
   MenubarSubTrigger,
   MenubarTrigger,
 } from "@/components/ui/menubar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePWA } from "@/hooks/usePWA";
+import { exportDbToJson } from "@/lib/backup";
+import { type Diagram } from "@/lib/db";
+import { type AppEdge, type AppNode } from "@/lib/types";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import {
-  GitCommitHorizontal,
-  ArrowLeft,
-  Table,
-  GripVertical,
-  Plus,
-} from "lucide-react";
-import TableAccordionContent from "./TableAccordionContent";
-import EdgeInspectorPanel from "./EdgeInspectorPanel";
-import { ScrollArea } from "./ui/scroll-area";
-import {
-  DndContext,
   closestCenter,
+  DndContext,
   PointerSensor,
   useSensor,
   useSensors,
@@ -58,8 +47,20 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { type AppNode, type AppEdge } from "@/lib/types";
-import { exportDbToJson } from "@/lib/backup";
+import {
+  ArrowLeft,
+  GitCommitHorizontal,
+  GripVertical,
+  Plus,
+  Table,
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useMemo, useState } from "react";
+import EdgeInspectorPanel from "./EdgeInspectorPanel";
+import TableAccordionContent from "./TableAccordionContent";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface EditorSidebarProps {
   diagram: Diagram;
@@ -78,6 +79,7 @@ interface EditorSidebarProps {
   onSetSidebarState: (state: "docked" | "hidden") => void;
   onExport: () => void;
   onCheckForUpdate: () => void;
+  onInstallAppRequest: () => void;
 }
 
 function SortableAccordionItem({
@@ -124,11 +126,13 @@ export default function EditorSidebar({
   onSetSidebarState,
   onExport,
   onCheckForUpdate,
+  onInstallAppRequest,
 }: EditorSidebarProps) {
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
   const { setTheme } = useTheme();
+  const { isInstalled } = usePWA();
 
   const sortedNodesFromProp = useMemo(
     () =>
@@ -298,6 +302,11 @@ export default function EditorSidebar({
               <MenubarItem onClick={onCheckForUpdate}>
                 Check for Updates
               </MenubarItem>
+              {!isInstalled && (
+                <MenubarItem onClick={onInstallAppRequest}>
+                  Install App
+                </MenubarItem>
+              )}
             </MenubarContent>
           </MenubarMenu>
         </Menubar>

@@ -7,6 +7,8 @@ export function importFromJson(json: string): Diagram['data'] {
             return {
                 nodes: data.nodes,
                 edges: data.edges,
+                notes: data.notes ?? [],
+                zones: data.zones ?? [],
                 viewport: data.viewport,
                 isLocked: data.isLocked ?? false,
             };

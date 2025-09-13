@@ -33,6 +33,25 @@ export interface TableNodeData extends Record<string, unknown> {
     isDeleted?: boolean;
     deletedAt?: Date;
     order?: number;
+    isPositionLocked?: boolean;
+}
+
+export interface NoteNodeData extends Record<string, unknown> {
+    text: string;
+    color?: string;
+    onUpdate?: (id: string, data: Partial<NoteNodeData>) => void;
+    onDelete?: (ids: string[]) => void;
+    isPositionLocked?: boolean;
+}
+
+export interface ZoneNodeData extends Record<string, unknown> {
+    name: string;
+    color?: string;
+    onUpdate?: (id: string, data: Partial<ZoneNodeData>) => void;
+    onDelete?: (ids: string[]) => void;
+    onCreateTableAtPosition?: (position: { x: number; y: number }) => void;
+    onCreateNoteAtPosition?: (position: { x: number; y: number }) => void;
+    isLocked?: boolean;
 }
 
 export interface EdgeData extends Record<string, unknown> {
@@ -41,4 +60,6 @@ export interface EdgeData extends Record<string, unknown> {
 }
 
 export type AppNode = Node<TableNodeData, 'table'>;
+export type AppNoteNode = Node<NoteNodeData, 'note'>;
+export type AppZoneNode = Node<ZoneNodeData, 'zone'>;
 export type AppEdge = Edge<EdgeData>;

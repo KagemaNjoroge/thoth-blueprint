@@ -3,22 +3,30 @@ import { getPromptState, savePromptState, shouldShowInstallPrompt, type PromptSt
 import { Download, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export function PWAInstallPrompt() {
+interface PWAInstallPromptProps {
+  isForced?: boolean;
+  onDismiss?: () => void;
+}
+
+export function PWAInstallPrompt({ isForced = false, onDismiss }: PWAInstallPromptProps) {
   const { isInstallable, isInstalled, installApp } = usePWA();
-  const [shouldShow, setShouldShow] = useState(false);
+  const [shouldShowFromTiming, setShouldShowFromTiming] = useState(false);
 
   useEffect(() => {
     if (isInstalled || !isInstallable) {
-      setShouldShow(false);
+      setShouldShowFromTiming(false);
       return;
     }
-    setShouldShow(shouldShowInstallPrompt());
-  }, [isInstallable, isInstalled]);
+    // Only set timed prompt if not forced
+    if (!isForced) {
+      setShouldShowFromTiming(shouldShowInstallPrompt());
+    }
+  }, [isInstallable, isInstalled, isForced]);
 
   const handleInstall = async () => {
     const success = await installApp();
     if (success) {
-      setShouldShow(false);
+      if (onDismiss) onDismiss();
     }
   };
 
@@ -47,10 +55,13 @@ export function PWAInstallPrompt() {
     }
 
     savePromptState(state);
-    setShouldShow(false);
+    setShouldShowFromTiming(false); // Hide timed prompt
+    if (onDismiss) onDismiss(); // Hide forced prompt
   };
 
-  if (!shouldShow) return null;
+  const isVisible = (isForced || shouldShowFromTiming) && !isInstalled;
+
+  if (!isVisible) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-background border rounded-lg shadow-lg p-4 z-50">

@@ -1,6 +1,14 @@
-import { useState } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db, Diagram, DatabaseType } from "@/lib/db";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,41 +18,48 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PlusCircle, Database, Table, GitCommitHorizontal, Pencil, Trash2, Import, RotateCcw, Save, Upload } from "lucide-react";
-import { CreateDiagramDialog } from "./CreateDiagramDialog";
-import { RenameDiagramDialog } from "./RenameDiagramDialog";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { formatDistanceToNow } from "date-fns";
-import { AppIntro } from "./AppIntro";
-import { ImportDialog } from "./ImportDialog";
-import { ThemeToggle } from "./theme-toggle";
-import { Features } from "./Features";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table as UiTable } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table as UiTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LoadProjectDialog } from "./LoadProjectDialog";
+import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
+import { DatabaseType, db, Diagram } from "@/lib/db";
+import { formatDistanceToNow } from "date-fns";
+import { useLiveQuery } from "dexie-react-hooks";
+import { Database, GitCommitHorizontal, Import, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useState } from "react";
+import { AppIntro } from "./AppIntro";
+import { CreateDiagramDialog } from "./CreateDiagramDialog";
+import { Features } from "./Features";
+import { ImportDialog } from "./ImportDialog";
+import { LoadProjectDialog } from "./LoadProjectDialog";
+import { RenameDiagramDialog } from "./RenameDiagramDialog";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;
+  onInstallAppRequest: () => void;
+  onCheckForUpdate: () => void;
 }
 
-export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryProps) {
+export default function DiagramGallery({ setSelectedDiagramId, onInstallAppRequest, onCheckForUpdate }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isLoadProjectDialogOpen, setIsLoadProjectDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
   const diagrams = useLiveQuery(() => db.diagrams.orderBy("updatedAt").reverse().toArray());
+  const { setTheme } = useTheme();
+  const { isInstalled } = usePWA();
 
   const activeDiagrams = diagrams?.filter(d => !d.deletedAt);
   const trashedDiagrams = diagrams?.filter(d => d.deletedAt);
@@ -111,7 +126,28 @@ export default function DiagramGallery({ setSelectedDiagramId }: DiagramGalleryP
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 mt-8 md:mt-12">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Diagrams</h1>
           <div className="flex gap-2 items-center self-end md:self-center">
-            <ThemeToggle />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onCheckForUpdate}>Check for Updates</DropdownMenuItem>
+                {!isInstalled && (
+                  <DropdownMenuItem onClick={onInstallAppRequest}>Install App</DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>
               <Upload className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Load Save</span>
