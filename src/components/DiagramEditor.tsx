@@ -519,11 +519,52 @@ const DiagramEditor = forwardRef(
         onDelete: deleteZone,
         onCreateTableAtPosition: onCreateTableAtPosition,
         onCreateNoteAtPosition: onCreateNoteAtPosition,
-        isLocked: isLocked,
+        isGloballyLocked: isLocked,
       }
     })), [zones, handleZoneUpdate, deleteZone, onCreateTableAtPosition, onCreateNoteAtPosition, isLocked]);
 
-    const combinedNodes = useMemo(() => [...visibleNodes, ...notesWithCallbacks, ...zonesWithCallbacks], [visibleNodes, notesWithCallbacks, zonesWithCallbacks]);
+    const combinedNodes = useMemo(() => {
+      const lockedZones = zones.filter(z => z.data.isLocked);
+
+      const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
+        if (lockedZones.length === 0) return false;
+
+        return lockedZones.some(zone => {
+          if (!node.position || !node.width || !node.height || !zone.position || !zone.width || !zone.height) {
+            return false;
+          }
+          return (
+            node.position.x >= zone.position.x &&
+            node.position.y >= zone.position.y &&
+            (node.position.x + node.width) <= (zone.position.x + zone.width) &&
+            (node.position.y + node.height) <= (zone.position.y + zone.height)
+          );
+        });
+      };
+
+      const processedContentNodes = [...visibleNodes, ...notesWithCallbacks].map(node => {
+        const isContainedInLockedZone = isNodeInLockedZone(node);
+        const isEffectivelyLocked = isLocked || isContainedInLockedZone;
+
+        return {
+          ...node,
+          draggable: !isEffectivelyLocked,
+          selectable: !isEffectivelyLocked,
+          connectable: !isEffectivelyLocked,
+        };
+      });
+
+      const processedZones = zonesWithCallbacks.map(zone => {
+        const isDraggable = !isLocked && !zone.data.isLocked;
+        return {
+          ...zone,
+          draggable: isDraggable,
+          selectable: !isLocked,
+        };
+      });
+
+      return [...processedContentNodes, ...processedZones];
+    }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, zones, isLocked]);
 
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>

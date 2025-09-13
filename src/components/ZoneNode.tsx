@@ -2,7 +2,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { type AppZoneNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { type NodeProps, NodeResizer, useReactFlow } from "@xyflow/react";
-import { Plus, StickyNote, Trash2 } from "lucide-react";
+import { Lock, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
 import { useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Input } from "./ui/input";
@@ -31,38 +31,67 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
     contextMenuPositionRef.current = position;
   };
 
+  const handleToggleLock = () => {
+    if (data.onUpdate) {
+      data.onUpdate(id, { isLocked: !data.isLocked });
+    }
+  };
+
+  const { isGloballyLocked, isLocked } = data;
+
   return (
     <ContextMenu>
       <ContextMenuTrigger onContextMenu={handleContextMenu}>
         <div
           className={cn(
             "w-full h-full rounded-lg border-2 border-dashed bg-primary/5 group",
-            selected ? "border-blue-500" : "border-primary/20"
+            selected ? "border-blue-500" : "border-primary/20",
+            isLocked && "border-solid border-destructive/50"
           )}
         >
           <NodeResizer
             minWidth={150}
             minHeight={150}
-            isVisible={selected}
+            isVisible={selected && !isLocked}
             lineClassName="border-blue-400"
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
-          <Input
-            value={name}
-            onChange={handleChange}
-            className="bg-transparent border-none text-foreground/80 font-semibold text-center focus-visible:ring-0 w-full"
-            placeholder="Zone Name"
-          />
+          <div className="flex items-center justify-center w-full p-1">
+            {isLocked && <Lock className="h-3 w-3 mr-2 text-destructive/80 flex-shrink-0" />}
+            <Input
+              value={name}
+              onChange={handleChange}
+              className="bg-transparent border-none text-foreground/80 font-semibold text-center focus-visible:ring-0 w-full"
+              placeholder="Zone Name"
+              disabled={isLocked || isGloballyLocked}
+            />
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
+        <ContextMenuItem
+          onSelect={handleToggleLock}
+          disabled={isGloballyLocked}
+        >
+          {isLocked ? (
+            <>
+              <Unlock className="h-4 w-4 mr-2" />
+              Unlock Zone
+            </>
+          ) : (
+            <>
+              <Lock className="h-4 w-4 mr-2" />
+              Lock Zone
+            </>
+          )}
+        </ContextMenuItem>
         <ContextMenuItem
           onSelect={() => {
             if (data.onCreateTableAtPosition && contextMenuPositionRef.current) {
               data.onCreateTableAtPosition(contextMenuPositionRef.current);
             }
           }}
-          disabled={data.isLocked ?? false}
+          disabled={isGloballyLocked || isLocked}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add New Table
@@ -73,7 +102,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               data.onCreateNoteAtPosition(contextMenuPositionRef.current);
             }
           }}
-          disabled={data.isLocked ?? false}
+          disabled={isGloballyLocked || isLocked}
         >
           <StickyNote className="h-4 w-4 mr-2" />
           Add Note
@@ -85,7 +114,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
             }
           }}
           className="text-destructive focus:text-destructive"
-          disabled={data.isLocked ?? false}
+          disabled={isGloballyLocked || isLocked}
         >
           <Trash2 className="h-4 w-4 mr-2" />
           Delete Zone
