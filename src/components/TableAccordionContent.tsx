@@ -204,7 +204,7 @@ function SortableColumnItem({
                   e.target.value ? parseInt(e.target.value, 10) : undefined
                 )
               }
-              className="h-8 w-12"
+              className="h-8 w-16"
               disabled={isLocked}
             />
             <Input
@@ -218,7 +218,7 @@ function SortableColumnItem({
                   e.target.value ? parseInt(e.target.value, 10) : undefined
                 )
               }
-              className="h-8 w-12"
+              className="h-8 w-16"
               disabled={isLocked}
             />
           </>
