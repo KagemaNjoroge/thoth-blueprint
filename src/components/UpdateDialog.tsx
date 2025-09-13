@@ -4,7 +4,6 @@ import { usePWA } from '@/hooks/usePWA';
 import { AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-// Step 4: Use the globally defined variables
 const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
 const gitHash = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : '';
 const displayVersion = gitHash && gitHash !== 'N/A' ? `${appVersion} (${gitHash})` : appVersion;

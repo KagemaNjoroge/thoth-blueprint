@@ -1,11 +1,11 @@
-import { type NodeProps, NodeResizer, useReactFlow } from "@xyflow/react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { type AppZoneNode } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { type NodeProps, NodeResizer, useReactFlow } from "@xyflow/react";
+import { Plus, StickyNote, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Input } from "./ui/input";
-import { cn } from "@/lib/utils";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Plus, StickyNote, Trash2 } from "lucide-react";
 
 export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>) {
   const [name, setName] = useState(data.name);
@@ -62,7 +62,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               data.onCreateTableAtPosition(contextMenuPositionRef.current);
             }
           }}
-          disabled={data.isLocked}
+          disabled={data.isLocked ?? false}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add New Table
@@ -73,7 +73,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
               data.onCreateNoteAtPosition(contextMenuPositionRef.current);
             }
           }}
-          disabled={data.isLocked}
+          disabled={data.isLocked ?? false}
         >
           <StickyNote className="h-4 w-4 mr-2" />
           Add Note
@@ -85,7 +85,7 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
             }
           }}
           className="text-destructive focus:text-destructive"
-          disabled={data.isLocked}
+          disabled={data.isLocked ?? false}
         >
           <Trash2 className="h-4 w-4 mr-2" />
           Delete Zone

@@ -1,8 +1,3 @@
-import { Button } from "./ui/button";
-import { Trash2 } from "lucide-react";
-import { Separator } from "./ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Label } from "./ui/label";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -14,8 +9,13 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useState, useEffect } from "react";
 import { type AppEdge, type AppNode } from "@/lib/types";
+import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "./ui/button";
+import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Separator } from "./ui/separator";
 
 export const relationshipTypes = [
     { value: 'one-to-one', label: 'One-to-One' },
@@ -45,25 +45,25 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
 
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
-    
+
     // Extract column ID from handle ID (format: "columnId-side-type")
     const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
-      if (!handleId) return null;
-      // Handle both old format (just column ID) and new format (columnId-side-type)
-      const parts = handleId.split('-');
-      return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
+        if (!handleId) return null;
+        // Handle both old format (just column ID) and new format (columnId-side-type)
+        const parts = handleId.split('-');
+        return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
     };
-    
+
     const sourceColumnId = getColumnIdFromHandle(edge.sourceHandle);
     const targetColumnId = getColumnIdFromHandle(edge.targetHandle);
-    
+
     const sourceColumn = sourceNode?.data.columns.find((c) => c.id === sourceColumnId);
     const targetColumn = targetNode?.data.columns.find((c) => c.id === targetColumnId);
 
     const handleTypeChange = (value: string) => {
         setRelationshipType(value);
-        const newEdge: AppEdge = { 
-            ...edge, 
+        const newEdge: AppEdge = {
+            ...edge,
             data: { ...edge.data, relationship: value },
         };
         onEdgeUpdate(newEdge);
