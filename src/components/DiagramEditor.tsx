@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { db, type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode, type TableNodeData, type AppNoteNode, type NoteNodeData } from "@/lib/types";
+import { type AppEdge, type AppNode, type AppNoteNode, type NoteNodeData, type TableNodeData } from "@/lib/types";
 import {
   Background,
   ControlButton,
@@ -45,8 +45,8 @@ import {
 import { IoLockClosedOutline, IoLockOpenOutline } from "react-icons/io5";
 import CustomEdge from "./CustomEdge";
 import { relationshipTypes } from "./EdgeInspectorPanel";
-import TableNode from "./TableNode";
 import NoteNode from "./NoteNode";
+import TableNode from "./TableNode";
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -163,7 +163,7 @@ const DiagramEditor = forwardRef(
       const initialEdges: AppEdge[] = (diagram.data.edges ?? []).map(
         (edge) => ({ ...edge, type: "custom" })
       );
-      
+
       const initialNotes: AppNoteNode[] = (diagram.data.notes ?? []).map(
         (note) => ({ ...note, type: "note" })
       );
@@ -306,11 +306,11 @@ const DiagramEditor = forwardRef(
         const noteIdSet = new Set(notes.map(n => n.id));
 
         for (const change of changes) {
-            if ('id' in change && noteIdSet.has(change.id)) {
-                noteChanges.push(change);
-            } else {
-                tableNodeChanges.push(change);
-            }
+          if ('id' in change && noteIdSet.has(change.id)) {
+            noteChanges.push(change);
+          } else {
+            tableNodeChanges.push(change);
+          }
         }
 
         // Handle table node changes (soft delete)
@@ -332,13 +332,13 @@ const DiagramEditor = forwardRef(
         const noteRemoveChangeIds = noteChanges
           .filter((c) => c.type === "remove" && "id" in c)
           .map((c) => (c as { id: string }).id);
-        
+
         if (noteRemoveChangeIds.length > 0) {
-            deleteNote(noteRemoveChangeIds);
+          deleteNote(noteRemoveChangeIds);
         }
         const nonRemoveNoteChanges = noteChanges.filter((c) => c.type !== "remove");
         if (nonRemoveNoteChanges.length > 0) {
-            setNotes(nds => applyNodeChanges(nonRemoveNoteChanges, nds) as AppNoteNode[]);
+          setNotes(nds => applyNodeChanges(nonRemoveNoteChanges, nds) as AppNoteNode[]);
         }
       },
       [notes, performSoftDelete, deleteNote]
@@ -370,12 +370,12 @@ const DiagramEditor = forwardRef(
     );
 
     const handleNoteUpdate = useCallback((nodeId: string, data: Partial<NoteNodeData>) => {
-        setNotes(nds => nds.map(n => {
-            if (n.id === nodeId) {
-                return { ...n, data: { ...n.data, ...data } };
-            }
-            return n;
-        }));
+      setNotes(nds => nds.map(n => {
+        if (n.id === nodeId) {
+          return { ...n, data: { ...n.data, ...data } };
+        }
+        return n;
+      }));
     }, []);
 
     // Node types
@@ -400,17 +400,17 @@ const DiagramEditor = forwardRef(
     }, [setRfInstance]);
 
     const onCreateNoteAtPosition = useCallback((position: { x: number; y: number }) => {
-        const newNote: AppNoteNode = {
-            id: `note-${+new Date()}`,
-            type: 'note',
-            position,
-            width: 192,
-            height: 192,
-            data: {
-                text: 'New Note',
-            },
-        };
-        setNotes(nds => [...nds, newNote]);
+      const newNote: AppNoteNode = {
+        id: `note-${+new Date()}`,
+        type: 'note',
+        position,
+        width: 192,
+        height: 192,
+        data: {
+          text: 'New Note',
+        },
+      };
+      setNotes(nds => [...nds, newNote]);
     }, []);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
@@ -468,12 +468,12 @@ const DiagramEditor = forwardRef(
     }), [deleteNode, undoDelete, onSelectionChange]);
 
     const notesWithCallbacks = useMemo(() => notes.map(n => ({
-        ...n,
-        data: {
-            ...n.data,
-            onUpdate: handleNoteUpdate,
-            onDelete: deleteNote,
-        }
+      ...n,
+      data: {
+        ...n.data,
+        onUpdate: handleNoteUpdate,
+        onDelete: deleteNote,
+      }
     })), [notes, handleNoteUpdate, deleteNote]);
 
     const combinedNodes = useMemo(() => [...visibleNodes, ...notesWithCallbacks], [visibleNodes, notesWithCallbacks]);
