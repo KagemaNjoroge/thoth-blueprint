@@ -349,7 +349,7 @@ const DiagramEditor = forwardRef(
         }
 
         setNotes(nds => applyNodeChanges(noteChanges, nds) as AppNoteNode[]);
-        setZones(zns => applyNodeChanges(zoneChanges, zns) as AppZoneNode[]);
+        setZones(zns => applyNodeChanges(zoneChanges, nds) as AppZoneNode[]);
       },
       [notes, zones, performSoftDelete]
     );
@@ -389,16 +389,18 @@ const DiagramEditor = forwardRef(
     }, []);
 
     const handleZoneUpdate = useCallback((nodeId: string, data: Partial<ZoneNodeData>) => {
-      const newZones = zones.map(z => {
+      setZones(zns => zns.map(z => {
         if (z.id === nodeId) {
           return { ...z, data: { ...z.data, ...data } };
         }
         return z;
-      });
-      setZones(newZones);
-    
-      // After updating the zone, recalculate and update the lock status of all nodes.
-      const lockedZones = newZones.filter(z => z.data.isLocked);
+      }));
+    }, []);
+
+    // Sync node lock status when zones or node positions change
+    useEffect(() => {
+      const lockedZones = zones.filter(z => z.data.isLocked);
+  
       const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
         if (lockedZones.length === 0) return false;
         return lockedZones.some(zone => {
@@ -413,17 +415,29 @@ const DiagramEditor = forwardRef(
           );
         });
       };
-    
-      setAllNodes(currentNodes => currentNodes.map(node => ({
-        ...node,
-        data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
-      })));
-    
-      setNotes(currentNotes => currentNotes.map(node => ({
-        ...node,
-        data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
-      })));
-    }, [zones]);
+  
+      const updateNodesIfNeeded = <T extends AppNode | AppNoteNode>(
+        nodes: T[],
+        setNodes: React.Dispatch<React.SetStateAction<T[]>>
+      ) => {
+        let hasChanged = false;
+        const newNodes = nodes.map(node => {
+          const shouldBeLocked = isNodeInLockedZone(node);
+          if (!!node.data.isPositionLocked !== shouldBeLocked) {
+            hasChanged = true;
+            return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
+          }
+          return node;
+        });
+  
+        if (hasChanged) {
+          setNodes(newNodes);
+        }
+      };
+  
+      updateNodesIfNeeded(allNodes, setAllNodes as React.Dispatch<React.SetStateAction<AppNode[]>>);
+      updateNodesIfNeeded(notes, setNotes as React.Dispatch<React.SetStateAction<AppNoteNode[]>>);
+    }, [zones, allNodes, notes]);
 
     // Node types
     const nodeTypes: NodeTypes = useMemo(
