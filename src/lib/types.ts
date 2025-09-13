@@ -42,6 +42,13 @@ export interface NoteNodeData extends Record<string, unknown> {
     onDelete?: (ids: string[]) => void;
 }
 
+export interface ZoneNodeData extends Record<string, unknown> {
+    name: string;
+    color?: string;
+    onUpdate?: (id: string, data: Partial<ZoneNodeData>) => void;
+    onDelete?: (ids: string[]) => void;
+}
+
 export interface EdgeData extends Record<string, unknown> {
     relationship: string;
     isHighlighted?: boolean;
@@ -49,4 +56,5 @@ export interface EdgeData extends Record<string, unknown> {
 
 export type AppNode = Node<TableNodeData, 'table'>;
 export type AppNoteNode = Node<NoteNodeData, 'note'>;
+export type AppZoneNode = Node<ZoneNodeData, 'zone'>;
 export type AppEdge = Edge<EdgeData>;

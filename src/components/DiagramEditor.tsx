@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { db, type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode, type AppNoteNode, type NoteNodeData, type TableNodeData } from "@/lib/types";
+import { type AppEdge, type AppNode, type AppNoteNode, type NoteNodeData, type TableNodeData, type AppZoneNode, type ZoneNodeData } from "@/lib/types";
 import {
   Background,
   ControlButton,
@@ -31,7 +31,7 @@ import {
   type ReactFlowInstance
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Plus, StickyNote } from "lucide-react";
+import { Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -47,6 +47,7 @@ import CustomEdge from "./CustomEdge";
 import { relationshipTypes } from "./EdgeInspectorPanel";
 import NoteNode from "./NoteNode";
 import TableNode from "./TableNode";
+import ZoneNode from "./ZoneNode";
 
 interface DiagramEditorProps {
   diagram: Diagram;
@@ -71,6 +72,7 @@ const DiagramEditor = forwardRef(
   ) => {
     const [allNodes, setAllNodes] = useState<AppNode[]>([]);
     const [notes, setNotes] = useState<AppNoteNode[]>([]);
+    const [zones, setZones] = useState<AppZoneNode[]>([]);
     const [edges, setEdges] = useState<AppEdge[]>([]);
     const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance<
       AppNode,
@@ -167,14 +169,19 @@ const DiagramEditor = forwardRef(
       const initialNotes: AppNoteNode[] = (diagram.data.notes ?? []).map(
         (note) => ({ ...note, type: "note" })
       );
+      
+      const initialZones: AppZoneNode[] = (diagram.data.zones ?? []).map(
+        (zone) => ({ ...zone, type: "zone", zIndex: -1 })
+      );
 
       setAllNodes(initialNodes);
       setEdges(initialEdges);
       setNotes(initialNotes);
+      setZones(initialZones);
 
       if (wasModified && diagram.id) {
         db.diagrams.update(diagram.id, {
-          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges, notes: initialNotes },
+          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges, notes: initialNotes, zones: initialZones },
           updatedAt: new Date(),
         }).catch(error => {
           console.error("Failed to update diagram:", error);
@@ -212,6 +219,7 @@ const DiagramEditor = forwardRef(
             nodes: allNodes,
             edges,
             notes,
+            zones,
             viewport: rfInstance.getViewport(),
           },
           updatedAt: new Date(),
@@ -219,13 +227,13 @@ const DiagramEditor = forwardRef(
       } catch (error) {
         console.error("Failed to save diagram:", error);
       }
-    }, [diagram, allNodes, edges, notes, rfInstance]);
+    }, [diagram, allNodes, edges, notes, zones, rfInstance]);
 
     // Debounced saving
     useEffect(() => {
       const handler = setTimeout(() => saveDiagram(), 1000);
       return () => clearTimeout(handler);
-    }, [allNodes, edges, notes, saveDiagram]);
+    }, [allNodes, edges, notes, zones, saveDiagram]);
 
     const undoDelete = useCallback(() => {
       setAllNodes((currentNodes) => {
@@ -298,50 +306,52 @@ const DiagramEditor = forwardRef(
       setNotes(nds => nds.filter(n => !nodeIds.includes(n.id)));
     }, []);
 
+    const deleteZone = useCallback((nodeIds: string[]) => {
+      setZones(zns => zns.filter(z => !nodeIds.includes(z.id)));
+    }, []);
+
     // Node change handling
     const onNodesChange: OnNodesChange = useCallback(
       (changes: NodeChange[]) => {
         const tableNodeChanges: NodeChange[] = [];
         const noteChanges: NodeChange[] = [];
+        const zoneChanges: NodeChange[] = [];
+        
         const noteIdSet = new Set(notes.map(n => n.id));
+        const zoneIdSet = new Set(zones.map(z => z.id));
 
         for (const change of changes) {
-          if ('id' in change && noteIdSet.has(change.id)) {
-            noteChanges.push(change);
+          if ('id' in change) {
+            if (noteIdSet.has(change.id)) {
+              noteChanges.push(change);
+            } else if (zoneIdSet.has(change.id)) {
+              zoneChanges.push(change);
+            } else {
+              tableNodeChanges.push(change);
+            }
           } else {
             tableNodeChanges.push(change);
+            noteChanges.push(change);
+            zoneChanges.push(change);
           }
         }
 
-        // Handle table node changes (soft delete)
         const tableRemoveChangeIds = tableNodeChanges
           .filter((c) => c.type === "remove" && "id" in c)
           .map((c) => (c as { id: string }).id);
 
         if (tableRemoveChangeIds.length > 0) {
-          setAllNodes((currentNodes) =>
-            performSoftDelete(tableRemoveChangeIds, currentNodes)
-          );
+          setAllNodes((currentNodes) => performSoftDelete(tableRemoveChangeIds, currentNodes));
         }
         const nonRemoveTableChanges = tableNodeChanges.filter((c) => c.type !== "remove");
         if (nonRemoveTableChanges.length > 0) {
           setAllNodes((nds) => applyNodeChanges(nonRemoveTableChanges, nds) as AppNode[]);
         }
 
-        // Handle note changes (hard delete)
-        const noteRemoveChangeIds = noteChanges
-          .filter((c) => c.type === "remove" && "id" in c)
-          .map((c) => (c as { id: string }).id);
-
-        if (noteRemoveChangeIds.length > 0) {
-          deleteNote(noteRemoveChangeIds);
-        }
-        const nonRemoveNoteChanges = noteChanges.filter((c) => c.type !== "remove");
-        if (nonRemoveNoteChanges.length > 0) {
-          setNotes(nds => applyNodeChanges(nonRemoveNoteChanges, nds) as AppNoteNode[]);
-        }
+        setNotes(nds => applyNodeChanges(noteChanges, nds) as AppNoteNode[]);
+        setZones(zns => applyNodeChanges(zoneChanges, zns) as AppZoneNode[]);
       },
-      [notes, performSoftDelete, deleteNote]
+      [notes, zones, performSoftDelete]
     );
 
     const onEdgesChange: OnEdgesChange = useCallback(
@@ -378,6 +388,15 @@ const DiagramEditor = forwardRef(
       }));
     }, []);
 
+    const handleZoneUpdate = useCallback((nodeId: string, data: Partial<ZoneNodeData>) => {
+      setZones(zns => zns.map(z => {
+        if (z.id === nodeId) {
+          return { ...z, data: { ...z.data, ...data } };
+        }
+        return z;
+      }));
+    }, []);
+
     // Node types
     const nodeTypes: NodeTypes = useMemo(
       () => ({
@@ -389,6 +408,7 @@ const DiagramEditor = forwardRef(
           />
         ),
         note: NoteNode,
+        zone: ZoneNode,
       }),
       [deleteNode]
     );
@@ -411,6 +431,21 @@ const DiagramEditor = forwardRef(
         },
       };
       setNotes(nds => [...nds, newNote]);
+    }, []);
+
+    const onCreateZoneAtPosition = useCallback((position: { x: number; y: number }) => {
+      const newZone: AppZoneNode = {
+        id: `zone-${+new Date()}`,
+        type: 'zone',
+        position,
+        width: 300,
+        height: 300,
+        zIndex: -1,
+        data: {
+          name: 'New Zone',
+        },
+      };
+      setZones(zns => [...zns, newZone]);
     }, []);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
@@ -476,7 +511,16 @@ const DiagramEditor = forwardRef(
       }
     })), [notes, handleNoteUpdate, deleteNote]);
 
-    const combinedNodes = useMemo(() => [...visibleNodes, ...notesWithCallbacks], [visibleNodes, notesWithCallbacks]);
+    const zonesWithCallbacks = useMemo(() => zones.map(z => ({
+      ...z,
+      data: {
+        ...z.data,
+        onUpdate: handleZoneUpdate,
+        onDelete: deleteZone,
+      }
+    })), [zones, handleZoneUpdate, deleteZone]);
+
+    const combinedNodes = useMemo(() => [...visibleNodes, ...notesWithCallbacks, ...zonesWithCallbacks], [visibleNodes, notesWithCallbacks, zonesWithCallbacks]);
 
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>
@@ -539,6 +583,16 @@ const DiagramEditor = forwardRef(
             >
               <StickyNote className="h-4 w-4 mr-2" />
               Add Note
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => {
+              if (clickPositionRef.current) {
+                onCreateZoneAtPosition(clickPositionRef.current);
+              }
+            }}
+              disabled={isLocked}
+            >
+              <SquareDashed className="h-4 w-4 mr-2" />
+              Add Zone
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>

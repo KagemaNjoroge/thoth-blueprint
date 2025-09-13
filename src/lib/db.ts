@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import { type AppNode, type AppEdge, type AppNoteNode } from './types';
+import { type AppNode, type AppEdge, type AppNoteNode, type AppZoneNode } from './types';
 
 export type DatabaseType = 'mysql' | 'postgres';
 
@@ -11,6 +11,7 @@ export interface Diagram {
     nodes: AppNode[];
     edges: AppEdge[];
     notes?: AppNoteNode[];
+    zones?: AppZoneNode[];
     viewport: { x: number; y: number; zoom: number };
     isLocked?: boolean;
   };
@@ -62,6 +63,13 @@ export class Database extends Dexie {
         return tx.table('diagrams').toCollection().modify(diagram => {
             if (diagram.data && typeof diagram.data.notes === 'undefined') {
                 diagram.data.notes = [];
+            }
+        });
+    });
+    this.version(7).stores({}).upgrade(tx => {
+        return tx.table('diagrams').toCollection().modify(diagram => {
+            if (diagram.data && typeof diagram.data.zones === 'undefined') {
+                diagram.data.zones = [];
             }
         });
     });
