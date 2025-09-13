@@ -349,7 +349,7 @@ const DiagramEditor = forwardRef(
         }
 
         setNotes(nds => applyNodeChanges(noteChanges, nds) as AppNoteNode[]);
-        setZones(zns => applyNodeChanges(zoneChanges, nds) as AppZoneNode[]);
+        setZones(zns => applyNodeChanges(zoneChanges, zns) as AppZoneNode[]);
       },
       [notes, zones, performSoftDelete]
     );
@@ -397,7 +397,7 @@ const DiagramEditor = forwardRef(
       }));
     }, []);
 
-    // Sync node lock status when zones or node positions change
+    // Sync node lock status when zones change
     useEffect(() => {
       const lockedZones = zones.filter(z => z.data.isLocked);
   
@@ -416,12 +416,9 @@ const DiagramEditor = forwardRef(
         });
       };
   
-      const updateNodesIfNeeded = <T extends AppNode | AppNoteNode>(
-        nodes: T[],
-        setNodes: React.Dispatch<React.SetStateAction<T[]>>
-      ) => {
+      setAllNodes(currentNodes => {
         let hasChanged = false;
-        const newNodes = nodes.map(node => {
+        const newNodes = currentNodes.map(node => {
           const shouldBeLocked = isNodeInLockedZone(node);
           if (!!node.data.isPositionLocked !== shouldBeLocked) {
             hasChanged = true;
@@ -429,15 +426,23 @@ const DiagramEditor = forwardRef(
           }
           return node;
         });
-  
-        if (hasChanged) {
-          setNodes(newNodes);
-        }
-      };
-  
-      updateNodesIfNeeded(allNodes, setAllNodes as React.Dispatch<React.SetStateAction<AppNode[]>>);
-      updateNodesIfNeeded(notes, setNotes as React.Dispatch<React.SetStateAction<AppNoteNode[]>>);
-    }, [zones, allNodes, notes]);
+        return hasChanged ? newNodes : currentNodes;
+      });
+
+      setNotes(currentNotes => {
+        let hasChanged = false;
+        const newNotes = currentNotes.map(node => {
+          const shouldBeLocked = isNodeInLockedZone(node);
+          if (!!node.data.isPositionLocked !== shouldBeLocked) {
+            hasChanged = true;
+            return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
+          }
+          return node;
+        });
+        return hasChanged ? newNotes : currentNotes;
+      });
+
+    }, [zones]);
 
     // Node types
     const nodeTypes: NodeTypes = useMemo(
