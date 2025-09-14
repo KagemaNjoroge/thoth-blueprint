@@ -108,19 +108,19 @@ const DiagramEditor = forwardRef(
           edge.id === selectedEdgeId ||
           edge.id === hoveredEdgeId;
 
-        if (edge.data?.isHighlighted === isHighlighted) {
-          return edge;
-        }
+        const isEffectivelyLocked = isLocked || edge.data?.isPositionLocked;
 
         return {
           ...edge,
+          selectable: !isEffectivelyLocked,
           data: {
-            ...edge.data,
+            relationship: edge.data?.relationship || relationshipTypes[1]?.value || "one-to-many",
             isHighlighted,
+            isPositionLocked: edge.data?.isPositionLocked || false
           },
         };
       });
-    }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
+    }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId, isLocked]);
 
     const handleLockChange = useCallback(() => {
       if (!diagram?.id) return;
@@ -136,13 +136,8 @@ const DiagramEditor = forwardRef(
     useEffect(() => {
       if (!diagram?.data) return;
 
-      let wasModified = false;
-      const initialNodes: AppNode[] = (diagram.data.nodes ?? []).map(
+      const initialNodesRaw: AppNode[] = (diagram.data.nodes ?? []).map(
         (node: AppNode, index: number) => {
-          if (node.data.order === undefined || node.data.order === null) {
-            wasModified = true;
-          }
-
           const newData: TableNodeData = {
             ...node.data,
             order: node.data.order ?? index,
@@ -162,11 +157,18 @@ const DiagramEditor = forwardRef(
         }
       );
 
-      const initialEdges: AppEdge[] = (diagram.data.edges ?? []).map(
-        (edge) => ({ ...edge, type: "custom" })
+      const initialEdgesRaw: AppEdge[] = (diagram.data.edges ?? []).map(
+        (edge) => ({
+          ...edge,
+          type: "custom",
+          data: {
+            relationship: edge.data?.relationship || relationshipTypes[1]?.value || "one-to-many",
+            isPositionLocked: edge.data?.isPositionLocked || false
+          }
+        })
       );
 
-      const initialNotes: AppNoteNode[] = (diagram.data.notes ?? []).map(
+      const initialNotesRaw: AppNoteNode[] = (diagram.data.notes ?? []).map(
         (note) => ({ ...note, type: "note" })
       );
 
@@ -174,19 +176,50 @@ const DiagramEditor = forwardRef(
         (zone) => ({ ...zone, type: "zone", zIndex: -1 })
       );
 
+      const lockedZones = initialZones.filter(z => z.data.isLocked);
+      const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
+        if (lockedZones.length === 0) return false;
+        return lockedZones.some(zone => {
+          if (!node.position || !node.measured || !zone.position || !zone.width || !zone.height) {
+            return false;
+          }
+          return (
+            node.position.x >= zone.position.x &&
+            node.position.y >= zone.position.y &&
+            (node.position.x + (node?.measured?.width || 0)) <= (zone.position.x + zone.width) &&
+            (node.position.y + (node?.measured?.height || 0)) <= (zone.position.y + zone.height)
+          );
+        });
+      };
+
+      const initialNodes = initialNodesRaw.map(node => ({
+        ...node,
+        data: { ...node.data, isPositionLocked: isNodeInLockedZone(node) }
+      }));
+
+      const initialNotes = initialNotesRaw.map(note => ({
+        ...note,
+        data: { ...note.data, isPositionLocked: isNodeInLockedZone(note) }
+      }));
+
+      const initialEdges = initialEdgesRaw.map(edge => {
+        const sourceNode = initialNodes.find(n => n.id === edge.source);
+        const targetNode = initialNodes.find(n => n.id === edge.target);
+        const shouldBeLocked = !!(sourceNode && targetNode && isNodeInLockedZone(sourceNode) && isNodeInLockedZone(targetNode));
+        return {
+          ...edge,
+          data: {
+            relationship: edge?.data?.relationship || relationshipTypes[1]?.value || "one-to-many",
+            isPositionLocked: shouldBeLocked
+          }
+        };
+      });
+
       setAllNodes(initialNodes);
       setEdges(initialEdges);
       setNotes(initialNotes);
       setZones(initialZones);
 
-      if (wasModified && diagram.id) {
-        db.diagrams.update(diagram.id, {
-          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges, notes: initialNotes, zones: initialZones },
-          updatedAt: new Date(),
-        }).catch(error => {
-          console.error("Failed to update diagram:", error);
-        });
-      }
     }, [diagram]);
 
     // Reset selection when diagram changes
@@ -341,15 +374,37 @@ const DiagramEditor = forwardRef(
           });
         };
 
-        setAllNodes(currentNodes =>
-          currentNodes.map(node => {
+        setAllNodes(currentNodes => {
+          const newNodes = currentNodes.map(node => {
             const shouldBeLocked = isNodeInLockedZone(node);
             if (!!node.data.isPositionLocked !== shouldBeLocked) {
               return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
             }
             return node;
-          })
-        );
+          });
+
+          setEdges(currentEdges =>
+            currentEdges.map(edge => {
+              const sourceNode = newNodes.find(n => n.id === edge.source);
+              const targetNode = newNodes.find(n => n.id === edge.target);
+              if (!sourceNode || !targetNode) return edge;
+
+              const shouldBeLocked = isNodeInLockedZone(sourceNode) && isNodeInLockedZone(targetNode);
+              if (!!edge.data?.isPositionLocked !== shouldBeLocked) {
+                return {
+                  ...edge,
+                  data: {
+                    relationship: edge?.data?.relationship || relationshipTypes[1]?.value || "one-to-many",
+                    isPositionLocked: shouldBeLocked
+                  }
+                };
+              }
+              return edge;
+            })
+          );
+
+          return newNodes;
+        });
 
         setNotes(currentNotes =>
           currentNotes.map(node => {
@@ -410,9 +465,21 @@ const DiagramEditor = forwardRef(
     );
 
     const onEdgesChange: OnEdgesChange = useCallback(
-      (changes: EdgeChange[]) =>
-        setEdges((eds) => applyEdgeChanges(changes, eds) as AppEdge[]),
-      []
+      (changes: EdgeChange[]) => {
+        const deletableChanges = changes.filter(change => {
+          if (change.type === 'remove') {
+            const edge = edges.find(e => e.id === change.id);
+            if (edge && (isLocked || edge.data?.isPositionLocked)) {
+              return false;
+            }
+          }
+          return true;
+        });
+        setEdges((currentEdges) =>
+          applyEdgeChanges(deletableChanges, currentEdges) as AppEdge[]
+        );
+      },
+      [edges, isLocked]
     );
 
     const onConnect: OnConnect = useCallback((connection: Connection) => {
@@ -452,7 +519,10 @@ const DiagramEditor = forwardRef(
       const newEdge = {
         ...connection,
         type: "custom",
-        data: { relationship: relationshipTypes[1]?.value ?? "one-to-many" },
+        data: {
+          relationship: relationshipTypes[1]?.value ?? "one-to-many",
+          isPositionLocked: false
+        },
       };
       setEdges((eds) => addEdge(newEdge, eds) as AppEdge[]);
     }, [allNodes]);
@@ -553,10 +623,26 @@ const DiagramEditor = forwardRef(
       deleteNode: deleteNode,
       updateEdge: (updatedEdge: AppEdge) => {
         setEdges((eds) =>
-          eds.map((edge) => (edge.id === updatedEdge.id ? updatedEdge : edge))
+          eds.map((edge) => {
+            if (edge.id === updatedEdge.id) {
+              return {
+                ...updatedEdge,
+                data: {
+                  relationship: updatedEdge?.data?.relationship || relationshipTypes[1]?.value || "one-to-many",
+                  isHighlighted: updatedEdge?.data?.isHighlighted || false,
+                  isPositionLocked: updatedEdge?.data?.isPositionLocked || false
+                }
+              };
+            }
+            return edge;
+          })
         );
       },
       deleteEdge: (edgeId: string) => {
+        const edge = edges.find(e => e.id === edgeId);
+        if (edge && (isLocked || edge.data?.isPositionLocked)) {
+          return;
+        }
         setEdges((eds) => eds.filter((e) => e.id !== edgeId));
         onSelectionChange({ nodes: [], edges: [] });
       },
@@ -570,7 +656,7 @@ const DiagramEditor = forwardRef(
           currentNodes.map((node) => nodeUpdateMap.get(node.id) || node)
         );
       },
-    }), [deleteNode, undoDelete, onSelectionChange]);
+    }), [deleteNode, undoDelete, onSelectionChange, edges, isLocked]);
 
     const notesWithCallbacks = useMemo(() => notes.map(n => ({
       ...n,

@@ -345,7 +345,7 @@ export default function EditorSidebar({
                     nodes={nodes}
                     onEdgeUpdate={onEdgeUpdate}
                     onEdgeDelete={onEdgeDelete}
-                    isLocked={isLocked}
+                    isLocked={isLocked || !!inspectingEdge.data?.isPositionLocked}
                   />
                 </div>
               ) : (

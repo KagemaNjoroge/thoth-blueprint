@@ -80,6 +80,7 @@ export interface ZoneNodeData extends Record<string, unknown> {
 export interface EdgeData extends Record<string, unknown> {
   relationship: string;
   isHighlighted?: boolean;
+  isPositionLocked?: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;
