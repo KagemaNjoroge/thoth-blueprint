@@ -69,13 +69,13 @@ export function generateLaravelMigrationString(
   const output = `/*
  * Laravel Migration Files Generated from ThothBlueprint
  * Generated on: ${new Date().toLocaleString()}
- * 
+ *
  * Instructions:
  * 1. Copy each migration block below into separate files in your Laravel project
  * 2. Place them in the database/migrations/ directory
  * 3. Use the filename format shown in each comment
  * 4. Run 'php artisan migrate' to execute the migrations
- * 
+ *
  * Note: Each migration file is independent and includes all constraints
  */
 
