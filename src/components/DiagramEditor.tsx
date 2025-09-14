@@ -8,6 +8,7 @@ import { tableColors } from "@/lib/colors";
 import { relationshipTypes } from "@/lib/constants";
 import { db, } from "@/lib/db";
 import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type Diagram, type NoteNodeData, type TableNodeData, type ZoneNodeData } from "@/lib/types";
+import { showError } from "@/utils/toast";
 import {
   Background,
   ControlButton,
@@ -415,13 +416,46 @@ const DiagramEditor = forwardRef(
     );
 
     const onConnect: OnConnect = useCallback((connection: Connection) => {
+      const { source, target, sourceHandle, targetHandle } = connection;
+
+      if (!source || !target || !sourceHandle || !targetHandle) {
+        return;
+      }
+
+      const getColumnIdFromHandle = (handleId: string): string => {
+        const parts = handleId.split('-');
+        return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
+      };
+
+      const sourceNode = allNodes.find(n => n.id === source);
+      const targetNode = allNodes.find(n => n.id === target);
+
+      if (!sourceNode || !targetNode) {
+        return;
+      }
+
+      const sourceColumnId = getColumnIdFromHandle(sourceHandle);
+      const targetColumnId = getColumnIdFromHandle(targetHandle);
+
+      const sourceColumn = sourceNode.data.columns.find(c => c.id === sourceColumnId);
+      const targetColumn = targetNode.data.columns.find(c => c.id === targetColumnId);
+
+      if (!sourceColumn || !targetColumn) {
+        return;
+      }
+
+      if (sourceColumn.type !== targetColumn.type) {
+        showError("Cannot create relationship: Column types do not match.");
+        return;
+      }
+
       const newEdge = {
         ...connection,
         type: "custom",
         data: { relationship: relationshipTypes[1]?.value ?? "one-to-many" },
       };
       setEdges((eds) => addEdge(newEdge, eds) as AppEdge[]);
-    }, []);
+    }, [allNodes]);
 
     const deleteNode = useCallback(
       (nodeId: string) => {
