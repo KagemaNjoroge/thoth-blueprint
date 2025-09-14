@@ -1,6 +1,5 @@
-import { Diagram } from "./db";
 import { exporter } from "@dbml/core";
-import { AppNode, Column, Index } from "./types";
+import { type AppNode, type Column, type Diagram, type Index } from "./types";
 
 const diagramToDbml = (diagram: Diagram): string => {
   const { nodes, edges } = diagram.data;

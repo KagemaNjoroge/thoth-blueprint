@@ -1,4 +1,4 @@
-import { DatabaseType } from './db';
+import { DatabaseType } from "./types";
 
 export const postgresDataTypes = [
   // Numeric Types

@@ -19,7 +19,7 @@ const updateSW = registerSW({
 });
 
 // Make updateSW available globally for the PWA hook
-(window as any).updateSW = updateSW;
+window.updateSW = updateSW;
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

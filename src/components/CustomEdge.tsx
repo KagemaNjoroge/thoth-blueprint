@@ -73,7 +73,6 @@ const getTotalPathLength = (pathData: string) => {
 
 export default function CustomEdge(props: EdgeProps) {
   const {
-    id,
     sourceX,
     sourceY,
     targetX,

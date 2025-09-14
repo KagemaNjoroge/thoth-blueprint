@@ -16,13 +16,9 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
+import { relationshipTypes } from "@/lib/constants";
 
-export const relationshipTypes = [
-    { value: 'one-to-one', label: 'One-to-One' },
-    { value: 'one-to-many', label: 'One-to-Many' },
-    { value: 'many-to-one', label: 'Many-to-One' },
-    { value: 'many-to-many', label: 'Many-to-Many' },
-];
+
 
 interface EdgeInspectorPanelProps {
     edge: AppEdge;

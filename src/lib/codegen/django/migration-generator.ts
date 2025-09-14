@@ -2,7 +2,6 @@ import { Diagram, AppNode, AppEdge, Column } from "@/lib/types";
 import {
   toDjangoTableName,
   toDjangoModelName,
-  generateTimestamp,
   getDjangoFieldType,
   getDjangoFieldOptions,
   getDjangoOnDeleteAction,
@@ -18,7 +17,7 @@ export interface DjangoMigrationFile {
   content: string;
 }
 
-export function generateDjangoMigration(diagram: Diagram, options: DjangoMigrationOptions = {}): DjangoMigrationFile[] {
+export function generateDjangoMigration(diagram: Diagram, _options: DjangoMigrationOptions = {}): DjangoMigrationFile[] {
   const content = generateInitialMigrationContent(diagram);
   return [{
     filename: `0001_initial.py`,

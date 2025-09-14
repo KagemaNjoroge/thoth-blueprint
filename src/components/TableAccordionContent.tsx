@@ -1,6 +1,5 @@
-import { type DatabaseType } from "@/lib/db";
 import { dataTypes } from "@/lib/db-types";
-import { type AppNode, type Column, type Index } from "@/lib/types";
+import { type DatabaseType, type AppNode, type Column, type Index } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   closestCenter,

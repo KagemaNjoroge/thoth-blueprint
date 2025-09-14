@@ -5,8 +5,9 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
-import { db, type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type NoteNodeData, type TableNodeData, type ZoneNodeData } from "@/lib/types";
+import { relationshipTypes } from "@/lib/constants";
+import { db, } from "@/lib/db";
+import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type Diagram, type NoteNodeData, type TableNodeData, type ZoneNodeData } from "@/lib/types";
 import {
   Background,
   ControlButton,
@@ -20,7 +21,6 @@ import {
   type Edge,
   type EdgeChange,
   type EdgeTypes,
-  type Node,
   type NodeChange,
   type NodeProps,
   type NodeTypes,
@@ -44,7 +44,6 @@ import {
 } from "react";
 import { IoLockClosedOutline, IoLockOpenOutline } from "react-icons/io5";
 import CustomEdge from "./CustomEdge";
-import { relationshipTypes } from "./EdgeInspectorPanel";
 import NoteNode from "./NoteNode";
 import TableNode from "./TableNode";
 import ZoneNode from "./ZoneNode";
@@ -251,7 +250,7 @@ const DiagramEditor = forwardRef(
 
         return currentNodes.map((n) => {
           if (n.id === lastDeletedNode.id) {
-            const { isDeleted, deletedAt, ...restData } = n.data;
+            const { ...restData } = n.data;
             return { ...n, data: restData };
           }
           return n;
@@ -498,7 +497,7 @@ const DiagramEditor = forwardRef(
       clickPositionRef.current = position;
     }, [rfInstance]);
 
-    const onNodeContextMenu = (event: React.MouseEvent, node: Node) => {
+    const onNodeContextMenu = (event: React.MouseEvent) => {
       event.preventDefault();
     };
 

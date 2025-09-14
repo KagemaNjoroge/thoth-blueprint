@@ -32,7 +32,7 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table as UiTabl
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
-import { DatabaseType, db, Diagram } from "@/lib/db";
+import { db } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Database, GitCommitHorizontal, Import, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
@@ -44,6 +44,7 @@ import { Features } from "./Features";
 import { ImportDialog } from "./ImportDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
+import { type DatabaseType, type Diagram } from "@/lib/types";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;

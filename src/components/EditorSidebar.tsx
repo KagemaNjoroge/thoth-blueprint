@@ -4,34 +4,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarSub,
-  MenubarSubContent,
-  MenubarSubTrigger,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePWA } from "@/hooks/usePWA";
-import { exportDbToJson } from "@/lib/backup";
-import { type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode } from "@/lib/types";
+import { type AppEdge, type AppNode, type Diagram } from "@/lib/types";
 import {
   closestCenter,
   DndContext,
@@ -54,9 +28,9 @@ import {
   Plus,
   Table,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
+import EditorMenubar from "./EditorMenubar";
 import TableAccordionContent from "./TableAccordionContent";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -131,8 +105,6 @@ export default function EditorSidebar({
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
-  const { setTheme } = useTheme();
-  const { isInstalled } = usePWA();
 
   const sortedNodesFromProp = useMemo(
     () =>
@@ -150,7 +122,7 @@ export default function EditorSidebar({
     setNodes(sortedNodesFromProp);
   }, [sortedNodesFromProp]);
 
-  const edges = diagram.data.edges ?? [];
+  const edges = useMemo(() => diagram.data.edges ?? [], [diagram.data.edges]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -207,10 +179,6 @@ export default function EditorSidebar({
     }
   };
 
-  const handleHideSidebar = () => {
-    onSetSidebarState("hidden");
-  };
-
   const inspectingEdge = edges.find((e) => e.id === activeItemId);
 
   return (
@@ -221,95 +189,18 @@ export default function EditorSidebar({
           alt="ThothBlueprint Logo"
           className="h-5 w-5 mr-2 flex-shrink-0"
         />
-        <Menubar className="rounded-none border-none bg-transparent">
-          <MenubarMenu>
-            <MenubarTrigger>File</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={onBackToGallery}>
-                Back to Gallery
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem onClick={onAddTable} disabled={isLocked}>
-                Add Table <MenubarShortcut>⌘N/A</MenubarShortcut>
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
-              <MenubarItem onClick={exportDbToJson}>Save Data</MenubarItem>
-              <MenubarSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <MenubarItem
-                    onSelect={(e) => e.preventDefault()}
-                    className="text-destructive focus:text-destructive"
-                    disabled={isLocked}
-                  >
-                    Delete Diagram
-                  </MenubarItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will move the "{diagram.name}" diagram to the trash. You can restore it later from the gallery.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDeleteDiagram}>Move to Trash</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>Edit</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={onUndoDelete} disabled={isLocked}>
-                Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>View</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={handleHideSidebar}>
-                Hide Sidebar
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>Settings</MenubarTrigger>
-            <MenubarContent>
-              <MenubarSub>
-                <MenubarSubTrigger>Theme</MenubarSubTrigger>
-                <MenubarSubContent>
-                  <MenubarItem onClick={() => setTheme("light")}>
-                    Light
-                  </MenubarItem>
-                  <MenubarItem onClick={() => setTheme("dark")}>
-                    Dark
-                  </MenubarItem>
-                  <MenubarItem onClick={() => setTheme("system")}>
-                    System
-                  </MenubarItem>
-                </MenubarSubContent>
-              </MenubarSub>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>Help</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={onCheckForUpdate}>
-                Check for Updates
-              </MenubarItem>
-              {!isInstalled && (
-                <MenubarItem onClick={onInstallAppRequest}>
-                  Install App
-                </MenubarItem>
-              )}
-            </MenubarContent>
-          </MenubarMenu>
-        </Menubar>
+        <EditorMenubar
+          diagram={diagram}
+          onAddTable={onAddTable}
+          onDeleteDiagram={onDeleteDiagram}
+          onBackToGallery={onBackToGallery}
+          onUndoDelete={onUndoDelete}
+          onSetSidebarState={onSetSidebarState}
+          onExport={onExport}
+          onCheckForUpdate={onCheckForUpdate}
+          onInstallAppRequest={onInstallAppRequest}
+          isLocked={isLocked}
+        />
       </div>
       <div className="p-2 flex-shrink-0 border-b">
         <h3 className="text-lg font-semibold tracking-tight px-2">

@@ -1,10 +1,9 @@
-import { Diagram } from "@/lib/db";
-import { AppNode } from "@/lib/types";
 import { exportToSql } from "@/lib/dbml";
+import { type AppNode, type Diagram } from "@/lib/types";
 import {
-  toTypeOrmTableName,
-  toTypeOrmClassName,
   generateTimestamp,
+  toTypeOrmClassName,
+  toTypeOrmTableName,
 } from "./typeorm-helpers";
 
 export interface TypeOrmMigrationOptions {

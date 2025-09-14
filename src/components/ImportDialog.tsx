@@ -24,8 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DatabaseType, Diagram } from "@/lib/db";
 import { importFromJson } from "@/lib/importer";
+import { type DatabaseType, type Diagram } from "@/lib/types";
 import { showError } from "@/utils/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Upload } from "lucide-react";
@@ -52,7 +52,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      dbType: "postgres",
+      dbType: "mysql",
       content: "",
     },
   });

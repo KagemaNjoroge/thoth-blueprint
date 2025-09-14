@@ -7,11 +7,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DatabaseType, db } from "@/lib/db";
+import { db } from "@/lib/db";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronsUpDown, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
+import { type DatabaseType } from "@/lib/types";
 
 interface DiagramSelectorProps {
     selectedDiagramId: number | null;
