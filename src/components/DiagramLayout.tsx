@@ -1,14 +1,14 @@
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { type ReactNode, type RefObject } from "react";
+import { type Diagram } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
-import { type Diagram } from "@/lib/types";
+import { type ReactNode, type RefObject } from "react";
 import { type ImperativePanelHandle } from "react-resizable-panels";
 
 interface DiagramLayoutProps {

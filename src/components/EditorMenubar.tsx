@@ -29,6 +29,8 @@ import { useTheme } from "next-themes";
 interface EditorMenubarProps {
   diagram: Diagram;
   onAddTable: () => void;
+  onAddNote: () => void;
+  onAddZone: () => void;
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
   onUndoDelete: () => void;
@@ -42,6 +44,8 @@ interface EditorMenubarProps {
 export default function EditorMenubar({
   diagram,
   onAddTable,
+  onAddNote,
+  onAddZone,
   onDeleteDiagram,
   onBackToGallery,
   onUndoDelete,
@@ -105,6 +109,12 @@ export default function EditorMenubar({
           <MenubarItem onClick={onAddTable} disabled={isLocked}>
             Add Table <MenubarShortcut>⌘A</MenubarShortcut>
           </MenubarItem>
+          <MenubarItem onClick={onAddNote} disabled={isLocked}>
+            Add Note
+          </MenubarItem>
+          <MenubarItem onClick={onAddZone} disabled={isLocked}>
+            Add Zone
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
@@ -131,20 +141,16 @@ export default function EditorMenubar({
                 System
               </MenubarItem>
             </MenubarSubContent>
-          </MenubarSub>
-        </MenubarContent>
-      </MenubarMenu>
-      <MenubarMenu>
-        <MenubarTrigger>Help</MenubarTrigger>
-        <MenubarContent>
-          <MenubarItem onClick={onCheckForUpdate}>
-            Check for Updates
-          </MenubarItem>
-          {!isInstalled && (
-            <MenubarItem onClick={onInstallAppRequest}>
-              Install App
+            <MenubarSeparator />
+            <MenubarItem onClick={onCheckForUpdate}>
+              Check for Updates
             </MenubarItem>
-          )}
+            {!isInstalled && (
+              <MenubarItem onClick={onInstallAppRequest}>
+                Install App
+              </MenubarItem>
+            )}
+          </MenubarSub>
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

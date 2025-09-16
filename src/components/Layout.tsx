@@ -7,11 +7,13 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSelection } from "@/hooks/useSelection";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { db } from "@/lib/db";
-import { type AppEdge, type AppNode } from "@/lib/types";
+import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode } from "@/lib/types";
 import { type ReactFlowInstance } from "@xyflow/react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useCallback, useRef, useState } from "react";
+import { AddNoteDialog } from "./AddNoteDialog";
 import { AddTableDialog } from "./AddTableDialog";
+import { AddZoneDialog } from "./AddZoneDialog";
 import DiagramEditor from "./DiagramEditor";
 import DiagramGallery from "./DiagramGallery";
 import { DiagramLayout } from "./DiagramLayout";
@@ -43,6 +45,10 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     setIsExportDialogOpen,
     isUpdateDialogOpen,
     setIsUpdateDialogOpen,
+    isAddNoteDialogOpen,
+    setIsAddNoteDialogOpen,
+    isAddZoneDialogOpen,
+    setIsAddZoneDialogOpen,
   } = useDialogs();
   const {
     activeItemId,
@@ -64,7 +70,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     deleteNode: (nodeId: string) => void;
     updateEdge: (edge: AppEdge) => void;
     deleteEdge: (edgeId: string) => void;
-    addNode: (node: AppNode) => void;
+    addNode: (node: AppNode | AppNoteNode | AppZoneNode) => void;
     undoDelete: () => void;
     batchUpdateNodes: (nodes: AppNode[]) => void;
   }>(null);
@@ -75,6 +81,8 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   );
 
   const handleAddTable = () => setIsAddTableDialogOpen(true);
+  const handleAddNote = () => setIsAddNoteDialogOpen(true);
+  const handleAddZone = () => setIsAddZoneDialogOpen(true);
 
   const {
     handleNodeUpdate,
@@ -89,6 +97,8 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     handleCreateTable,
     handleCreateTableAtPosition,
     handleDeleteDiagram,
+    handleCreateNote,
+    handleCreateZone,
   } = useDiagramOperations({
     diagram,
     rfInstance,
@@ -120,6 +130,14 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       onEdgeDelete={handleEdgeDelete}
       onAddTable={() => {
         handleAddTable();
+        setIsSidebarOpen(false);
+      }}
+      onAddNote={() => {
+        handleAddNote();
+        setIsSidebarOpen(false);
+      }}
+      onAddZone={() => {
+        handleAddZone();
         setIsSidebarOpen(false);
       }}
       onDeleteDiagram={handleDeleteDiagram}
@@ -213,6 +231,16 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
         isOpen={isAddTableDialogOpen}
         onOpenChange={setIsAddTableDialogOpen}
         onCreateTable={handleCreateTable}
+      />
+      <AddNoteDialog
+        isOpen={isAddNoteDialogOpen}
+        onOpenChange={setIsAddNoteDialogOpen}
+        onCreateNote={handleCreateNote}
+      />
+      <AddZoneDialog
+        isOpen={isAddZoneDialogOpen}
+        onOpenChange={setIsAddZoneDialogOpen}
+        onCreateZone={handleCreateZone}
       />
       <ExportDialog
         isOpen={isExportDialogOpen}

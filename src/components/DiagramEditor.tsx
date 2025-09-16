@@ -646,8 +646,14 @@ const DiagramEditor = forwardRef(
         setEdges((eds) => eds.filter((e) => e.id !== edgeId));
         onSelectionChange({ nodes: [], edges: [] });
       },
-      addNode: (newNode: AppNode) => {
-        setAllNodes((nds) => nds.concat(newNode));
+      addNode: (newNode: AppNode | AppNoteNode | AppZoneNode) => {
+        if (newNode.type === 'table') {
+          setAllNodes((nds) => nds.concat(newNode as AppNode));
+        } else if (newNode.type === 'note') {
+          setNotes((nds) => nds.concat(newNode as AppNoteNode));
+        } else if (newNode.type === 'zone') {
+          setZones((zns) => zns.concat(newNode as AppZoneNode));
+        }
       },
       undoDelete: undoDelete,
       batchUpdateNodes: (nodesToUpdate: AppNode[]) => {

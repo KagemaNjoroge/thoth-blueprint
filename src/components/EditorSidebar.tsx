@@ -45,6 +45,8 @@ interface EditorSidebarProps {
   onEdgeUpdate: (edge: AppEdge) => void;
   onEdgeDelete: (edgeId: string) => void;
   onAddTable: () => void;
+  onAddNote: () => void;
+  onAddZone: () => void;
   onDeleteDiagram: () => void;
   onBackToGallery: () => void;
   onUndoDelete: () => void;
@@ -92,6 +94,8 @@ export default function EditorSidebar({
   onEdgeUpdate,
   onEdgeDelete,
   onAddTable,
+  onAddNote,
+  onAddZone,
   onDeleteDiagram,
   onBackToGallery,
   onUndoDelete,
@@ -192,6 +196,8 @@ export default function EditorSidebar({
         <EditorMenubar
           diagram={diagram}
           onAddTable={onAddTable}
+          onAddNote={onAddNote}
+          onAddZone={onAddZone}
           onDeleteDiagram={onDeleteDiagram}
           onBackToGallery={onBackToGallery}
           onUndoDelete={onUndoDelete}
