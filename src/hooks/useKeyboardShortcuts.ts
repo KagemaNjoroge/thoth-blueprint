@@ -1,7 +1,10 @@
 import { useEffect } from "react";
-import { useDialogs } from "./useDialogs";
 
-export function useKeyboardShortcuts(selectedDiagramId: number | null, isAddTableDialogOpen: boolean, handleAddTable: () => void) {
+export function useKeyboardShortcuts(
+  selectedDiagramId: number | null,
+  isAddTableDialogOpen: boolean,
+  handleAddTable: () => void
+) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (selectedDiagramId) {

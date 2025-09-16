@@ -1,8 +1,10 @@
-import { type ImperativePanelHandle } from "react-resizable-panels";
 import { useEffect, useRef, useState } from "react";
+import { type ImperativePanelHandle } from "react-resizable-panels";
 
 export function useSidebarState() {
-  const [sidebarState, setSidebarState] = useState<"docked" | "hidden">("docked");
+  const [sidebarState, setSidebarState] = useState<"docked" | "hidden">(
+    "docked"
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
@@ -25,8 +27,8 @@ export function useSidebarState() {
   }, [isSidebarVisible]);
 
   const handleOpenSidebar = () => {
-    if (sidebarState === 'hidden') {
-      setSidebarState('docked');
+    if (sidebarState === "hidden") {
+      setSidebarState("docked");
     } else {
       sidebarPanelRef.current?.expand();
     }
@@ -41,6 +43,6 @@ export function useSidebarState() {
     setIsSidebarOpen,
     sidebarPanelRef,
     isSidebarVisible,
-    handleOpenSidebar
+    handleOpenSidebar,
   };
 }

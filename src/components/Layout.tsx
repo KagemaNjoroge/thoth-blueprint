@@ -1,4 +1,5 @@
-import { LayoutProvider } from "@/contexts/LayoutContext";
+
+import { LayoutProvider } from "@/contexts/LayoutContextProvider";
 import { useDiagramOperations } from "@/hooks/useDiagramOperations";
 import { useDiagramSelection } from "@/hooks/useDiagramSelection";
 import { useDialogs } from "@/hooks/useDialogs";

@@ -1,13 +1,14 @@
 import { db } from "@/lib/db";
-import { type AppNode, type AppEdge } from "@/lib/types";
+import { type AppNode, type AppEdge, Diagram } from "@/lib/types";
 import { tableColors } from "@/lib/colors";
 import { colors } from "@/lib/constants";
 import { type ReactFlowInstance } from "@xyflow/react";
 import { useCallback } from "react";
 
 interface UseDiagramOperationsProps {
-  diagram: any;
+  diagram: Diagram | undefined;
   rfInstance: ReactFlowInstance<AppNode, AppEdge> | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   editorRef: React.RefObject<any>;
   setSelectedDiagramId: (id: number | null) => void;
 }

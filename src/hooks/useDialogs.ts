@@ -11,6 +11,6 @@ export function useDialogs() {
     isExportDialogOpen,
     setIsExportDialogOpen,
     isUpdateDialogOpen,
-    setIsUpdateDialogOpen
+    setIsUpdateDialogOpen,
   };
 }

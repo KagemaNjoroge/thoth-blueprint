@@ -1,4 +1,3 @@
-import { type AppEdge, type AppNode } from "@/lib/types";
 import { type OnSelectionChangeParams } from "@xyflow/react";
 import { useCallback, useState } from "react";
 
@@ -33,6 +32,6 @@ export function useSelection() {
     setSelectedNodeId,
     selectedEdgeId,
     setSelectedEdgeId,
-    handleSelectionChange
+    handleSelectionChange,
   };
 }

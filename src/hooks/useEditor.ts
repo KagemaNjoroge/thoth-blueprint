@@ -15,31 +15,46 @@ interface UseEditorProps {
 }
 
 export function useEditor({ editorRef, setActiveItemId }: UseEditorProps) {
-  const handleNodeUpdate = useCallback((node: AppNode) => {
-    editorRef.current?.updateNode(node);
-  }, [editorRef]);
+  const handleNodeUpdate = useCallback(
+    (node: AppNode) => {
+      editorRef.current?.updateNode(node);
+    },
+    [editorRef]
+  );
 
-  const handleNodeDelete = useCallback((nodeId: string) => {
-    editorRef.current?.deleteNode(nodeId);
-    setActiveItemId(null);
-  }, [editorRef, setActiveItemId]);
+  const handleNodeDelete = useCallback(
+    (nodeId: string) => {
+      editorRef.current?.deleteNode(nodeId);
+      setActiveItemId(null);
+    },
+    [editorRef, setActiveItemId]
+  );
 
-  const handleEdgeUpdate = useCallback((edge: AppEdge) => {
-    editorRef.current?.updateEdge(edge);
-  }, [editorRef]);
+  const handleEdgeUpdate = useCallback(
+    (edge: AppEdge) => {
+      editorRef.current?.updateEdge(edge);
+    },
+    [editorRef]
+  );
 
-  const handleEdgeDelete = useCallback((edgeId: string) => {
-    editorRef.current?.deleteEdge(edgeId);
-    setActiveItemId(null);
-  }, [editorRef, setActiveItemId]);
+  const handleEdgeDelete = useCallback(
+    (edgeId: string) => {
+      editorRef.current?.deleteEdge(edgeId);
+      setActiveItemId(null);
+    },
+    [editorRef, setActiveItemId]
+  );
 
   const handleUndoDelete = useCallback(() => {
     editorRef.current?.undoDelete();
   }, [editorRef]);
 
-  const handleBatchNodeUpdate = useCallback((nodesToUpdate: AppNode[]) => {
-    editorRef.current?.batchUpdateNodes(nodesToUpdate);
-  }, [editorRef]);
+  const handleBatchNodeUpdate = useCallback(
+    (nodesToUpdate: AppNode[]) => {
+      editorRef.current?.batchUpdateNodes(nodesToUpdate);
+    },
+    [editorRef]
+  );
 
   return {
     handleNodeUpdate,
@@ -47,6 +62,6 @@ export function useEditor({ editorRef, setActiveItemId }: UseEditorProps) {
     handleEdgeUpdate,
     handleEdgeDelete,
     handleUndoDelete,
-    handleBatchNodeUpdate
+    handleBatchNodeUpdate,
   };
 }

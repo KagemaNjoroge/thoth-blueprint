@@ -2,19 +2,21 @@ import { db } from "@/lib/db";
 import { useEffect, useState } from "react";
 
 export function useDiagramSelection() {
-  const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(null);
+  const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(
+    null
+  );
 
   // Load selected diagram ID on mount
   useEffect(() => {
     const loadSelectedDiagram = async () => {
       try {
-        const state = await db.appState.get('selectedDiagramId');
-        if (state && typeof state.value === 'number') {
+        const state = await db.appState.get("selectedDiagramId");
+        if (state && typeof state.value === "number") {
           const diagramExists = await db.diagrams.get(state.value);
           if (diagramExists && !diagramExists.deletedAt) {
             setSelectedDiagramId(state.value);
           } else {
-            await db.appState.delete('selectedDiagramId');
+            await db.appState.delete("selectedDiagramId");
           }
         }
       } catch (error) {
@@ -29,11 +31,14 @@ export function useDiagramSelection() {
     const saveSelectedDiagram = async () => {
       try {
         if (selectedDiagramId !== null) {
-          await db.appState.put({ key: 'selectedDiagramId', value: selectedDiagramId });
+          await db.appState.put({
+            key: "selectedDiagramId",
+            value: selectedDiagramId,
+          });
         } else {
-          const state = await db.appState.get('selectedDiagramId');
+          const state = await db.appState.get("selectedDiagramId");
           if (state) {
-            await db.appState.delete('selectedDiagramId');
+            await db.appState.delete("selectedDiagramId");
           }
         }
       } catch (error) {
