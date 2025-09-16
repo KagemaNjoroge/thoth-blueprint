@@ -67,10 +67,6 @@ export default function EditorMenubar({
             Back to Gallery
           </MenubarItem>
           <MenubarSeparator />
-          <MenubarItem onClick={onAddTable} disabled={isLocked}>
-            Add Table <MenubarShortcut>⌘N/A</MenubarShortcut>
-          </MenubarItem>
-          <MenubarSeparator />
           <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
           <MenubarItem onClick={exportDbToJson}>Save Data</MenubarItem>
           <MenubarSeparator />
@@ -104,6 +100,10 @@ export default function EditorMenubar({
         <MenubarContent>
           <MenubarItem onClick={onUndoDelete} disabled={isLocked}>
             Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
+          </MenubarItem>
+          <MenubarSeparator />
+          <MenubarItem onClick={onAddTable} disabled={isLocked}>
+            Add Table <MenubarShortcut>⌘A</MenubarShortcut>
           </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
