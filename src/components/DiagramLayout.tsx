@@ -5,11 +5,11 @@ import {
 } from "@/components/ui/resizable";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useSidebarState } from "@/hooks/useSidebarState";
-import { type ReactNode } from "react";
+import { type ReactNode, type RefObject } from "react";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
 import { type Diagram } from "@/lib/types";
+import { type ImperativePanelHandle } from "react-resizable-panels";
 
 interface DiagramLayoutProps {
   sidebarContent: ReactNode;
@@ -19,6 +19,9 @@ interface DiagramLayoutProps {
   handleOpenSidebar: () => void;
   isSidebarCollapsed: boolean;
   diagram: Diagram | undefined;
+  sidebarPanelRef: RefObject<ImperativePanelHandle>;
+  onCollapse: () => void;
+  onExpand: () => void;
 }
 
 export function DiagramLayout({
@@ -28,10 +31,11 @@ export function DiagramLayout({
   setIsSidebarOpen,
   handleOpenSidebar,
   isSidebarCollapsed,
-  diagram
+  diagram,
+  sidebarPanelRef,
+  onCollapse,
+  onExpand,
 }: DiagramLayoutProps) {
-  const { sidebarPanelRef } = useSidebarState();
-
   return (
     <>
       <div className="lg:hidden">
@@ -55,6 +59,8 @@ export function DiagramLayout({
           minSize={20}
           maxSize={40}
           className="hidden lg:block"
+          onCollapse={onCollapse}
+          onExpand={onExpand}
         >
           {sidebarContent}
         </ResizablePanel>

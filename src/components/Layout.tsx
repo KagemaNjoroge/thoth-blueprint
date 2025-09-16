@@ -1,4 +1,3 @@
-
 import { LayoutProvider } from "@/contexts/LayoutContextProvider";
 import { useDiagramOperations } from "@/hooks/useDiagramOperations";
 import { useDiagramSelection } from "@/hooks/useDiagramSelection";
@@ -34,7 +33,8 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     setIsSidebarCollapsed,
     isSidebarOpen,
     setIsSidebarOpen,
-    handleOpenSidebar
+    handleOpenSidebar,
+    sidebarPanelRef,
   } = useSidebarState();
   const {
     isAddTableDialogOpen,
@@ -42,7 +42,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     isExportDialogOpen,
     setIsExportDialogOpen,
     isUpdateDialogOpen,
-    setIsUpdateDialogOpen
+    setIsUpdateDialogOpen,
   } = useDialogs();
   const {
     activeItemId,
@@ -51,7 +51,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     setSelectedNodeId,
     selectedEdgeId,
     setSelectedEdgeId,
-    handleSelectionChange
+    handleSelectionChange,
   } = useSelection();
 
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<
@@ -82,14 +82,19 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     handleEdgeUpdate,
     handleEdgeDelete,
     handleUndoDelete,
-    handleBatchNodeUpdate
+    handleBatchNodeUpdate,
   } = useEditor({ editorRef, setActiveItemId });
 
   const {
     handleCreateTable,
     handleCreateTableAtPosition,
-    handleDeleteDiagram
-  } = useDiagramOperations({ diagram, rfInstance, editorRef, setSelectedDiagramId });
+    handleDeleteDiagram,
+  } = useDiagramOperations({
+    diagram,
+    rfInstance,
+    editorRef,
+    setSelectedDiagramId,
+  });
 
   const handleSetRfInstance = useCallback(
     (instance: ReactFlowInstance<AppNode, AppEdge> | null) => {
@@ -191,6 +196,9 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           handleOpenSidebar={handleOpenSidebar}
           isSidebarCollapsed={isSidebarCollapsed}
           diagram={diagram}
+          sidebarPanelRef={sidebarPanelRef}
+          onCollapse={() => setIsSidebarCollapsed(true)}
+          onExpand={() => setIsSidebarCollapsed(false)}
         />
       ) : (
         <div className="w-full h-screen">

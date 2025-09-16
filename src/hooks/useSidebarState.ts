@@ -5,7 +5,7 @@ export function useSidebarState() {
   const [sidebarState, setSidebarState] = useState<"docked" | "hidden">(
     "docked"
   );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
 
