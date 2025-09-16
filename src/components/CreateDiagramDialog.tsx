@@ -44,7 +44,7 @@ export function CreateDiagramDialog({ isOpen, onOpenChange, onCreateDiagram }: C
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      dbType: "postgres",
+      dbType: "mysql",
     },
   });
 

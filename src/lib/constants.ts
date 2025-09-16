@@ -4,3 +4,12 @@ export const relationshipTypes = [
     { value: 'many-to-one', label: 'Many-to-One' },
     { value: 'many-to-many', label: 'Many-to-Many' },
 ];
+
+export const colors = {
+  HIGHLIGHT: "#60a5fa",
+  DEFAULT_STROKE: "#a1a1aa",
+  DEFAULT_INDICATOR: "#4b5563",
+  WHITE: "#FFFFFF",
+  DEFAULT_TABLE_COLOR: "#60A5FA",
+  DEFAULT_DIAGRAM_COLOR: "#A1A1AA"
+}

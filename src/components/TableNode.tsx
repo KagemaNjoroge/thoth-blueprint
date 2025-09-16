@@ -22,6 +22,7 @@ import {
   PopoverWithArrowContent,
   PopoverWithArrowTrigger,
 } from "./ui/popover-with-arrow";
+import { colors } from "@/lib/constants";
 
 interface CustomTableNodeProps extends NodeProps {
   data: TableNodeData;
@@ -45,10 +46,10 @@ function TableNode({
   }, [id, data.columns, updateNodeInternals]);
 
   const cardStyle = {
-    border: `1px solid ${selected ? data.color || "#60A5FA" : "hsl(var(--border))"
+    border: `1px solid ${selected ? data.color || colors.DEFAULT_TABLE_COLOR : "hsl(var(--border))"
       }`,
     boxShadow: selected
-      ? `0 0 8px ${data.color || "#60A5FA"}40`
+      ? `0 0 8px ${data.color || colors.DEFAULT_TABLE_COLOR}40`
       : "var(--tw-shadow, 0 0 #0000)",
     width: 288,
   };
@@ -71,7 +72,7 @@ function TableNode({
         <div
           style={{
             height: "6px",
-            backgroundColor: data.color || "#60A5FA",
+            backgroundColor: data.color || colors.DEFAULT_TABLE_COLOR,
             borderTopLeftRadius: "calc(var(--radius) - 1px)",
             borderTopRightRadius: "calc(var(--radius) - 1px)",
           }}
@@ -157,7 +158,7 @@ function TableNode({
                       ...handleStyle,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      background: data.color || "#60A5FA",
+                      background: data.color || colors.DEFAULT_TABLE_COLOR,
                     }}
                     className="!w-2.5 !h-2.5"
                   />
@@ -169,7 +170,7 @@ function TableNode({
                       ...handleStyle,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      background: data.color || "#60A5FA",
+                      background: data.color || colors.DEFAULT_TABLE_COLOR,
                     }}
                     className="!w-2.5 !h-2.5"
                   />
@@ -195,7 +196,7 @@ function TableNode({
                       ...handleStyle,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      background: data.color || "#60A5FA",
+                      background: data.color || colors.DEFAULT_TABLE_COLOR,
                     }}
                     className="!w-2.5 !h-2.5"
                   />
@@ -207,7 +208,7 @@ function TableNode({
                       ...handleStyle,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      background: data.color || "#60A5FA",
+                      background: data.color || colors.DEFAULT_TABLE_COLOR,
                     }}
                     className="!w-2.5 !h-2.5"
                   />

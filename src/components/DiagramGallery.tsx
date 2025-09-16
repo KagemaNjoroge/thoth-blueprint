@@ -45,6 +45,7 @@ import { ImportDialog } from "./ImportDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
 import { type DatabaseType, type Diagram } from "@/lib/types";
+import { colors } from "@/lib/constants";
 
 interface DiagramGalleryProps {
   setSelectedDiagramId: (id: number) => void;
@@ -182,7 +183,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
                       className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full overflow-hidden"
                       onClick={() => setSelectedDiagramId(diagram.id!)}
                     >
-                      <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || '#a1a1aa' }} className="h-2 w-full" />
+                      <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || colors.DEFAULT_DIAGRAM_COLOR }} className="h-2 w-full" />
                       <CardHeader>
                         <CardTitle className="truncate">{diagram.name}</CardTitle>
                         <CardDescription className="flex items-center gap-2 pt-1">

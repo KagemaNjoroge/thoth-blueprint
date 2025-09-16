@@ -57,6 +57,7 @@ import { Label } from "./ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Separator } from "./ui/separator";
 import { Textarea } from "./ui/textarea";
+import { colors } from "@/lib/constants";
 
 interface TableAccordionContentProps {
   node: AppNode;
@@ -695,7 +696,7 @@ export default function TableAccordionContent({
             <Edit className="h-4 w-4 mr-2" /> Rename
           </Button>
           <ColorPicker
-            color={node.data.color || "#60A5FA"}
+            color={node.data.color || colors.DEFAULT_TABLE_COLOR}
             onColorChange={handleColorChange}
             disabled={isLocked}
           />

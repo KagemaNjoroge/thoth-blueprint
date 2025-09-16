@@ -1,3 +1,4 @@
+import { colors } from "@/lib/constants";
 import { type EdgeData } from "@/lib/types";
 import {
   BaseEdge,
@@ -6,14 +7,6 @@ import {
   getSmoothStepPath,
 } from "@xyflow/react";
 import { useMemo } from "react";
-
-// Color constants
-const COLORS = {
-  HIGHLIGHT: "#60a5fa",
-  DEFAULT_STROKE: "#a1a1aa",
-  DEFAULT_INDICATOR: "#4b5563",
-  WHITE: "#FFFFFF",
-} as const;
 
 const EdgeIndicator = ({
   x,
@@ -30,7 +23,7 @@ const EdgeIndicator = ({
     style={{
       position: "absolute",
       transform: `translate(-50%, -50%) translate(${x}px,${y}px)`,
-      background: isHighlighted ? COLORS.HIGHLIGHT : COLORS.DEFAULT_INDICATOR,
+      background: isHighlighted ? colors.HIGHLIGHT : colors.DEFAULT_INDICATOR,
       color: "white",
       fontSize: "10px",
       fontWeight: "bold",
@@ -138,7 +131,7 @@ export default function CustomEdge(props: EdgeProps) {
       <BaseEdge
         path={edgePath}
         style={{
-          stroke: isHighlighted ? COLORS.HIGHLIGHT : COLORS.DEFAULT_STROKE,
+          stroke: isHighlighted ? colors.HIGHLIGHT : colors.DEFAULT_STROKE,
           strokeWidth: isHighlighted ? 2 : 1.5,
           ...style,
         }}
@@ -147,7 +140,7 @@ export default function CustomEdge(props: EdgeProps) {
         <BaseEdge
           path={edgePath}
           style={{
-            stroke: COLORS.WHITE,
+            stroke: colors.WHITE,
             strokeWidth: 2,
             strokeDasharray: "10, 20",
             animation: "flow 2s linear infinite",

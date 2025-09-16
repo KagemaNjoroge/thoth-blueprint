@@ -9,6 +9,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { relationshipTypes } from "@/lib/constants";
 import { type AppEdge, type AppNode } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -16,7 +17,6 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
-import { relationshipTypes } from "@/lib/constants";
 
 
 

@@ -8,7 +8,7 @@ export const LoadingSpinner = () => {
           <img
             src="/ThothBlueprint-icon.svg"
             alt="ThothBlueprint Logo"
-            className="absolute inset-0 m-auto h-12 w-12"
+            className="absolute inset-0 m-auto h-8 w-8"
           />
           <Loader2 className="h-20 w-20 animate-spin text-primary" />
         </div>
