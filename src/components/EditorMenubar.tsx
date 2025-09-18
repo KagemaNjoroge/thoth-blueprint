@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Menubar,
+  MenubarCheckboxItem,
   MenubarContent,
   MenubarItem,
   MenubarMenu,
@@ -23,43 +24,69 @@ import {
 } from "@/components/ui/menubar";
 import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
-import { type Diagram } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
 import { useTheme } from "next-themes";
+import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 
 interface EditorMenubarProps {
-  diagram: Diagram;
   onAddTable: () => void;
   onAddNote: () => void;
   onAddZone: () => void;
-  onDeleteDiagram: () => void;
-  onBackToGallery: () => void;
-  onUndoDelete: () => void;
   onSetSidebarState: (state: "docked" | "hidden") => void;
   onExport: () => void;
   onCheckForUpdate: () => void;
   onInstallAppRequest: () => void;
-  isLocked: boolean;
 }
 
 export default function EditorMenubar({
-  diagram,
   onAddTable,
   onAddNote,
   onAddZone,
-  onDeleteDiagram,
-  onBackToGallery,
-  onUndoDelete,
   onSetSidebarState,
   onExport,
   onCheckForUpdate,
   onInstallAppRequest,
-  isLocked,
 }: EditorMenubarProps) {
+  const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+  const allDiagrams = useStore((state) => state.diagrams);
+
+  const diagram = useMemo(() =>
+    allDiagrams.find(d => d.id === selectedDiagramId),
+    [allDiagrams, selectedDiagramId]
+  );
+
+  const {
+    moveDiagramToTrash,
+    setSelectedDiagramId,
+    undoDelete,
+    settings,
+    updateSettings
+  } = useStore(
+    useShallow((state: StoreState) => ({
+      moveDiagramToTrash: state.moveDiagramToTrash,
+      setSelectedDiagramId: state.setSelectedDiagramId,
+      undoDelete: state.undoDelete,
+      settings: state.settings,
+      updateSettings: state.updateSettings,
+    }))
+  );
+
   const { setTheme } = useTheme();
   const { isInstalled } = usePWA();
 
-  const handleHideSidebar = () => {
-    onSetSidebarState("hidden");
+  if (!diagram) return null;
+  const isLocked = diagram.data.isLocked ?? false;
+
+  const handleDeleteDiagram = () => {
+    if (diagram) {
+      moveDiagramToTrash(diagram.id!);
+      setSelectedDiagramId(null);
+    }
+  };
+
+  const onBackToGallery = () => {
+    setSelectedDiagramId(null);
   };
 
   return (
@@ -93,7 +120,7 @@ export default function EditorMenubar({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDeleteDiagram}>Move to Trash</AlertDialogAction>
+                <AlertDialogAction onClick={handleDeleteDiagram}>Move to Trash</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -102,7 +129,7 @@ export default function EditorMenubar({
       <MenubarMenu>
         <MenubarTrigger>Edit</MenubarTrigger>
         <MenubarContent>
-          <MenubarItem onClick={onUndoDelete} disabled={isLocked}>
+          <MenubarItem onClick={undoDelete} disabled={isLocked}>
             Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
           </MenubarItem>
           <MenubarSeparator />
@@ -120,9 +147,17 @@ export default function EditorMenubar({
       <MenubarMenu>
         <MenubarTrigger>View</MenubarTrigger>
         <MenubarContent>
-          <MenubarItem onClick={handleHideSidebar}>
+          <MenubarItem onClick={() => onSetSidebarState("hidden")}>
             Hide Sidebar
           </MenubarItem>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.rememberLastPosition}
+            onCheckedChange={(checked) => updateSettings({ rememberLastPosition: checked })}
+          >
+            Remember Last Editor Position
+          </MenubarCheckboxItem>
+          <MenubarSeparator />
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
@@ -141,16 +176,15 @@ export default function EditorMenubar({
                 System
               </MenubarItem>
             </MenubarSubContent>
-            <MenubarSeparator />
-            <MenubarItem onClick={onCheckForUpdate}>
-              Check for Updates
-            </MenubarItem>
-            {!isInstalled && (
-              <MenubarItem onClick={onInstallAppRequest}>
-                Install App
-              </MenubarItem>
-            )}
           </MenubarSub>
+          <MenubarItem onClick={onCheckForUpdate}>
+            Check for Updates
+          </MenubarItem>
+          {!isInstalled && (
+            <MenubarItem onClick={onInstallAppRequest}>
+              Install App
+            </MenubarItem>
+          )}
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

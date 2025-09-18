@@ -9,31 +9,41 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { relationshipTypes } from "@/lib/constants";
+import { DbRelationship, relationshipTypes } from "@/lib/constants";
 import { type AppEdge, type AppNode } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 
-
-
 interface EdgeInspectorPanelProps {
     edge: AppEdge;
     nodes: AppNode[];
-    onEdgeUpdate: (edge: AppEdge) => void;
-    onEdgeDelete: (edgeId: string) => void;
-    isLocked: boolean;
 }
 
-export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDelete, isLocked }: EdgeInspectorPanelProps) {
-    const [relationshipType, setRelationshipType] = useState(edge.data?.relationship || 'one-to-many');
+export default function EdgeInspectorPanel({ edge, nodes }: EdgeInspectorPanelProps) {
+    const { updateEdge, deleteEdge } = useStore(
+        useShallow((state: StoreState) => ({
+            updateEdge: state.updateEdge,
+            deleteEdge: state.deleteEdge,
+        }))
+    );
+
+    const diagram = useStore(useShallow((state: StoreState) =>
+        state.diagrams.find(d => d.id === state.selectedDiagramId)
+    ));
+
+    const isLocked = diagram?.data.isLocked ?? false;
+
+    const [relationshipType, setRelationshipType] = useState(edge.data?.relationship || DbRelationship.ONE_TO_MANY);
 
     useEffect(() => {
         if (edge) {
-            setRelationshipType(edge.data?.relationship || 'one-to-many');
+            setRelationshipType(edge.data?.relationship || DbRelationship.ONE_TO_MANY);
         }
     }, [edge]);
 
@@ -42,10 +52,8 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
     const sourceNode = nodes.find(n => n.id === edge.source);
     const targetNode = nodes.find(n => n.id === edge.target);
 
-    // Extract column ID from handle ID (format: "columnId-side-type")
     const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
         if (!handleId) return null;
-        // Handle both old format (just column ID) and new format (columnId-side-type)
         const parts = handleId.split('-');
         return parts.length >= 3 ? parts.slice(0, -2).join('-') : handleId;
     };
@@ -62,7 +70,7 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
             ...edge,
             data: { ...edge.data, relationship: value },
         };
-        onEdgeUpdate(newEdge);
+        updateEdge(newEdge);
     };
 
     return (
@@ -104,7 +112,7 @@ export default function EdgeInspectorPanel({ edge, nodes, onEdgeUpdate, onEdgeDe
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onEdgeDelete(edge.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={() => deleteEdge(edge.id)}>Delete</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>

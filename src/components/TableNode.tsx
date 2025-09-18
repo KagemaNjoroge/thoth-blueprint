@@ -24,17 +24,17 @@ import {
 } from "./ui/popover-with-arrow";
 import { colors } from "@/lib/constants";
 
-interface CustomTableNodeProps extends NodeProps {
+interface TableNodeProps extends NodeProps {
   data: TableNodeData;
-  onDeleteRequest: (nodeId: string) => void;
+  onDelete?: (ids: string[]) => void;
 }
 
 function TableNode({
   id,
   data,
   selected,
-  onDeleteRequest,
-}: CustomTableNodeProps) {
+  onDelete,
+}: TableNodeProps) {
   const updateNodeInternals = useUpdateNodeInternals();
   const prevColumnsRef = useRef(data.columns);
 
@@ -136,7 +136,7 @@ function TableNode({
                 variant="destructive"
                 size="sm"
                 className="w-full h-auto py-1 px-2 text-xs"
-                onClick={() => onDeleteRequest(id)}
+                onClick={() => onDelete?.([id])}
               >
                 <Trash2 className="h-3 w-3 mr-1" /> Delete Table
               </Button>

@@ -1,16 +1,11 @@
-import { LayoutProvider } from "@/contexts/LayoutContextProvider";
-import { useDiagramOperations } from "@/hooks/useDiagramOperations";
-import { useDiagramSelection } from "@/hooks/useDiagramSelection";
-import { useDialogs } from "@/hooks/useDialogs";
-import { useEditor } from "@/hooks/useEditor";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useSelection } from "@/hooks/useSelection";
-import { useSidebarState } from "@/hooks/useSidebarState";
-import { db } from "@/lib/db";
-import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode } from "@/lib/types";
+import { useSidebarState } from "@/hooks/use-sidebar-state";
+import { tableColors } from "@/lib/colors";
+import { colors } from "@/lib/constants";
+import { ProcessedEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedNode } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
 import { type ReactFlowInstance } from "@xyflow/react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { useCallback, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { AddNoteDialog } from "./AddNoteDialog";
 import { AddTableDialog } from "./AddTableDialog";
 import { AddZoneDialog } from "./AddZoneDialog";
@@ -27,9 +22,23 @@ interface LayoutProps {
 }
 
 export default function Layout({ onInstallAppRequest }: LayoutProps) {
-  const { selectedDiagramId, setSelectedDiagramId } = useDiagramSelection();
+  const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+  const allDiagrams = useStore((state) => state.diagrams);
+  const isLoading = useStore((state) => state.isLoading);
+
+  const diagram = useMemo(() =>
+    allDiagrams.find((d) => d.id === selectedDiagramId),
+    [allDiagrams, selectedDiagramId]
+  );
+
+  const { addNode } = useStore(
+    useShallow((state: StoreState) => ({
+      addNode: state.addNode,
+    }))
+  );
+
   const {
-    sidebarState,
+    // sidebarState,
     setSidebarState,
     isSidebarCollapsed,
     setIsSidebarCollapsed,
@@ -38,116 +47,100 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     handleOpenSidebar,
     sidebarPanelRef,
   } = useSidebarState();
-  const {
-    isAddTableDialogOpen,
-    setIsAddTableDialogOpen,
-    isExportDialogOpen,
-    setIsExportDialogOpen,
-    isUpdateDialogOpen,
-    setIsUpdateDialogOpen,
-    isAddNoteDialogOpen,
-    setIsAddNoteDialogOpen,
-    isAddZoneDialogOpen,
-    setIsAddZoneDialogOpen,
-  } = useDialogs();
-  const {
-    activeItemId,
-    setActiveItemId,
-    selectedNodeId,
-    setSelectedNodeId,
-    selectedEdgeId,
-    setSelectedEdgeId,
-    handleSelectionChange,
-  } = useSelection();
 
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<
-    AppNode,
-    AppEdge
-  > | null>(null);
+  const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
+  const [isAddZoneDialogOpen, setIsAddZoneDialogOpen] = useState(false);
 
-  const editorRef = useRef<{
-    updateNode: (node: AppNode) => void;
-    deleteNode: (nodeId: string) => void;
-    updateEdge: (edge: AppEdge) => void;
-    deleteEdge: (edgeId: string) => void;
-    addNode: (node: AppNode | AppNoteNode | AppZoneNode) => void;
-    undoDelete: () => void;
-    batchUpdateNodes: (nodes: AppNode[]) => void;
-  }>(null);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
 
-  const diagram = useLiveQuery(
-    () => (selectedDiagramId ? db.diagrams.get(selectedDiagramId) : undefined),
-    [selectedDiagramId]
-  );
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (selectedDiagramId) {
+        const target = event.target as HTMLElement;
+        if (["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable) {
+          return;
+        }
+        if ((event.ctrlKey || event.metaKey) && (event.key === "n" || event.key === "a")) {
+          event.preventDefault();
+          if (!isAddTableDialogOpen) {
+            setIsAddTableDialogOpen(true);
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedDiagramId, isAddTableDialogOpen]);
 
-  const handleAddTable = () => setIsAddTableDialogOpen(true);
-  const handleAddNote = () => setIsAddNoteDialogOpen(true);
-  const handleAddZone = () => setIsAddZoneDialogOpen(true);
+  const handleCreateTable = (tableName: string) => {
+    if (!diagram) return;
+    let position = { x: 200, y: 200 };
+    if (rfInstance) {
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      position = { x: flowPosition.x - 144, y: flowPosition.y - 50 };
+    }
+    const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
+    const newNode: AppNode = {
+      id: `${tableName}-${+new Date()}`,
+      type: "table",
+      position,
+      data: {
+        label: tableName,
+        color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
+        columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
+        order: visibleNodes.length,
+      },
+    };
+    addNode(newNode);
+  };
 
-  const {
-    handleNodeUpdate,
-    handleNodeDelete,
-    handleEdgeUpdate,
-    handleEdgeDelete,
-    handleUndoDelete,
-    handleBatchNodeUpdate,
-  } = useEditor({ editorRef, setActiveItemId });
+  const handleCreateNote = (text: string) => {
+    let position = { x: 200, y: 200 };
+    if (rfInstance) {
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      position = { x: flowPosition.x - 96, y: flowPosition.y - 96 };
+    }
+    const newNote: AppNoteNode = {
+      id: `note-${+new Date()}`,
+      type: "note",
+      position,
+      width: 192,
+      height: 192,
+      data: { text },
+    };
+    addNode(newNote);
+  };
 
-  const {
-    handleCreateTable,
-    handleCreateTableAtPosition,
-    handleDeleteDiagram,
-    handleCreateNote,
-    handleCreateZone,
-  } = useDiagramOperations({
-    diagram,
-    rfInstance,
-    editorRef,
-    setSelectedDiagramId,
-  });
+  const handleCreateZone = (name: string) => {
+    let position = { x: 200, y: 200 };
+    if (rfInstance) {
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      position = { x: flowPosition.x - 150, y: flowPosition.y - 150 };
+    }
+    const newZone: AppZoneNode = {
+      id: `zone-${+new Date()}`,
+      type: "zone",
+      position,
+      width: 300,
+      height: 300,
+      zIndex: -1,
+      data: { name },
+    };
+    addNode(newZone);
+  };
 
-  const handleSetRfInstance = useCallback(
-    (instance: ReactFlowInstance<AppNode, AppEdge> | null) => {
-      setRfInstance(instance);
-    },
-    []
-  );
-
-  const isLocked = diagram?.data?.isLocked ?? false;
-
-  useKeyboardShortcuts(selectedDiagramId, isAddTableDialogOpen, handleAddTable);
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
   const sidebarContent = diagram ? (
     <EditorSidebar
-      diagram={diagram}
-      activeItemId={activeItemId}
-      onActiveItemIdChange={(id) => {
-        setActiveItemId(id);
-      }}
-      onNodeUpdate={handleNodeUpdate}
-      onNodeDelete={handleNodeDelete}
-      onEdgeUpdate={handleEdgeUpdate}
-      onEdgeDelete={handleEdgeDelete}
-      onAddTable={() => {
-        handleAddTable();
-        setIsSidebarOpen(false);
-      }}
-      onAddNote={() => {
-        handleAddNote();
-        setIsSidebarOpen(false);
-      }}
-      onAddZone={() => {
-        handleAddZone();
-        setIsSidebarOpen(false);
-      }}
-      onDeleteDiagram={handleDeleteDiagram}
-      onBackToGallery={() => {
-        setSelectedDiagramId(null);
-        setIsSidebarOpen(false);
-      }}
-      onUndoDelete={handleUndoDelete}
-      onBatchNodeUpdate={handleBatchNodeUpdate}
-      isLocked={isLocked}
+      onAddTable={() => { setIsAddTableDialogOpen(true); setIsSidebarOpen(false); }}
+      onAddNote={() => { setIsAddNoteDialogOpen(true); setIsSidebarOpen(false); }}
+      onAddZone={() => { setIsAddZoneDialogOpen(true); setIsSidebarOpen(false); }}
       onSetSidebarState={setSidebarState}
       onExport={() => setIsExportDialogOpen(true)}
       onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
@@ -156,64 +149,16 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   ) : null;
 
   return (
-    <LayoutProvider
-      selectedDiagramId={selectedDiagramId}
-      setSelectedDiagramId={setSelectedDiagramId}
-      diagram={diagram}
-      isLocked={isLocked}
-      rfInstance={rfInstance}
-      setRfInstance={setRfInstance}
-      sidebarState={sidebarState}
-      setSidebarState={setSidebarState}
-      isSidebarCollapsed={isSidebarCollapsed}
-      setIsSidebarCollapsed={setIsSidebarCollapsed}
-      isSidebarOpen={isSidebarOpen}
-      setIsSidebarOpen={setIsSidebarOpen}
-      isAddTableDialogOpen={isAddTableDialogOpen}
-      setIsAddTableDialogOpen={setIsAddTableDialogOpen}
-      isExportDialogOpen={isExportDialogOpen}
-      setIsExportDialogOpen={setIsExportDialogOpen}
-      isUpdateDialogOpen={isUpdateDialogOpen}
-      setIsUpdateDialogOpen={setIsUpdateDialogOpen}
-      handleNodeUpdate={handleNodeUpdate}
-      handleNodeDelete={handleNodeDelete}
-      handleEdgeUpdate={handleEdgeUpdate}
-      handleEdgeDelete={handleEdgeDelete}
-      handleAddTable={handleAddTable}
-      handleCreateTable={handleCreateTable}
-      handleCreateTableAtPosition={handleCreateTableAtPosition}
-      handleDeleteDiagram={handleDeleteDiagram}
-      handleUndoDelete={handleUndoDelete}
-      handleBatchNodeUpdate={handleBatchNodeUpdate}
-      handleOpenSidebar={handleOpenSidebar}
-      handleSetRfInstance={handleSetRfInstance}
-      activeItemId={activeItemId}
-      setActiveItemId={setActiveItemId}
-      selectedNodeId={selectedNodeId}
-      setSelectedNodeId={setSelectedNodeId}
-      selectedEdgeId={selectedEdgeId}
-      setSelectedEdgeId={setSelectedEdgeId}
-    >
+    <>
       <PWAUpdateNotification onUpdateNow={() => setIsUpdateDialogOpen(true)} />
       {selectedDiagramId && diagram ? (
         <DiagramLayout
           sidebarContent={sidebarContent}
-          diagramContent={
-            <DiagramEditor
-              ref={editorRef}
-              diagram={diagram}
-              onSelectionChange={handleSelectionChange}
-              setRfInstance={handleSetRfInstance}
-              selectedNodeId={selectedNodeId}
-              selectedEdgeId={selectedEdgeId}
-              onCreateTableAtPosition={handleCreateTableAtPosition}
-            />
-          }
+          diagramContent={<DiagramEditor setRfInstance={setRfInstance} />}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
           handleOpenSidebar={handleOpenSidebar}
           isSidebarCollapsed={isSidebarCollapsed}
-          diagram={diagram}
           sidebarPanelRef={sidebarPanelRef}
           onCollapse={() => setIsSidebarCollapsed(true)}
           onExpand={() => setIsSidebarCollapsed(false)}
@@ -221,37 +166,16 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       ) : (
         <div className="w-full h-screen">
           <DiagramGallery
-            setSelectedDiagramId={setSelectedDiagramId}
             onInstallAppRequest={onInstallAppRequest}
             onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
           />
         </div>
       )}
-      <AddTableDialog
-        isOpen={isAddTableDialogOpen}
-        onOpenChange={setIsAddTableDialogOpen}
-        onCreateTable={handleCreateTable}
-      />
-      <AddNoteDialog
-        isOpen={isAddNoteDialogOpen}
-        onOpenChange={setIsAddNoteDialogOpen}
-        onCreateNote={handleCreateNote}
-      />
-      <AddZoneDialog
-        isOpen={isAddZoneDialogOpen}
-        onOpenChange={setIsAddZoneDialogOpen}
-        onCreateZone={handleCreateZone}
-      />
-      <ExportDialog
-        isOpen={isExportDialogOpen}
-        onOpenChange={setIsExportDialogOpen}
-        diagram={diagram}
-        rfInstance={rfInstance}
-      />
-      <UpdateDialog
-        isOpen={isUpdateDialogOpen}
-        onOpenChange={setIsUpdateDialogOpen}
-      />
-    </LayoutProvider>
+      <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} />
+      <AddNoteDialog isOpen={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen} onCreateNote={handleCreateNote} />
+      <AddZoneDialog isOpen={isAddZoneDialogOpen} onOpenChange={setIsAddZoneDialogOpen} onCreateZone={handleCreateZone} />
+      <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />
+      <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
+    </>
   );
 }

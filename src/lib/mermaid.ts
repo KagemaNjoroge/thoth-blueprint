@@ -1,3 +1,4 @@
+import { DbRelationship } from "./constants";
 import { type AppNode, type Column, type Diagram } from "./types";
 
 const diagramToMermaid = (diagram: Diagram): string => {
@@ -32,16 +33,16 @@ const diagramToMermaid = (diagram: Diagram): string => {
       const targetTableName = targetNode.data.label.trim();
       let relationshipSymbol = "";
       switch (edge.data?.relationship) {
-        case "one-to-one":
+        case DbRelationship.ONE_TO_ONE:
           relationshipSymbol = "||--||";
           break;
-        case "one-to-many":
+        case DbRelationship.ONE_TO_MANY:
           relationshipSymbol = "||--o{";
           break;
-        case "many-to-one":
+        case DbRelationship.MANY_TO_ONE:
           relationshipSymbol = "}o--||";
           break;
-        case "many-to-many":
+        case DbRelationship.MANY_TO_MANY:
           relationshipSymbol = "}o--o{";
           break;
         default:

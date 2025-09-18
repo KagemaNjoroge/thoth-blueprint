@@ -1,16 +1,22 @@
+import { useStore } from "@/store/store";
 import { showError, showSuccess } from "@/utils/toast";
 import { saveAs } from "file-saver";
-import { db } from "./db";
-import { type Diagram } from "./types";
+import { type AppState, type Diagram } from "./types";
 
-export async function exportDbToJson() {
+interface BackupData {
+  diagrams: Diagram[];
+  appState: AppState[];
+}
+
+export function exportDbToJson() {
   try {
-    const diagrams = await db.diagrams.toArray();
-    const appState = await db.appState.toArray();
+    const state = useStore.getState();
+    const diagrams = state.diagrams;
+    const selectedDiagramId = state.selectedDiagramId;
 
-    const backupData = {
+    const backupData: BackupData = {
       diagrams,
-      appState,
+      appState: [{ key: "selectedDiagramId", value: selectedDiagramId || 0 }],
     };
 
     const jsonString = JSON.stringify(backupData, null, 2);
@@ -35,38 +41,40 @@ export async function exportDbToJson() {
 
 export async function importJsonToDb(jsonString: string) {
   try {
-    const backupData = JSON.parse(jsonString);
+    const backupData = JSON.parse(jsonString) as BackupData;
 
     if (!backupData.diagrams || !Array.isArray(backupData.diagrams)) {
       throw new Error('Invalid save file format. Missing "diagrams" array.');
     }
 
-    await db.transaction("rw", db.diagrams, db.appState, async () => {
-      // Clear existing data
-      await db.diagrams.clear();
-      await db.appState.clear();
-
-      // Add new data
-      const diagramsToPut = backupData.diagrams.map((d: Diagram) => {
-        // Dates might be strings after JSON serialization, so convert them back
-        if (d.createdAt) d.createdAt = new Date(d.createdAt);
-        if (d.updatedAt) d.updatedAt = new Date(d.updatedAt);
-        if (d.deletedAt) d.deletedAt = new Date(d.deletedAt);
-        return d;
-      });
-      await db.diagrams.bulkPut(diagramsToPut);
-
-      if (backupData.appState && Array.isArray(backupData.appState)) {
-        await db.appState.bulkPut(backupData.appState);
-      }
+    // Process the diagrams to ensure dates are proper Date objects
+    const processedDiagrams = backupData.diagrams.map((d: Diagram) => {
+      if (d.createdAt) d.createdAt = new Date(d.createdAt);
+      if (d.updatedAt) d.updatedAt = new Date(d.updatedAt);
+      if (d.deletedAt) d.deletedAt = new Date(d.deletedAt);
+      return d;
     });
 
-    showSuccess("Save loaded successfully! The page will now reload.");
+    let selectedDiagramId: number | null = null;
+    if (backupData.appState && Array.isArray(backupData.appState)) {
+      const selectedDiagramIdState = backupData.appState.find(
+        (state: AppState) => state.key === "selectedDiagramId"
+      );
+      if (
+        selectedDiagramIdState &&
+        typeof selectedDiagramIdState.value === "number"
+      ) {
+        selectedDiagramId = selectedDiagramIdState.value;
+      }
+    }
 
-    // Reload the page to reflect the new state
-    setTimeout(() => {
-      window.location.reload();
-    }, 1500);
+    useStore.setState({
+      diagrams: processedDiagrams,
+      selectedDiagramId: selectedDiagramId,
+      isLoading: false,
+    });
+
+    showSuccess("Save loaded successfully!");
   } catch (error) {
     console.error("Failed to load save:", error);
     const errorMessage =

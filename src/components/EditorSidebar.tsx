@@ -5,7 +5,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { type AppEdge, type AppNode, type Diagram } from "@/lib/types";
+import { type AppNode } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
 import {
   closestCenter,
   DndContext,
@@ -29,29 +30,19 @@ import {
   Table,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import EditorMenubar from "./EditorMenubar";
 import TableAccordionContent from "./TableAccordionContent";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
+import { DbRelationship } from "@/lib/constants";
 
 interface EditorSidebarProps {
-  diagram: Diagram;
-  activeItemId: string | null;
-  onActiveItemIdChange: (id: string | null) => void;
-  onNodeUpdate: (node: AppNode) => void;
-  onNodeDelete: (nodeId: string) => void;
-  onEdgeUpdate: (edge: AppEdge) => void;
-  onEdgeDelete: (edgeId: string) => void;
   onAddTable: () => void;
   onAddNote: () => void;
   onAddZone: () => void;
-  onDeleteDiagram: () => void;
-  onBackToGallery: () => void;
-  onUndoDelete: () => void;
-  onBatchNodeUpdate: (nodes: AppNode[]) => void;
-  isLocked: boolean;
   onSetSidebarState: (state: "docked" | "hidden") => void;
   onExport: () => void;
   onCheckForUpdate: () => void;
@@ -86,66 +77,77 @@ function SortableAccordionItem({
 }
 
 export default function EditorSidebar({
-  diagram,
-  activeItemId,
-  onActiveItemIdChange,
-  onNodeUpdate,
-  onNodeDelete,
-  onEdgeUpdate,
-  onEdgeDelete,
   onAddTable,
   onAddNote,
   onAddZone,
-  onDeleteDiagram,
-  onBackToGallery,
-  onUndoDelete,
-  onBatchNodeUpdate,
-  isLocked,
   onSetSidebarState,
   onExport,
   onCheckForUpdate,
   onInstallAppRequest,
 }: EditorSidebarProps) {
+  const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+  const allDiagrams = useStore((state) => state.diagrams);
+  const selectedNodeId = useStore((state) => state.selectedNodeId);
+  const setSelectedNodeId = useStore((state) => state.setSelectedNodeId);
+  const selectedEdgeId = useStore((state) => state.selectedEdgeId)
+
+  const diagram = useMemo(() =>
+    allDiagrams.find((d) => d.id === selectedDiagramId),
+    [allDiagrams, selectedDiagramId]
+  );
+
+  const {
+    updateNode,
+    batchUpdateNodes,
+  } = useStore(
+    useShallow((state: StoreState) => ({
+      updateNode: state.updateNode,
+      batchUpdateNodes: state.batchUpdateNodes,
+    }))
+  );
+
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
+  const [inspectingEdgeId, setInspectingEdgeId] = useState<string | null>(null);
 
-  const sortedNodesFromProp = useMemo(
+  const sortedNodesFromStore = useMemo(
     () =>
-      (diagram.data.nodes ?? [])
+      (diagram?.data.nodes ?? [])
         .filter((n) => !n.data.isDeleted)
         .sort(
           (a, b) => (a.data.order ?? Infinity) - (b.data.order ?? Infinity)
         ),
-    [diagram.data.nodes]
+    [diagram?.data.nodes]
   );
 
-  const [nodes, setNodes] = useState<AppNode[]>(sortedNodesFromProp);
+  const [nodes, setNodes] = useState<AppNode[]>(sortedNodesFromStore);
 
   useEffect(() => {
-    setNodes(sortedNodesFromProp);
-  }, [sortedNodesFromProp]);
+    setNodes(sortedNodesFromStore);
+  }, [sortedNodesFromStore]);
 
-  const edges = useMemo(() => diagram.data.edges ?? [], [diagram.data.edges]);
+  const edges = useMemo(() => diagram?.data.edges ?? [], [diagram?.data.edges]);
+  const isLocked = useMemo(() => diagram?.data.isLocked ?? false, [diagram?.data.isLocked]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   useEffect(() => {
-    if (activeItemId) {
-      if (nodes.some((n) => n.id === activeItemId)) {
-        setCurrentInspectorTab("tables");
-      } else if (edges.some((e) => e.id === activeItemId)) {
-        setCurrentInspectorTab("relationships");
-      }
+    if (selectedNodeId && nodes.some((n) => n.id === selectedNodeId)) {
+      setCurrentInspectorTab("tables");
     }
-  }, [activeItemId, nodes, edges]);
+  }, [selectedNodeId, nodes]);
+
+    useEffect(() => {
+    if (selectedEdgeId && edges.some((n) => n.id === selectedEdgeId)) {
+      setCurrentInspectorTab("relationships");
+      setInspectingEdgeId(selectedEdgeId)
+    }
+  }, [selectedEdgeId, edges]);
 
   const handleInspectorTabChange = (tab: string) => {
-    if (tab !== currentInspectorTab) {
-      setCurrentInspectorTab(tab);
-      onActiveItemIdChange(null);
-    }
+    setCurrentInspectorTab(tab);
   };
 
   const handleStartEdit = (node: AppNode) => {
@@ -158,7 +160,7 @@ export default function EditorSidebar({
   };
 
   const handleNameSave = (node: AppNode) => {
-    onNodeUpdate({ ...node, data: { ...node.data, label: tableName } });
+    updateNode({ ...node, data: { ...node.data, label: tableName } });
     setEditingTableName(null);
   };
 
@@ -179,11 +181,12 @@ export default function EditorSidebar({
         },
       }));
 
-      onBatchNodeUpdate(nodesToUpdate);
+      batchUpdateNodes(nodesToUpdate);
     }
   };
+  const inspectingEdge = edges.find((e) => e.id === inspectingEdgeId);
 
-  const inspectingEdge = edges.find((e) => e.id === activeItemId);
+  if (!diagram) return null;
 
   return (
     <div className="h-full w-full flex flex-col bg-card" onContextMenu={(e) => e.preventDefault()}>
@@ -194,18 +197,13 @@ export default function EditorSidebar({
           className="h-5 w-5 mr-2 flex-shrink-0"
         />
         <EditorMenubar
-          diagram={diagram}
           onAddTable={onAddTable}
           onAddNote={onAddNote}
           onAddZone={onAddZone}
-          onDeleteDiagram={onDeleteDiagram}
-          onBackToGallery={onBackToGallery}
-          onUndoDelete={onUndoDelete}
           onSetSidebarState={onSetSidebarState}
           onExport={onExport}
           onCheckForUpdate={onCheckForUpdate}
           onInstallAppRequest={onInstallAppRequest}
-          isLocked={isLocked}
         />
       </div>
       <div className="p-2 flex-shrink-0 border-b">
@@ -261,8 +259,8 @@ export default function EditorSidebar({
                   <Accordion
                     type="single"
                     collapsible
-                    value={activeItemId ?? ""}
-                    onValueChange={onActiveItemIdChange}
+                    value={selectedNodeId ?? ""}
+                    onValueChange={(value) => setSelectedNodeId(value || null)}
                     className="w-full"
                   >
                     {nodes.map((node) => (
@@ -319,11 +317,7 @@ export default function EditorSidebar({
                             <AccordionContent>
                               <TableAccordionContent
                                 node={node}
-                                dbType={diagram.dbType}
-                                onNodeUpdate={onNodeUpdate}
-                                onNodeDelete={onNodeDelete}
                                 onStartEdit={() => handleStartEdit(node)}
-                                isLocked={isLocked}
                               />
                             </AccordionContent>
                           </AccordionItem>
@@ -341,7 +335,7 @@ export default function EditorSidebar({
                 <div>
                   <Button
                     variant="ghost"
-                    onClick={() => onActiveItemIdChange(null)}
+                    onClick={() => setInspectingEdgeId(null)}
                     className="mb-2"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
@@ -349,9 +343,6 @@ export default function EditorSidebar({
                   <EdgeInspectorPanel
                     edge={inspectingEdge}
                     nodes={nodes}
-                    onEdgeUpdate={onEdgeUpdate}
-                    onEdgeDelete={onEdgeDelete}
-                    isLocked={isLocked || !!inspectingEdge.data?.isPositionLocked}
                   />
                 </div>
               ) : (
@@ -364,7 +355,7 @@ export default function EditorSidebar({
                         key={edge.id}
                         variant="ghost"
                         className="w-full justify-start h-auto py-2"
-                        onClick={() => onActiveItemIdChange(edge.id)}
+                        onClick={() => setInspectingEdgeId(edge.id)}
                       >
                         <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
                         <div className="text-left text-sm">
@@ -372,7 +363,7 @@ export default function EditorSidebar({
                             {sourceNode?.data.label} to {targetNode?.data.label}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            {edge.data?.relationship ?? "one-to-many"}
+                            {edge.data?.relationship ?? DbRelationship.ONE_TO_MANY}
                           </p>
                         </div>
                       </Button>

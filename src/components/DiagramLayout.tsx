@@ -5,7 +5,6 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { type Diagram } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
 import { type ReactNode, type RefObject } from "react";
@@ -18,7 +17,6 @@ interface DiagramLayoutProps {
   setIsSidebarOpen: (open: boolean) => void;
   handleOpenSidebar: () => void;
   isSidebarCollapsed: boolean;
-  diagram: Diagram | undefined;
   sidebarPanelRef: RefObject<ImperativePanelHandle>;
   onCollapse: () => void;
   onExpand: () => void;
@@ -31,7 +29,6 @@ export function DiagramLayout({
   setIsSidebarOpen,
   handleOpenSidebar,
   isSidebarCollapsed,
-  diagram,
   sidebarPanelRef,
   onCollapse,
   onExpand,
@@ -70,19 +67,17 @@ export function DiagramLayout({
         />
         <ResizablePanel defaultSize={75}>
           <div className="flex h-full items-center justify-center relative">
-            {diagram && (
-              <div className="absolute top-4 left-4 z-10 lg:hidden">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => setIsSidebarOpen(true)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </div>
-            )}
+            <div className="absolute top-4 left-4 z-10 lg:hidden">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
 
-            {diagram && isSidebarCollapsed && (
+            {isSidebarCollapsed && (
               <div className="absolute top-4 left-4 z-10 hidden lg:block">
                 <Button
                   size="icon"

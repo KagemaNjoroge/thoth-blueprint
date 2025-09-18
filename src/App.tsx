@@ -7,6 +7,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { PWAStatus } from "./components/PWAStatus";
 import { Suspense, lazy, useState } from "react";
 import { LoadingSpinner } from "./components/LoadingSpinner";
+import { StoreInitializer } from "./components/StoreInitializer";
 
 const queryClient = new QueryClient();
 
@@ -19,6 +20,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <StoreInitializer />
         <Toaster />
         <Sonner />
         <PWAStatus />
@@ -35,7 +37,6 @@ const App = () => {
                   <Index onInstallAppRequest={() => setIsInstallPromptForced(true)} />
                 }
               />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

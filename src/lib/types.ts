@@ -1,6 +1,19 @@
 import { type Edge, type Node } from "@xyflow/react";
 
 export type DatabaseType = "mysql" | "postgres";
+export type CombinedNode = AppNode | AppNoteNode | AppZoneNode;
+export type ProcessedNode = (AppNode | AppNoteNode | AppZoneNode) & {
+  draggable: boolean;
+};
+export type ProcessedEdge = Omit<AppEdge, 'type'> & {
+  type: string;
+  selectable: boolean;
+  data: {
+    relationship: string;
+    isHighlighted: boolean;
+    isPositionLocked?: boolean;
+  };
+};
 
 export interface Diagram {
   id?: number;
@@ -57,6 +70,7 @@ export interface TableNodeData extends Record<string, unknown> {
   deletedAt?: Date;
   order?: number;
   isPositionLocked?: boolean;
+  onDelete?: (ids: string[]) => void;
 }
 
 export interface NoteNodeData extends Record<string, unknown> {

@@ -58,14 +58,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Separator } from "./ui/separator";
 import { Textarea } from "./ui/textarea";
 import { colors } from "@/lib/constants";
+import { useStore, type StoreState } from "@/store/store";
+import { useShallow } from "zustand/react/shallow";
 
 interface TableAccordionContentProps {
   node: AppNode;
-  dbType: DatabaseType;
-  onNodeUpdate: (node: AppNode) => void;
-  onNodeDelete: (nodeId: string) => void;
   onStartEdit: () => void;
-  isLocked: boolean;
 }
 
 function SortableColumnItem({
@@ -357,17 +355,23 @@ function SortableColumnItem({
 
 export default function TableAccordionContent({
   node,
-  dbType,
-  onNodeUpdate,
-  onNodeDelete,
   onStartEdit,
-  isLocked,
 }: TableAccordionContentProps) {
+  const { diagram, updateNode, deleteNodes } = useStore(
+    useShallow((state: StoreState) => ({
+      diagram: state.diagrams.find(d => d.id === state.selectedDiagramId),
+      updateNode: state.updateNode,
+      deleteNodes: state.deleteNodes,
+    }))
+  );
+
   const [columns, setColumns] = useState<Column[]>([]);
   const [indices, setIndices] = useState<Index[]>([]);
   const [tableComment, setTableComment] = useState("");
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
 
+  const dbType = diagram?.dbType ?? 'mysql';
+  const isLocked = diagram?.data.isLocked ?? false;
   const availableTypes = dataTypes[dbType] ?? [];
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -387,7 +391,15 @@ export default function TableAccordionContent({
     }
   }, [node]);
 
-  if (!node) return null;
+  if (!node || !diagram) return null;
+
+  const onNodeUpdate = (updatedNode: AppNode) => {
+    updateNode(updatedNode);
+  };
+
+  const onNodeDelete = (nodeId: string) => {
+    deleteNodes([nodeId]);
+  };
 
   const handleAddColumn = () => {
     const newColumn: Column = {
@@ -584,7 +596,7 @@ export default function TableAccordionContent({
                           })}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-sm">
+                        <span className="text-sm text-muted-foreground">
                           Select columns...
                         </span>
                       )}

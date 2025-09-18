@@ -15,7 +15,7 @@ import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-genera
 import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
 import { exportToDbml, exportToJson, exportToSql } from "@/lib/dbml";
 import { exportToMermaid } from "@/lib/mermaid";
-import { Diagram, AppNode, AppEdge } from "@/lib/types";
+import { type Diagram, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
 import { cn, downloadZip } from "@/lib/utils";
 import { showError } from "@/utils/toast";
 import {
@@ -34,7 +34,7 @@ interface ExportDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   diagram: Diagram | null | undefined;
-  rfInstance: ReactFlowInstance<AppNode, AppEdge> | null;
+  rfInstance: ReactFlowInstance<ProcessedNode, ProcessedEdge> | null;
 }
 
 export function ExportDialog({
