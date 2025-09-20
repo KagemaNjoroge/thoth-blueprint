@@ -15,6 +15,7 @@ import { DiagramLayout } from "./DiagramLayout";
 import EditorSidebar from "./EditorSidebar";
 import { ExportDialog } from "./ExportDialog";
 import { PWAUpdateNotification } from "./PWAUpdateNotification";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { UpdateDialog } from "./UpdateDialog";
 
 interface LayoutProps {
@@ -54,6 +55,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
   const [isAddZoneDialogOpen, setIsAddZoneDialogOpen] = useState(false);
+  const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
 
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
 
@@ -157,6 +159,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       onExport={() => setIsExportDialogOpen(true)}
       onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
       onInstallAppRequest={onInstallAppRequest}
+      onViewShortcuts={() => setIsShortcutsDialogOpen(true)}
     />
   ) : null;
 
@@ -188,6 +191,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       <AddZoneDialog isOpen={isAddZoneDialogOpen} onOpenChange={setIsAddZoneDialogOpen} onCreateZone={handleCreateZone} />
       <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />
       <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
+      <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
     </>
   );
 }

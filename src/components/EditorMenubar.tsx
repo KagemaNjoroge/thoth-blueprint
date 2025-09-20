@@ -37,6 +37,7 @@ interface EditorMenubarProps {
   onExport: () => void;
   onCheckForUpdate: () => void;
   onInstallAppRequest: () => void;
+  onViewShortcuts: () => void;
 }
 
 export default function EditorMenubar({
@@ -47,6 +48,7 @@ export default function EditorMenubar({
   onExport,
   onCheckForUpdate,
   onInstallAppRequest,
+  onViewShortcuts,
 }: EditorMenubarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const allDiagrams = useStore((state) => state.diagrams);
@@ -149,6 +151,9 @@ export default function EditorMenubar({
         <MenubarContent>
           <MenubarItem onClick={() => onSetSidebarState("hidden")}>
             Hide Sidebar
+          </MenubarItem>
+          <MenubarItem onClick={onViewShortcuts}>
+            View Shortcuts
           </MenubarItem>
           <MenubarSeparator />
           <MenubarCheckboxItem
