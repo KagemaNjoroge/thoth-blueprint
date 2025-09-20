@@ -1,8 +1,6 @@
-# ThothBlueprint
-
 <p align="center">
   <img src="/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="100" height="100">
-  <h1 align="center">ThothBlueprint</h1>
+  <h1 align="center">Thoth Blueprint</h1>
 </p>
 
 <p align="center">
@@ -17,7 +15,7 @@
   </a>
 </p>
 
-ThothBlueprint is a powerful database design tool that allows you to visualize your database schema with an intuitive drag-and-drop editor. Create, edit, and export your database designs to various formats including SQL, DBML, JSON, and SVG. Generate migration files for popular frameworks like Laravel, TypeORM, and Django.
+Thoth Blueprint is a powerful database design tool that allows you to visualize your database schema with an intuitive drag-and-drop editor. Create, edit, and export your database designs to various formats, including SQL, DBML, JSON, and SVG. Generate migration files for popular frameworks like Laravel, TypeORM, and Django.
 
 ## Features
 
@@ -121,4 +119,4 @@ Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to contr
 
 ## License
 
-This project is open source and available under the GNU General Public License v3.0 License. Please see [License File](LICENSE.md) for more information.
+This project is open source and available under the GNU General Public License v3.0. Please see [License File](LICENSE.md) for more information.
