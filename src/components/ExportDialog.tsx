@@ -290,7 +290,7 @@ export function ExportDialog({
             Select a format to export your diagram.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto pr-4">
+        <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto px-4">
           <div>
             <h3 className="text-lg font-semibold mb-4">Share</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

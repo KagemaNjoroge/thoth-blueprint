@@ -59,6 +59,8 @@ export interface StoreState {
   batchUpdateNodes: (nodes: AppNode[]) => void;
 }
 
+export const TABLE_SOFT_DELETE_LIMIT = 10
+
 const debouncedSave = debounce(
   async (diagrams: Diagram[], selectedDiagramId: number | null) => {
     try {
@@ -145,10 +147,8 @@ export const useStore = create(
         selectedNodeId: null,
         selectedEdgeId: null,
       }),
-    setSelectedNodeId: (id) =>
-      set({ selectedNodeId: id}),
-    setSelectedEdgeId: (id) =>
-      set({ selectedEdgeId: id}),
+    setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+    setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
     updateSettings: (newSettings) => {
       set((state) => {
         const updatedSettings = { ...state.settings, ...newSettings };
@@ -352,9 +352,60 @@ export const useStore = create(
         );
         if (!diagram) return state;
 
-        const filterList = <T extends { id: string }>(
-          list: T[] | undefined
-        ): T[] => (list || []).filter((item) => !nodeIds.includes(item.id));
+        // Helper function to mark table nodes as deleted
+        const markAsDeleted = (list: AppNode[] | undefined): AppNode[] =>
+          (list || []).map((item) =>
+            nodeIds.includes(item.id) && item.type === "table"
+              ? {
+                  ...item,
+                  data: {
+                    ...item.data,
+                    isDeleted: true,
+                    deletedAt: new Date(),
+                  },
+                }
+              : item
+          );
+
+        const nodesWithNewDeletes = markAsDeleted(diagram.data.nodes);
+        const allDeletedTables = nodesWithNewDeletes.filter(
+          (node) => node.type === "table" && node.data?.isDeleted === true
+        );
+
+        let finalNodes = nodesWithNewDeletes;
+
+        if (allDeletedTables.length > TABLE_SOFT_DELETE_LIMIT) {
+          // Sort deleted tables by deletion time (oldest first)
+          const sortedDeletedTables = [...allDeletedTables].sort((a, b) => {
+            const aTime = a.data?.deletedAt
+              ? new Date(a.data.deletedAt).getTime()
+              : 0;
+            const bTime = b.data?.deletedAt
+              ? new Date(b.data.deletedAt).getTime()
+              : 0;
+            return aTime - bTime;
+          });
+
+          const tablesToRemoveCount = allDeletedTables.length - TABLE_SOFT_DELETE_LIMIT;
+          const tablesToRemove = sortedDeletedTables.slice(
+            0,
+            tablesToRemoveCount
+          );
+          const tableIdsToRemove = new Set(
+            tablesToRemove.map((table) => table.id)
+          );
+
+          // Permanently remove the oldest deleted tables
+          finalNodes = nodesWithNewDeletes.filter(
+            (node) => !tableIdsToRemove.has(node.id)
+          );
+        }
+
+        const filterNotesForDeletion = (notes: AppNoteNode[]): AppNoteNode[] =>
+          (notes || []).filter((note) => !nodeIds.includes(note.id));
+
+        const filterZonesForDeletion = (zones: AppZoneNode[]): AppZoneNode[] =>
+          (zones || []).filter((zone) => !nodeIds.includes(zone.id));
 
         return {
           diagrams: state.diagrams.map((d) =>
@@ -363,9 +414,9 @@ export const useStore = create(
                   ...d,
                   data: {
                     ...d.data,
-                    nodes: filterList(d.data.nodes),
-                    notes: filterList(d.data.notes),
-                    zones: filterList(d.data.zones),
+                    nodes: finalNodes,
+                    notes: filterNotesForDeletion(d.data.notes || []),
+                    zones: filterZonesForDeletion(d.data.zones || []),
                   },
                   updatedAt: new Date(),
                 }
@@ -451,30 +502,44 @@ export const useStore = create(
         if (!diagram) return state;
 
         const deletedNodes = (diagram.data.nodes || []).filter(
-          (n) => n.data.isDeleted && n.data.deletedAt
+          (n) => n.data?.isDeleted === true && n.data?.deletedAt
         );
+
         if (deletedNodes.length === 0) return state;
 
-        const lastDeletedNode = deletedNodes.reduce((latest, current) =>
-          (latest.data.deletedAt?.getTime() ?? 0) >
-          (current.data.deletedAt?.getTime() ?? 0)
-            ? latest
-            : current
-        );
+        const lastDeletedNode = deletedNodes.reduce((latest, current) => {
+          const latestTime = new Date(latest?.data?.deletedAt || "").getTime();
+          const currentTime = new Date(
+            current?.data?.deletedAt || ""
+          ).getTime();
+          return latestTime > currentTime ? latest : current;
+        });
+
+        console.log("restoring node:", lastDeletedNode);
 
         const newNodes = (diagram.data.nodes || []).map((n) => {
           if (n.id === lastDeletedNode.id) {
-            const { ...restData } = n.data;
-            return { ...n, data: restData };
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                isDeleted: false,
+                deletedAt: undefined as unknown as Date, // Clear the deletion timestamp
+              },
+            };
           }
           return n;
         });
+
         return {
           diagrams: state.diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
-                  data: { ...d.data, nodes: newNodes },
+                  data: {
+                    ...d.data,
+                    nodes: newNodes,
+                  },
                   updatedAt: new Date(),
                 }
               : d
@@ -482,6 +547,7 @@ export const useStore = create(
         };
       });
     },
+
     batchUpdateNodes: (nodesToUpdate) => {
       set((state) => {
         const diagram = state.diagrams.find(

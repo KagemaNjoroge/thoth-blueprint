@@ -141,7 +141,6 @@ const DiagramEditor = forwardRef(
     const visibleNodes = useMemo(() => nodes.filter((n) => !n.data.isDeleted), [nodes]);
 
     const onSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
-      console.log("selected nodes", nodes, edges);
       if (nodes.length === 1 && edges.length === 0 && nodes[0]) {
         if (nodes[0].type === 'table') {
           setSelectedNodeId(nodes[0].id);
@@ -327,7 +326,7 @@ const DiagramEditor = forwardRef(
 
       const processedNotes = notesWithCallbacks.map(note => ({
         ...note,
-        data:{
+        data: {
           ...note.data,
           isPositionLocked: isLocked || isNodeInLockedZone(note, zonesWithCallbacks)
         },
@@ -342,6 +341,20 @@ const DiagramEditor = forwardRef(
       return [...processedNodes, ...processedNotes, ...processedZones];
     }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, isLocked, handleTableDelete]);
 
+    const onBeforeDelete = async ({ nodes }: { nodes: ProcessedNode[]; edges: ProcessedEdge[] }) => {
+      if (nodes.length > 0) {
+        const tableNodes = nodes.filter(node => node.type === "table");
+        const nonTableNodes = nodes.filter(node => node.type !== "table");
+        // Soft delete tables only
+        if (tableNodes.length > 0) {
+          const tableNodeIds = tableNodes.map(node => node.id);
+          deleteNodes(tableNodeIds);
+        }
+        return nonTableNodes.length > 0;
+      }
+      return true
+    };
+
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>
         <ContextMenu>
@@ -351,6 +364,7 @@ const DiagramEditor = forwardRef(
               edges={processedEdges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onBeforeDelete={onBeforeDelete} //prevent table permanent delete
               onConnect={onConnect}
               onSelectionChange={onSelectionChange}
               nodeTypes={nodeTypes}

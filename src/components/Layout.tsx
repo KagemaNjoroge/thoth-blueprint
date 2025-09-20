@@ -31,9 +31,10 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     [allDiagrams, selectedDiagramId]
   );
 
-  const { addNode } = useStore(
+  const { addNode, undoDelete } = useStore(
     useShallow((state: StoreState) => ({
       addNode: state.addNode,
+      undoDelete: state.undoDelete,
     }))
   );
 
@@ -63,17 +64,28 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
         if (["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable) {
           return;
         }
-        if ((event.ctrlKey || event.metaKey) && (event.key === "n" || event.key === "a")) {
+        // handle Ctrl+A to open table add dialog
+        if ((event.ctrlKey || event.metaKey) && event.key === "a") {
           event.preventDefault();
           if (!isAddTableDialogOpen) {
             setIsAddTableDialogOpen(true);
           }
         }
+        // Handle Ctrl+B to toggle sidebar
+        if ((event.ctrlKey || event.metaKey) && event.key === "b") {
+          event.preventDefault();
+          handleOpenSidebar();
+        }
+        //handle Ctrl+Z to undo table delete
+        if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+          event.preventDefault();
+          undoDelete();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDiagramId, isAddTableDialogOpen]);
+  }, [selectedDiagramId, isAddTableDialogOpen, handleOpenSidebar, undoDelete]);
 
   const handleCreateTable = (tableName: string) => {
     if (!diagram) return;
