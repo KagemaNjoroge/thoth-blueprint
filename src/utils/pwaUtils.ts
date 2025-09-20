@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'pwa-install-prompt';
+const STORAGE_KEY = "pwa-install-prompt";
 const INITIAL_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_DELAY = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -24,13 +24,16 @@ export function savePromptState(state: PromptState): void {
 
 export function shouldShowInstallPrompt(): boolean {
   const state = getPromptState();
-  
+
   if (!state) return true;
   if (state.permanentlyDismissed) return false;
-  
-  const delay = Math.min(INITIAL_DELAY * Math.pow(2, state.dismissCount), MAX_DELAY);
+
+  const delay = Math.min(
+    INITIAL_DELAY * Math.pow(2, state.dismissCount),
+    MAX_DELAY
+  );
   const timeSinceLastDismiss = Date.now() - state.lastDismissed;
-  
+
   return timeSinceLastDismiss >= delay;
 }
 

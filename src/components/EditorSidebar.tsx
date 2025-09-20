@@ -4,34 +4,9 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarSub,
-  MenubarSubContent,
-  MenubarSubTrigger,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePWA } from "@/hooks/usePWA";
-import { exportDbToJson } from "@/lib/backup";
-import { type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode } from "@/lib/types";
+import { type AppNode } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
 import {
   closestCenter,
   DndContext,
@@ -54,32 +29,25 @@ import {
   Plus,
   Table,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
+import EditorMenubar from "./EditorMenubar";
 import TableAccordionContent from "./TableAccordionContent";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
+import { DbRelationship } from "@/lib/constants";
 
 interface EditorSidebarProps {
-  diagram: Diagram;
-  activeItemId: string | null;
-  onActiveItemIdChange: (id: string | null) => void;
-  onNodeUpdate: (node: AppNode) => void;
-  onNodeDelete: (nodeId: string) => void;
-  onEdgeUpdate: (edge: AppEdge) => void;
-  onEdgeDelete: (edgeId: string) => void;
   onAddTable: () => void;
-  onDeleteDiagram: () => void;
-  onBackToGallery: () => void;
-  onUndoDelete: () => void;
-  onBatchNodeUpdate: (nodes: AppNode[]) => void;
-  isLocked: boolean;
+  onAddNote: () => void;
+  onAddZone: () => void;
   onSetSidebarState: (state: "docked" | "hidden") => void;
   onExport: () => void;
   onCheckForUpdate: () => void;
   onInstallAppRequest: () => void;
+  onViewShortcuts: () => void;
 }
 
 function SortableAccordionItem({
@@ -110,66 +78,78 @@ function SortableAccordionItem({
 }
 
 export default function EditorSidebar({
-  diagram,
-  activeItemId,
-  onActiveItemIdChange,
-  onNodeUpdate,
-  onNodeDelete,
-  onEdgeUpdate,
-  onEdgeDelete,
   onAddTable,
-  onDeleteDiagram,
-  onBackToGallery,
-  onUndoDelete,
-  onBatchNodeUpdate,
-  isLocked,
+  onAddNote,
+  onAddZone,
   onSetSidebarState,
   onExport,
   onCheckForUpdate,
   onInstallAppRequest,
+  onViewShortcuts,
 }: EditorSidebarProps) {
+  const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+  const allDiagrams = useStore((state) => state.diagrams);
+  const selectedNodeId = useStore((state) => state.selectedNodeId);
+  const setSelectedNodeId = useStore((state) => state.setSelectedNodeId);
+  const selectedEdgeId = useStore((state) => state.selectedEdgeId)
+
+  const diagram = useMemo(() =>
+    allDiagrams.find((d) => d.id === selectedDiagramId),
+    [allDiagrams, selectedDiagramId]
+  );
+
+  const {
+    updateNode,
+    batchUpdateNodes,
+  } = useStore(
+    useShallow((state: StoreState) => ({
+      updateNode: state.updateNode,
+      batchUpdateNodes: state.batchUpdateNodes,
+    }))
+  );
+
   const [editingTableName, setEditingTableName] = useState<string | null>(null);
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
-  const { setTheme } = useTheme();
-  const { isInstalled } = usePWA();
+  const [inspectingEdgeId, setInspectingEdgeId] = useState<string | null>(null);
 
-  const sortedNodesFromProp = useMemo(
+  const sortedNodesFromStore = useMemo(
     () =>
-      (diagram.data.nodes ?? [])
+      (diagram?.data.nodes ?? [])
         .filter((n) => !n.data.isDeleted)
         .sort(
           (a, b) => (a.data.order ?? Infinity) - (b.data.order ?? Infinity)
         ),
-    [diagram.data.nodes]
+    [diagram?.data.nodes]
   );
 
-  const [nodes, setNodes] = useState<AppNode[]>(sortedNodesFromProp);
+  const [nodes, setNodes] = useState<AppNode[]>(sortedNodesFromStore);
 
   useEffect(() => {
-    setNodes(sortedNodesFromProp);
-  }, [sortedNodesFromProp]);
+    setNodes(sortedNodesFromStore);
+  }, [sortedNodesFromStore]);
 
-  const edges = diagram.data.edges ?? [];
+  const edges = useMemo(() => diagram?.data.edges ?? [], [diagram?.data.edges]);
+  const isLocked = useMemo(() => diagram?.data.isLocked ?? false, [diagram?.data.isLocked]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
   useEffect(() => {
-    if (activeItemId) {
-      if (nodes.some((n) => n.id === activeItemId)) {
-        setCurrentInspectorTab("tables");
-      } else if (edges.some((e) => e.id === activeItemId)) {
-        setCurrentInspectorTab("relationships");
-      }
+    if (selectedNodeId && nodes.some((n) => n.id === selectedNodeId)) {
+      setCurrentInspectorTab("tables");
     }
-  }, [activeItemId, nodes, edges]);
+  }, [selectedNodeId, nodes]);
+
+    useEffect(() => {
+    if (selectedEdgeId && edges.some((n) => n.id === selectedEdgeId)) {
+      setCurrentInspectorTab("relationships");
+      setInspectingEdgeId(selectedEdgeId)
+    }
+  }, [selectedEdgeId, edges]);
 
   const handleInspectorTabChange = (tab: string) => {
-    if (tab !== currentInspectorTab) {
-      setCurrentInspectorTab(tab);
-      onActiveItemIdChange(null);
-    }
+    setCurrentInspectorTab(tab);
   };
 
   const handleStartEdit = (node: AppNode) => {
@@ -182,7 +162,7 @@ export default function EditorSidebar({
   };
 
   const handleNameSave = (node: AppNode) => {
-    onNodeUpdate({ ...node, data: { ...node.data, label: tableName } });
+    updateNode({ ...node, data: { ...node.data, label: tableName } });
     setEditingTableName(null);
   };
 
@@ -203,15 +183,12 @@ export default function EditorSidebar({
         },
       }));
 
-      onBatchNodeUpdate(nodesToUpdate);
+      batchUpdateNodes(nodesToUpdate);
     }
   };
+  const inspectingEdge = edges.find((e) => e.id === inspectingEdgeId);
 
-  const handleHideSidebar = () => {
-    onSetSidebarState("hidden");
-  };
-
-  const inspectingEdge = edges.find((e) => e.id === activeItemId);
+  if (!diagram) return null;
 
   return (
     <div className="h-full w-full flex flex-col bg-card" onContextMenu={(e) => e.preventDefault()}>
@@ -221,95 +198,16 @@ export default function EditorSidebar({
           alt="ThothBlueprint Logo"
           className="h-5 w-5 mr-2 flex-shrink-0"
         />
-        <Menubar className="rounded-none border-none bg-transparent">
-          <MenubarMenu>
-            <MenubarTrigger>File</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={onBackToGallery}>
-                Back to Gallery
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem onClick={onAddTable} disabled={isLocked}>
-                Add Table <MenubarShortcut>⌘N/A</MenubarShortcut>
-              </MenubarItem>
-              <MenubarSeparator />
-              <MenubarItem onClick={onExport}>Export Diagram</MenubarItem>
-              <MenubarItem onClick={exportDbToJson}>Save Data</MenubarItem>
-              <MenubarSeparator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <MenubarItem
-                    onSelect={(e) => e.preventDefault()}
-                    className="text-destructive focus:text-destructive"
-                    disabled={isLocked}
-                  >
-                    Delete Diagram
-                  </MenubarItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will move the "{diagram.name}" diagram to the trash. You can restore it later from the gallery.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDeleteDiagram}>Move to Trash</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>Edit</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={onUndoDelete} disabled={isLocked}>
-                Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>View</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={handleHideSidebar}>
-                Hide Sidebar
-              </MenubarItem>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>Settings</MenubarTrigger>
-            <MenubarContent>
-              <MenubarSub>
-                <MenubarSubTrigger>Theme</MenubarSubTrigger>
-                <MenubarSubContent>
-                  <MenubarItem onClick={() => setTheme("light")}>
-                    Light
-                  </MenubarItem>
-                  <MenubarItem onClick={() => setTheme("dark")}>
-                    Dark
-                  </MenubarItem>
-                  <MenubarItem onClick={() => setTheme("system")}>
-                    System
-                  </MenubarItem>
-                </MenubarSubContent>
-              </MenubarSub>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger>Help</MenubarTrigger>
-            <MenubarContent>
-              <MenubarItem onClick={onCheckForUpdate}>
-                Check for Updates
-              </MenubarItem>
-              {!isInstalled && (
-                <MenubarItem onClick={onInstallAppRequest}>
-                  Install App
-                </MenubarItem>
-              )}
-            </MenubarContent>
-          </MenubarMenu>
-        </Menubar>
+        <EditorMenubar
+          onAddTable={onAddTable}
+          onAddNote={onAddNote}
+          onAddZone={onAddZone}
+          onSetSidebarState={onSetSidebarState}
+          onExport={onExport}
+          onCheckForUpdate={onCheckForUpdate}
+          onInstallAppRequest={onInstallAppRequest}
+          onViewShortcuts={onViewShortcuts}
+        />
       </div>
       <div className="p-2 flex-shrink-0 border-b">
         <h3 className="text-lg font-semibold tracking-tight px-2">
@@ -364,8 +262,8 @@ export default function EditorSidebar({
                   <Accordion
                     type="single"
                     collapsible
-                    value={activeItemId ?? ""}
-                    onValueChange={onActiveItemIdChange}
+                    value={selectedNodeId ?? ""}
+                    onValueChange={(value) => setSelectedNodeId(value || null)}
                     className="w-full"
                   >
                     {nodes.map((node) => (
@@ -422,11 +320,7 @@ export default function EditorSidebar({
                             <AccordionContent>
                               <TableAccordionContent
                                 node={node}
-                                dbType={diagram.dbType}
-                                onNodeUpdate={onNodeUpdate}
-                                onNodeDelete={onNodeDelete}
                                 onStartEdit={() => handleStartEdit(node)}
-                                isLocked={isLocked}
                               />
                             </AccordionContent>
                           </AccordionItem>
@@ -444,7 +338,7 @@ export default function EditorSidebar({
                 <div>
                   <Button
                     variant="ghost"
-                    onClick={() => onActiveItemIdChange(null)}
+                    onClick={() => setInspectingEdgeId(null)}
                     className="mb-2"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
@@ -452,9 +346,6 @@ export default function EditorSidebar({
                   <EdgeInspectorPanel
                     edge={inspectingEdge}
                     nodes={nodes}
-                    onEdgeUpdate={onEdgeUpdate}
-                    onEdgeDelete={onEdgeDelete}
-                    isLocked={isLocked}
                   />
                 </div>
               ) : (
@@ -467,7 +358,7 @@ export default function EditorSidebar({
                         key={edge.id}
                         variant="ghost"
                         className="w-full justify-start h-auto py-2"
-                        onClick={() => onActiveItemIdChange(edge.id)}
+                        onClick={() => setInspectingEdgeId(edge.id)}
                       >
                         <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
                         <div className="text-left text-sm">
@@ -475,7 +366,7 @@ export default function EditorSidebar({
                             {sourceNode?.data.label} to {targetNode?.data.label}
                           </p>
                           <p className="text-muted-foreground text-xs">
-                            {edge.data?.relationship ?? "one-to-many"}
+                            {edge.data?.relationship ?? DbRelationship.ONE_TO_MANY}
                           </p>
                         </div>
                       </Button>

@@ -1,8 +1,8 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./globals.css";
-import { ThemeProvider } from "./components/theme-provider.tsx";
 import { registerSW } from 'virtual:pwa-register';
+import App from "./App.tsx";
+import { ThemeProvider } from "./components/theme-provider.tsx";
+import "./globals.css";
 
 // Register service worker with error handling
 const updateSW = registerSW({
@@ -19,7 +19,7 @@ const updateSW = registerSW({
 });
 
 // Make updateSW available globally for the PWA hook
-(window as any).updateSW = updateSW;
+window.updateSW = updateSW;
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

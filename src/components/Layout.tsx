@@ -1,28 +1,23 @@
-import { Button } from "@/components/ui/button";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebarState } from "@/hooks/use-sidebar-state";
 import { tableColors } from "@/lib/colors";
-import { db } from "@/lib/db";
-import { type AppEdge, type AppNode } from "@/lib/types";
-import { cn } from "@/lib/utils";
-import {
-  type OnSelectionChangeParams,
-  type ReactFlowInstance,
-} from "@xyflow/react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { Menu } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { type ImperativePanelHandle } from "react-resizable-panels";
+import { colors, KeyboardShortcuts } from "@/lib/constants";
+import { type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
+import { showSuccess } from "@/utils/toast";
+import { type ReactFlowInstance } from "@xyflow/react";
+import { useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { AddNoteDialog } from "./AddNoteDialog";
 import { AddTableDialog } from "./AddTableDialog";
+import { AddZoneDialog } from "./AddZoneDialog";
 import DiagramEditor from "./DiagramEditor";
 import DiagramGallery from "./DiagramGallery";
+import { DiagramLayout } from "./DiagramLayout";
 import EditorSidebar from "./EditorSidebar";
 import { ExportDialog } from "./ExportDialog";
 import { PWAUpdateNotification } from "./PWAUpdateNotification";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { UpdateDialog } from "./UpdateDialog";
 
 interface LayoutProps {
@@ -30,383 +25,231 @@ interface LayoutProps {
 }
 
 export default function Layout({ onInstallAppRequest }: LayoutProps) {
-  const [selectedDiagramId, setSelectedDiagramId] = useState<number | null>(
-    null
+  const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+  const allDiagrams = useStore((state) => state.diagrams);
+  const isLoading = useStore((state) => state.isLoading);
+  const isMobile = useIsMobile();
+
+  const diagram = useMemo(() =>
+    allDiagrams.find((d) => d.id === selectedDiagramId),
+    [allDiagrams, selectedDiagramId]
   );
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
+  const { addNode, undoDelete, copyNodes, pasteNodes, lastCursorPosition } = useStore(
+    useShallow((state: StoreState) => ({
+      addNode: state.addNode,
+      undoDelete: state.undoDelete,
+      copyNodes: state.copyNodes,
+      pasteNodes: state.pasteNodes,
+      lastCursorPosition: state.lastCursorPosition,
+    }))
+  );
+
+  const {
+    // sidebarState,
+    setSidebarState,
+    isSidebarCollapsed,
+    setIsSidebarCollapsed,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    handleOpenSidebar,
+    sidebarPanelRef,
+  } = useSidebarState();
+
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<
-    AppNode,
-    AppEdge
-  > | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [sidebarState, setSidebarState] = useState<"docked" | "hidden">(
-    "docked"
-  );
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
+  const [isAddZoneDialogOpen, setIsAddZoneDialogOpen] = useState(false);
+  const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
 
-  const sidebarPanelRef = useRef<ImperativePanelHandle>(null);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
 
-  const editorRef = useRef<{
-    updateNode: (node: AppNode) => void;
-    deleteNode: (nodeId: string) => void;
-    updateEdge: (edge: AppEdge) => void;
-    deleteEdge: (edgeId: string) => void;
-    addNode: (node: AppNode) => void;
-    undoDelete: () => void;
-    batchUpdateNodes: (nodes: AppNode[]) => void;
-  }>(null);
-
-  // Load selected diagram ID on mount
   useEffect(() => {
-    const loadSelectedDiagram = async () => {
-      try {
-        const state = await db.appState.get('selectedDiagramId');
-        if (state && typeof state.value === 'number') {
-          const diagramExists = await db.diagrams.get(state.value);
-          if (diagramExists && !diagramExists.deletedAt) {
-            setSelectedDiagramId(state.value);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (selectedDiagramId) {
+        const target = event.target as HTMLElement;
+        if (["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable) {
+          return;
+        }
+        // handle Ctrl+A to open table add dialog
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.ADD_NEW_TABLE) {
+          event.preventDefault();
+          if (!isAddTableDialogOpen) {
+            setIsAddTableDialogOpen(true);
+          }
+        }
+        // Handle Ctrl+B to toggle sidebar
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.SIDEBAR_TOGGLE) {
+          event.preventDefault();
+          if (isMobile) {
+            // For mobile (sheet), toggle isSidebarOpen
+            setIsSidebarOpen(!isSidebarOpen);
           } else {
-            await db.appState.delete('selectedDiagramId');
+            // For desktop (resizable panel), toggle via handleOpenSidebar
+            handleOpenSidebar();
           }
         }
-      } catch (error) {
-        console.error("Failed to load selected diagram:", error);
-      }
-    };
-    loadSelectedDiagram();
-  }, []);
+        //handle Ctrl+Z to undo table delete
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.UNDO_TABLE_DELETE) {
+          event.preventDefault();
+          undoDelete();
+        }
+        // Handle Ctrl+C to copy selected nodes
+        if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+          event.preventDefault();
+          if (!rfInstance) return;
+          const selectedNodes = rfInstance.getNodes().filter(
+            (n) => n.selected && (n.type === 'table' || n.type === 'note')
+          ) as (AppNode | AppNoteNode)[];
 
-  // Save selected diagram ID when it changes
-  useEffect(() => {
-    const saveSelectedDiagram = async () => {
-      try {
-        if (selectedDiagramId !== null) {
-          await db.appState.put({ key: 'selectedDiagramId', value: selectedDiagramId });
-        } else {
-          const state = await db.appState.get('selectedDiagramId');
-          if (state) {
-            await db.appState.delete('selectedDiagramId');
+          if (selectedNodes.length > 0) {
+            copyNodes(selectedNodes);
+            showSuccess(`${selectedNodes.length} item(s) copied to clipboard.`);
           }
         }
-      } catch (error) {
-        console.error("Failed to save selected diagram:", error);
+        // Handle Ctrl+V to paste nodes
+        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+          event.preventDefault();
+          if (!rfInstance) return;
+
+          // Use stored cursor position if available, otherwise use center of viewport
+          let position;
+          if (lastCursorPosition) {
+            position = rfInstance.screenToFlowPosition(lastCursorPosition);
+          } else {
+            // Fallback to center of viewport
+            const { x, y, zoom } = rfInstance.getViewport();
+            position = {
+              x: (window.innerWidth / 2 - x) / zoom,
+              y: (window.innerHeight / 2 - y) / zoom
+            };
+          }
+
+          pasteNodes(position);
+        }
       }
     };
-    saveSelectedDiagram();
-  }, [selectedDiagramId]);
-
-  const diagram = useLiveQuery(
-    () => (selectedDiagramId ? db.diagrams.get(selectedDiagramId) : undefined),
-    [selectedDiagramId]
-  );
-
-  const isSidebarVisible = diagram && sidebarState === "docked";
-
-  useEffect(() => {
-    const panel = sidebarPanelRef.current;
-    if (panel) {
-      if (isSidebarVisible) {
-        if (panel.isCollapsed()) {
-          panel.expand();
-        }
-      } else {
-        if (!panel.isCollapsed()) {
-          panel.collapse();
-        }
-      }
-    }
-  }, [isSidebarVisible]);
-
-  const handleNodeUpdate = useCallback((node: AppNode) => {
-    editorRef.current?.updateNode(node);
-  }, []);
-
-  const handleNodeDelete = useCallback((nodeId: string) => {
-    editorRef.current?.deleteNode(nodeId);
-    setActiveItemId(null);
-  }, []);
-
-  const handleEdgeUpdate = useCallback((edge: AppEdge) => {
-    editorRef.current?.updateEdge(edge);
-  }, []);
-
-  const handleEdgeDelete = useCallback((edgeId: string) => {
-    editorRef.current?.deleteEdge(edgeId);
-    setActiveItemId(null);
-  }, []);
-
-  const handleSelectionChange = useCallback(
-    ({ nodes, edges }: OnSelectionChangeParams) => {
-      if (nodes.length === 1 && edges.length === 0 && nodes[0]) {
-        setActiveItemId(nodes[0].id);
-        setSelectedNodeId(nodes[0].id);
-        setSelectedEdgeId(null);
-      } else if (edges.length === 1 && nodes.length === 0 && edges[0]) {
-        setActiveItemId(edges[0].id);
-        setSelectedNodeId(null);
-        setSelectedEdgeId(edges[0].id);
-      } else {
-        setActiveItemId(null);
-        setSelectedNodeId(null);
-        setSelectedEdgeId(null);
-      }
-    },
-    []
-  );
-
-  const handleAddTable = () => setIsAddTableDialogOpen(true);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    selectedDiagramId,
+    isAddTableDialogOpen,
+    handleOpenSidebar,
+    undoDelete,
+    isMobile,
+    setIsSidebarOpen,
+    isSidebarOpen,
+    sidebarPanelRef,
+    rfInstance,
+    copyNodes,
+    pasteNodes,
+    lastCursorPosition
+  ]);
 
   const handleCreateTable = (tableName: string) => {
+    if (!diagram) return;
     let position = { x: 200, y: 200 };
     if (rfInstance) {
-      const flowPosition = rfInstance.screenToFlowPosition({
-        x: window.innerWidth * 0.6,
-        y: window.innerHeight / 2,
-      });
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
       position = { x: flowPosition.x - 144, y: flowPosition.y - 50 };
     }
-    const visibleNodes =
-      diagram?.data.nodes.filter((n) => !n.data.isDeleted) || [];
+    const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,
       type: "table",
       position,
       data: {
         label: tableName,
-        color:
-          tableColors[Math.floor(Math.random() * tableColors.length)] ??
-          "#60A5FA",
-        columns: [
-          {
-            id: `col_${Date.now()}`,
-            name: "id",
-            type: "INT",
-            pk: true,
-            nullable: false,
-          },
-        ],
+        color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
+        columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
         order: visibleNodes.length,
       },
     };
-    editorRef.current?.addNode(newNode);
+    addNode(newNode);
   };
 
-  const handleCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
-    if (!diagram) return;
-    const visibleNodes = diagram.data.nodes.filter(n => !n.data.isDeleted) || [];
-    const tableName = `new_table_${visibleNodes.length + 1}`;
-
-    // Center the node on the cursor position
-    const nodeWidth = 288; // As defined in TableNode.tsx
-    const nodeHeight = 100; // Approximate default height
-    const adjustedPosition = {
-      x: position.x - nodeWidth / 2,
-      y: position.y - nodeHeight / 2,
-    };
-
-    const newNode: AppNode = {
-      id: `${tableName}-${+new Date()}`,
-      type: 'table',
-      position: adjustedPosition,
-      data: {
-        label: tableName,
-        color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? '#60A5FA',
-        columns: [
-          { id: `col_${Date.now()}`, name: 'id', type: 'INT', pk: true, nullable: false },
-        ],
-        order: visibleNodes.length,
-      },
-    };
-    editorRef.current?.addNode(newNode);
-  }, [diagram]);
-
-  const handleDeleteDiagram = async () => {
-    if (diagram) {
-      await db.diagrams.update(diagram.id!, { deletedAt: new Date(), updatedAt: new Date() });
-      setSelectedDiagramId(null);
+  const handleCreateNote = (text: string) => {
+    let position = { x: 200, y: 200 };
+    if (rfInstance) {
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      position = { x: flowPosition.x - 96, y: flowPosition.y - 96 };
     }
-  };
-
-  const handleUndoDelete = useCallback(() => {
-    editorRef.current?.undoDelete();
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (selectedDiagramId) {
-        const target = event.target as HTMLElement;
-        if (
-          ["INPUT", "TEXTAREA"].includes(target.tagName) ||
-          target.isContentEditable
-        ) {
-          return;
-        }
-
-        if (
-          (event.ctrlKey || event.metaKey) &&
-          (event.key === "n" || event.key === "a")
-        ) {
-          event.preventDefault();
-          if (!isAddTableDialogOpen) {
-            handleAddTable();
-          }
-        }
-      }
+    const newNote: AppNoteNode = {
+      id: `note-${+new Date()}`,
+      type: "note",
+      position,
+      width: 192,
+      height: 192,
+      data: { text },
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDiagramId, isAddTableDialogOpen]);
-
-  const handleBatchNodeUpdate = useCallback((nodesToUpdate: AppNode[]) => {
-    editorRef.current?.batchUpdateNodes(nodesToUpdate);
-  }, []);
-
-  const handleSetRfInstance = useCallback(
-    (instance: ReactFlowInstance<AppNode, AppEdge> | null) => {
-      setRfInstance(instance);
-    },
-    []
-  );
-
-  const handleOpenSidebar = () => {
-    if (sidebarState === 'hidden') {
-      setSidebarState('docked');
-    } else {
-      sidebarPanelRef.current?.expand();
-    }
+    addNode(newNote);
   };
 
-  const isLocked = diagram?.data?.isLocked ?? false;
+  const handleCreateZone = (name: string) => {
+    let position = { x: 200, y: 200 };
+    if (rfInstance) {
+      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      position = { x: flowPosition.x - 150, y: flowPosition.y - 150 };
+    }
+    const newZone: AppZoneNode = {
+      id: `zone-${+new Date()}`,
+      type: "zone",
+      position,
+      width: 300,
+      height: 300,
+      zIndex: -1,
+      data: { name },
+    };
+    addNode(newZone);
+  };
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
   const sidebarContent = diagram ? (
     <EditorSidebar
-      diagram={diagram}
-      activeItemId={activeItemId}
-      onActiveItemIdChange={(id) => {
-        setActiveItemId(id);
-      }}
-      onNodeUpdate={handleNodeUpdate}
-      onNodeDelete={handleNodeDelete}
-      onEdgeUpdate={handleEdgeUpdate}
-      onEdgeDelete={handleEdgeDelete}
-      onAddTable={() => {
-        handleAddTable();
-        setIsSidebarOpen(false);
-      }}
-      onDeleteDiagram={handleDeleteDiagram}
-      onBackToGallery={() => {
-        setSelectedDiagramId(null);
-        setIsSidebarOpen(false);
-      }}
-      onUndoDelete={handleUndoDelete}
-      onBatchNodeUpdate={handleBatchNodeUpdate}
-      isLocked={isLocked}
+      onAddTable={() => { setIsAddTableDialogOpen(true); setIsSidebarOpen(false); }}
+      onAddNote={() => { setIsAddNoteDialogOpen(true); setIsSidebarOpen(false); }}
+      onAddZone={() => { setIsAddZoneDialogOpen(true); setIsSidebarOpen(false); }}
       onSetSidebarState={setSidebarState}
       onExport={() => setIsExportDialogOpen(true)}
       onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
       onInstallAppRequest={onInstallAppRequest}
+      onViewShortcuts={() => setIsShortcutsDialogOpen(true)}
     />
   ) : null;
 
   return (
     <>
       <PWAUpdateNotification onUpdateNow={() => setIsUpdateDialogOpen(true)} />
-      <div className="lg:hidden">
-        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-          <SheetContent side="left" className="p-0 w-[350px] sm:w-[400px] flex">
-            {sidebarContent}
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="min-h-screen w-full"
-        autoSaveId="sidebar-layout"
-      >
-        <ResizablePanel
-          ref={sidebarPanelRef}
-          defaultSize={25}
-          collapsible
-          collapsedSize={0}
-          minSize={20}
-          maxSize={40}
-          className="hidden lg:block"
+      {selectedDiagramId && diagram ? (
+        <DiagramLayout
+          sidebarContent={sidebarContent}
+          diagramContent={<DiagramEditor setRfInstance={setRfInstance} />}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+          handleOpenSidebar={handleOpenSidebar}
+          isSidebarCollapsed={isSidebarCollapsed}
+          sidebarPanelRef={sidebarPanelRef}
           onCollapse={() => setIsSidebarCollapsed(true)}
           onExpand={() => setIsSidebarCollapsed(false)}
-        >
-          {sidebarContent}
-        </ResizablePanel>
-        <ResizableHandle
-          withHandle
-          className={cn("hidden lg:flex", isSidebarCollapsed && "hidden")}
         />
-        <ResizablePanel defaultSize={75}>
-          <div className="flex h-full items-center justify-center relative">
-            {diagram && (
-              <div className="absolute top-4 left-4 z-10 lg:hidden">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => setIsSidebarOpen(true)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </div>
-            )}
-
-            {diagram && isSidebarCollapsed && (
-              <div className="absolute top-4 left-4 z-10 hidden lg:block">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={handleOpenSidebar}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </div>
-            )}
-
-            {selectedDiagramId && diagram ? (
-              <DiagramEditor
-                ref={editorRef}
-                diagram={diagram}
-                onSelectionChange={handleSelectionChange}
-                setRfInstance={handleSetRfInstance}
-                selectedNodeId={selectedNodeId}
-                selectedEdgeId={selectedEdgeId}
-                onCreateTableAtPosition={handleCreateTableAtPosition}
-              />
-            ) : (
-              <DiagramGallery
-                setSelectedDiagramId={setSelectedDiagramId}
-                onInstallAppRequest={onInstallAppRequest}
-                onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
-              />
-            )}
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-      <AddTableDialog
-        isOpen={isAddTableDialogOpen}
-        onOpenChange={setIsAddTableDialogOpen}
-        onCreateTable={handleCreateTable}
-      />
-      <ExportDialog
-        isOpen={isExportDialogOpen}
-        onOpenChange={setIsExportDialogOpen}
-        diagram={diagram}
-        rfInstance={rfInstance as ReactFlowInstance | null}
-      />
-      <UpdateDialog
-        isOpen={isUpdateDialogOpen}
-        onOpenChange={setIsUpdateDialogOpen}
-      />
+      ) : (
+        <div className="w-full h-screen">
+          <DiagramGallery
+            onInstallAppRequest={onInstallAppRequest}
+            onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
+          />
+        </div>
+      )}
+      <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} />
+      <AddNoteDialog isOpen={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen} onCreateNote={handleCreateNote} />
+      <AddZoneDialog isOpen={isAddZoneDialogOpen} onOpenChange={setIsAddZoneDialogOpen} onCreateZone={handleCreateZone} />
+      <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />
+      <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
+      <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
     </>
   );
 }

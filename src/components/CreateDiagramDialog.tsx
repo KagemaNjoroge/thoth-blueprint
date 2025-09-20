@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DatabaseType } from "@/lib/db";
+import { type DatabaseType } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -44,7 +44,7 @@ export function CreateDiagramDialog({ isOpen, onOpenChange, onCreateDiagram }: C
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      dbType: "postgres",
+      dbType: "mysql",
     },
   });
 

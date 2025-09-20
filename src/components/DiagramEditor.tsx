@@ -5,584 +5,365 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
-import { db, type Diagram } from "@/lib/db";
-import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type NoteNodeData, type TableNodeData, type ZoneNodeData } from "@/lib/types";
+import { colors, DbRelationship, relationshipTypes } from "@/lib/constants";
+import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
+import { isNodeInLockedZone } from "@/lib/utils";
+import { useStore, type StoreState } from "@/store/store";
+import { showError } from "@/utils/toast";
 import {
   Background,
   ControlButton,
   Controls,
   ReactFlow,
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
   type ColorMode,
   type Connection,
   type Edge,
-  type EdgeChange,
-  type EdgeTypes,
-  type Node,
-  type NodeChange,
   type NodeProps,
   type NodeTypes,
   type OnConnect,
-  type OnEdgesChange,
-  type OnNodesChange,
   type OnSelectionChangeParams,
-  type ReactFlowInstance
+  type ReactFlowInstance,
+  type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
+  useState
 } from "react";
 import { IoLockClosedOutline, IoLockOpenOutline } from "react-icons/io5";
+import { useDebouncedCallback } from "use-debounce";
+import { useShallow } from "zustand/react/shallow";
 import CustomEdge from "./CustomEdge";
-import { relationshipTypes } from "./EdgeInspectorPanel";
 import NoteNode from "./NoteNode";
 import TableNode from "./TableNode";
 import ZoneNode from "./ZoneNode";
 
+// Define nodeTypes outside component to prevent recreation
+const nodeTypes: NodeTypes = {
+  table: (props: NodeProps<AppNode>) => {
+    return (
+      <TableNode
+        {...props}
+        onDelete={props.data.onDelete || (() => { })}
+      />
+    );
+  },
+  note: (props: NodeProps<AppNoteNode>) => {
+    return (
+      <NoteNode
+        {...props}
+        onUpdate={props.data.onUpdate || (() => { })}
+        onDelete={props.data.onDelete || (() => { })}
+      />
+    );
+  },
+  zone: (props: NodeProps<AppZoneNode>) => {
+    return (
+      <ZoneNode
+        {...props}
+        onUpdate={props.data.onUpdate || (() => { })}
+        onDelete={props.data.onDelete || (() => { })}
+        onCreateTableAtPosition={props.data.onCreateTableAtPosition || (() => { })}
+        onCreateNoteAtPosition={props.data.onCreateNoteAtPosition || (() => { })}
+      />
+    );
+  },
+};
+
 interface DiagramEditorProps {
-  diagram: Diagram;
-  onSelectionChange: (params: OnSelectionChangeParams) => void;
-  setRfInstance: (instance: ReactFlowInstance<AppNode, AppEdge> | null) => void;
-  selectedNodeId: string | null;
-  selectedEdgeId: string | null;
-  onCreateTableAtPosition: (position: { x: number; y: number }) => void;
+  setRfInstance: (instance: ReactFlowInstance<ProcessedNode, ProcessedEdge> | null) => void;
 }
 
 const DiagramEditor = forwardRef(
-  (
-    {
-      diagram,
-      onSelectionChange,
-      setRfInstance,
+  ({ setRfInstance }: DiagramEditorProps, ref) => {
+    const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+    const allDiagrams = useStore((state) => state.diagrams);
+
+    const diagram = useMemo(() =>
+      allDiagrams.find(d => d.id === selectedDiagramId),
+      [allDiagrams, selectedDiagramId]
+    );
+
+    // Ref to store the React Flow instance
+    const rfInstanceRef = useRef<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
+
+    const {
+      onNodesChange,
+      onEdgesChange,
+      addEdge: addEdgeToStore,
+      updateCurrentDiagramData,
+      deleteNodes,
+      updateNode,
+      addNode,
+      undoDelete,
+      batchUpdateNodes,
       selectedNodeId,
+      setSelectedNodeId,
       selectedEdgeId,
-      onCreateTableAtPosition,
-    }: DiagramEditorProps,
-    ref
-  ) => {
-    const [allNodes, setAllNodes] = useState<AppNode[]>([]);
-    const [notes, setNotes] = useState<AppNoteNode[]>([]);
-    const [zones, setZones] = useState<AppZoneNode[]>([]);
-    const [edges, setEdges] = useState<AppEdge[]>([]);
-    const [rfInstance, setRfInstanceLocal] = useState<ReactFlowInstance<
-      AppNode,
-      AppEdge
-    > | null>(null);
+      setSelectedEdgeId,
+      setLastCursorPosition,
+      pasteNodes,
+      clipboard,
+      settings,
+    } = useStore(
+      useShallow((state: StoreState) => ({
+        onNodesChange: state.onNodesChange,
+        onEdgesChange: state.onEdgesChange,
+        addEdge: state.addEdge,
+        updateCurrentDiagramData: state.updateCurrentDiagramData,
+        deleteNodes: state.deleteNodes,
+        updateNode: state.updateNode,
+        addNode: state.addNode,
+        undoDelete: state.undoDelete,
+        batchUpdateNodes: state.batchUpdateNodes,
+        selectedNodeId: state.selectedNodeId,
+        setSelectedNodeId: state.setSelectedNodeId,
+        selectedEdgeId: state.selectedEdgeId,
+        setSelectedEdgeId: state.setSelectedEdgeId,
+        setLastCursorPosition: state.setLastCursorPosition,
+        pasteNodes: state.pasteNodes,
+        clipboard: state.clipboard,
+        settings: state.settings,
+      }))
+    );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
     const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
 
-    const edgeTypes: EdgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
+    const nodes = useMemo(() => diagram?.data.nodes || [], [diagram?.data.nodes]);
+    const edges = useMemo(() => diagram?.data.edges || [], [diagram?.data.edges]);
+    const notes = useMemo(() => diagram?.data.notes || [], [diagram?.data.notes]);
+    const zones = useMemo(() => diagram?.data.zones || [], [diagram?.data.zones]);
+    const isLocked = useMemo(() => diagram?.data.isLocked ?? false, [diagram?.data.isLocked]);
 
-    const visibleNodes = useMemo(
-      () => allNodes.filter((n) => !n.data.isDeleted),
-      [allNodes]
-    );
+    const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
+    const visibleNodes = useMemo(() => nodes.filter((n) => !n.data.isDeleted), [nodes]);
 
-    const isLocked = useMemo(() => diagram.data.isLocked ?? false, [diagram.data.isLocked]);
-
-    const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => {
-      setHoveredEdgeId(edge.id);
-    }, []);
-
-    const onEdgeMouseLeave = useCallback(() => {
-      setHoveredEdgeId(null);
-    }, []);
-
-    const processedEdges = useMemo(() => {
-      return edges.map((edge) => {
-        const isHighlighted =
-          edge.source === selectedNodeId ||
-          edge.target === selectedNodeId ||
-          edge.id === selectedEdgeId ||
-          edge.id === hoveredEdgeId;
-
-        if (edge.data?.isHighlighted === isHighlighted) {
-          return edge;
+    const onSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
+      if (nodes.length === 1 && edges.length === 0 && nodes[0]) {
+        if (nodes[0].type === 'table') {
+          setSelectedNodeId(nodes[0].id);
+          setSelectedEdgeId(null);
+        } else {
+          setSelectedNodeId(null);
         }
+      } else if (edges.length === 1 && nodes.length === 0 && edges[0]) {
+        setSelectedEdgeId(edges[0].id);
+        setSelectedNodeId(null);
+      } else {
+        setSelectedNodeId(null);
+        setSelectedEdgeId(null);
+      }
+    }, [setSelectedNodeId, setSelectedEdgeId]);
 
-        return {
-          ...edge,
-          data: {
-            ...edge.data,
-            isHighlighted,
-          },
-        };
-      });
-    }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId]);
+    const handleViewportChange = useDebouncedCallback((viewport: Viewport) => {
+      if (diagram) {
+        updateCurrentDiagramData({ viewport });
+      }
+    }, 500);
+
+    const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => setHoveredEdgeId(edge.id), []);
+    const onEdgeMouseLeave = useCallback(() => setHoveredEdgeId(null), []);
+
+    const processedEdges = useMemo((): ProcessedEdge[] => {
+      return edges.map((edge) => ({
+        ...edge,
+        type: "custom",
+        selectable: !isLocked,
+        data: {
+          ...edge.data,
+          relationship: edge.data?.relationship || relationshipTypes[1]?.value || DbRelationship.ONE_TO_MANY,
+          isHighlighted: edge.source === selectedNodeId || edge.target === selectedNodeId || edge.id === selectedEdgeId || edge.id === hoveredEdgeId,
+        },
+      }));
+    }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId, isLocked]);
 
     const handleLockChange = useCallback(() => {
-      if (!diagram?.id) return;
-
-      db.diagrams.update(diagram.id, {
-        "data.isLocked": !isLocked,
-        updatedAt: new Date(),
-      }).catch(error => {
-        console.error("Failed to update lock status:", error);
-      });
-    }, [diagram?.id, isLocked]);
-
-    useEffect(() => {
-      if (!diagram?.data) return;
-
-      let wasModified = false;
-      const initialNodes: AppNode[] = (diagram.data.nodes ?? []).map(
-        (node: AppNode, index: number) => {
-          if (node.data.order === undefined || node.data.order === null) {
-            wasModified = true;
-          }
-
-          const newData: TableNodeData = {
-            ...node.data,
-            order: node.data.order ?? index,
-            color:
-              node.data.color ??
-              tableColors[Math.floor(Math.random() * tableColors.length)]!,
-          };
-
-          if (node.data.deletedAt) {
-            newData.deletedAt = new Date(node.data.deletedAt);
-          }
-
-          return {
-            ...node,
-            data: newData,
-          };
-        }
-      );
-
-      const initialEdges: AppEdge[] = (diagram.data.edges ?? []).map(
-        (edge) => ({ ...edge, type: "custom" })
-      );
-
-      const initialNotes: AppNoteNode[] = (diagram.data.notes ?? []).map(
-        (note) => ({ ...note, type: "note" })
-      );
-
-      const initialZones: AppZoneNode[] = (diagram.data.zones ?? []).map(
-        (zone) => ({ ...zone, type: "zone", zIndex: -1 })
-      );
-
-      setAllNodes(initialNodes);
-      setEdges(initialEdges);
-      setNotes(initialNotes);
-      setZones(initialZones);
-
-      if (wasModified && diagram.id) {
-        db.diagrams.update(diagram.id, {
-          data: { ...diagram.data, nodes: initialNodes, edges: initialEdges, notes: initialNotes, zones: initialZones },
-          updatedAt: new Date(),
-        }).catch(error => {
-          console.error("Failed to update diagram:", error);
-        });
-      }
-    }, [diagram]);
-
-    // Reset selection when diagram changes
-    useEffect(() => {
-      onSelectionChange({ nodes: [], edges: [] });
-    }, [diagram.id, onSelectionChange]);
-
-    // Fit view when diagram or instance changes
-    useEffect(() => {
-      if (rfInstance) {
-        // Use a timeout to ensure nodes have been rendered before fitting view
-        const timer = setTimeout(() => {
-          rfInstance.fitView({ duration: 200 }).catch(error => {
-            console.error("Failed to fit view:", error);
-          });
-        }, 0);
-
-        return () => clearTimeout(timer);
-      }
-      return undefined;
-    }, [diagram.id, rfInstance]);
-
-    const saveDiagram = useCallback(async () => {
-      if (!diagram?.id || !rfInstance) return;
-
-      try {
-        await db.diagrams.update(diagram.id, {
-          data: {
-            ...diagram.data,
-            nodes: allNodes,
-            edges,
-            notes,
-            zones,
-            viewport: rfInstance.getViewport(),
-          },
-          updatedAt: new Date(),
-        });
-      } catch (error) {
-        console.error("Failed to save diagram:", error);
-      }
-    }, [diagram, allNodes, edges, notes, zones, rfInstance]);
-
-    // Debounced saving
-    useEffect(() => {
-      const handler = setTimeout(() => saveDiagram(), 1000);
-      return () => clearTimeout(handler);
-    }, [allNodes, edges, notes, zones, saveDiagram]);
-
-    const undoDelete = useCallback(() => {
-      setAllNodes((currentNodes) => {
-        const deletedNodes = currentNodes.filter(
-          (n) => n.data.isDeleted && n.data.deletedAt
-        );
-        if (deletedNodes.length === 0) return currentNodes;
-
-        const lastDeletedNode = deletedNodes.reduce((latest, current) =>
-          (latest.data.deletedAt?.getTime() ?? 0) >
-            (current.data.deletedAt?.getTime() ?? 0)
-            ? latest
-            : current
-        );
-
-        return currentNodes.map((n) => {
-          if (n.id === lastDeletedNode.id) {
-            const { isDeleted, deletedAt, ...restData } = n.data;
-            return { ...n, data: restData };
-          }
-          return n;
-        });
-      });
-    }, []);
-
-    // Keyboard shortcut handling
-    useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if ((event.metaKey || event.ctrlKey) && event.key === "z") {
-          event.preventDefault();
-          undoDelete();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [undoDelete]);
-
-    const performSoftDelete = useCallback((
-      nodeIds: string[],
-      currentNodes: AppNode[]
-    ): AppNode[] => {
-      const now = new Date();
-      let newNodes = currentNodes.map((n) => {
-        if (nodeIds.includes(n.id)) {
-          return { ...n, data: { ...n.data, isDeleted: true, deletedAt: now } };
-        }
-        return n;
-      });
-
-      // Limit deleted nodes to 10 to prevent memory issues
-      const deletedNodes = newNodes
-        .filter((n) => n.data.isDeleted && n.data.deletedAt)
-        .sort(
-          (a, b) =>
-            (a.data.deletedAt?.getTime() ?? 0) -
-            (b.data.deletedAt?.getTime() ?? 0)
-        );
-
-      if (deletedNodes.length > 10) {
-        const oldestNode = deletedNodes[0];
-        if (oldestNode) {
-          newNodes = newNodes.filter((n) => n.id !== oldestNode.id);
-        }
-      }
-      return newNodes;
-    }, []);
-
-    const deleteNote = useCallback((nodeIds: string[]) => {
-      setNotes(nds => nds.filter(n => !nodeIds.includes(n.id)));
-    }, []);
-
-    const deleteZone = useCallback((nodeIds: string[]) => {
-      setZones(zns => zns.filter(z => !nodeIds.includes(z.id)));
-    }, []);
-
-    const handleNoteUpdate = useCallback((nodeId: string, data: Partial<NoteNodeData>) => {
-      setNotes(nds => nds.map(n => {
-        if (n.id === nodeId) {
-          return { ...n, data: { ...n.data, ...data } };
-        }
-        return n;
-      }));
-    }, []);
-
-    const handleZoneUpdate = useCallback((nodeId: string, data: Partial<ZoneNodeData>) => {
-      setZones(currentZones => {
-        const newZones = currentZones.map(z =>
-          z.id === nodeId ? { ...z, data: { ...z.data, ...data } } : z
-        );
-
-        const lockedZones = newZones.filter(z => z.data.isLocked);
-        const isNodeInLockedZone = (node: AppNode | AppNoteNode): boolean => {
-          if (lockedZones.length === 0) return false;
-          return lockedZones.some(zone => {
-            if (!node.position || !node.measured || !zone.position || !zone.width || !zone.height) {
-              return false;
-            }
-            return (
-              node.position.x >= zone.position.x &&
-              node.position.y >= zone.position.y &&
-              (node.position.x + (node?.measured?.width || 0)) <= (zone.position.x + zone.width) &&
-              (node.position.y + (node?.measured?.height || 0)) <= (zone.position.y + zone.height)
-            );
-          });
-        };
-
-        setAllNodes(currentNodes =>
-          currentNodes.map(node => {
-            const shouldBeLocked = isNodeInLockedZone(node);
-            if (!!node.data.isPositionLocked !== shouldBeLocked) {
-              return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
-            }
-            return node;
-          })
-        );
-
-        setNotes(currentNotes =>
-          currentNotes.map(node => {
-            const shouldBeLocked = isNodeInLockedZone(node);
-            if (!!node.data.isPositionLocked !== shouldBeLocked) {
-              return { ...node, data: { ...node.data, isPositionLocked: shouldBeLocked } };
-            }
-            return node;
-          })
-        );
-
-        return newZones;
-      });
-    }, []);
-
-    // Node change handling
-    const onNodesChange: OnNodesChange = useCallback(
-      (changes: NodeChange[]) => {
-        const tableNodeChanges: NodeChange[] = [];
-        const noteChanges: NodeChange[] = [];
-        const zoneChanges: NodeChange[] = [];
-
-        const noteIdSet = new Set(notes.map(n => n.id));
-        const zoneIdSet = new Set(zones.map(z => z.id));
-
-        for (const change of changes) {
-          if ('id' in change) {
-            if (noteIdSet.has(change.id)) {
-              noteChanges.push(change);
-            } else if (zoneIdSet.has(change.id)) {
-              zoneChanges.push(change);
-            } else {
-              tableNodeChanges.push(change);
-            }
-          } else {
-            tableNodeChanges.push(change);
-            noteChanges.push(change);
-            zoneChanges.push(change);
-          }
-        }
-
-        const tableRemoveChangeIds = tableNodeChanges
-          .filter((c) => c.type === "remove" && "id" in c)
-          .map((c) => (c as { id: string }).id);
-
-        if (tableRemoveChangeIds.length > 0) {
-          setAllNodes((currentNodes) => performSoftDelete(tableRemoveChangeIds, currentNodes));
-        }
-        const nonRemoveTableChanges = tableNodeChanges.filter((c) => c.type !== "remove");
-        if (nonRemoveTableChanges.length > 0) {
-          setAllNodes((nds) => applyNodeChanges(nonRemoveTableChanges, nds) as AppNode[]);
-        }
-
-        setNotes(nds => applyNodeChanges(noteChanges, nds) as AppNoteNode[]);
-        setZones(zns => applyNodeChanges(zoneChanges, zns) as AppZoneNode[]);
-      },
-      [notes, zones, performSoftDelete]
-    );
-
-    const onEdgesChange: OnEdgesChange = useCallback(
-      (changes: EdgeChange[]) =>
-        setEdges((eds) => applyEdgeChanges(changes, eds) as AppEdge[]),
-      []
-    );
+      updateCurrentDiagramData({ isLocked: !isLocked });
+    }, [isLocked, updateCurrentDiagramData]);
 
     const onConnect: OnConnect = useCallback((connection: Connection) => {
-      const newEdge = {
+      const { source, target, sourceHandle, targetHandle } = connection;
+      if (!source || !target || !sourceHandle || !targetHandle) return;
+
+      const getColumnId = (handleId: string) => handleId.split('-')[0];
+      const sourceNode = nodes.find(n => n.id === source);
+      const targetNode = nodes.find(n => n.id === target);
+      if (!sourceNode || !targetNode) return;
+
+      const sourceColumn = sourceNode.data.columns.find(c => c.id === getColumnId(sourceHandle));
+      const targetColumn = targetNode.data.columns.find(c => c.id === getColumnId(targetHandle));
+      if (!sourceColumn || !targetColumn) return;
+
+      if (sourceColumn.type !== targetColumn.type) {
+        showError("Cannot create relationship: Column types do not match.");
+        return;
+      }
+
+      const newEdge: AppEdge = {
         ...connection,
+        id: `${source}-${target}-${sourceHandle}-${targetHandle}`,
         type: "custom",
-        data: { relationship: relationshipTypes[1]?.value ?? "one-to-many" },
+        data: { relationship: relationshipTypes[1]?.value || DbRelationship.ONE_TO_MANY },
       };
-      setEdges((eds) => addEdge(newEdge, eds) as AppEdge[]);
-    }, []);
+      addEdgeToStore(newEdge);
+    }, [nodes, addEdgeToStore]);
 
-    const deleteNode = useCallback(
-      (nodeId: string) => {
-        setAllNodes((currentNodes) =>
-          performSoftDelete([nodeId], currentNodes)
-        );
-        onSelectionChange({ nodes: [], edges: [] });
-      },
-      [onSelectionChange, performSoftDelete]
-    );
+    const onInit = useCallback((instance: ReactFlowInstance<ProcessedNode, ProcessedEdge>) => {
+      rfInstanceRef.current = instance;
+      setRfInstance(instance);
 
-    // Node types
-    const nodeTypes: NodeTypes = useMemo(
-      () => ({
-        table: (props: NodeProps) => (
-          <TableNode
-            {...props}
-            data={props.data as TableNodeData}
-            onDeleteRequest={deleteNode}
-          />
-        ),
-        note: NoteNode,
-        zone: ZoneNode,
-      }),
-      [deleteNode]
-    );
+      // Restore viewport if rememberLastPosition is enabled and viewport is available
+      if (settings.rememberLastPosition && diagram?.data.viewport) {
+        const { x, y, zoom } = diagram.data.viewport;
+        instance.setViewport({ x, y, zoom });
+      } else {
+        instance.fitView({ duration: 200 });
+      }
+    }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
 
-    // Initialization
-    const onInit = useCallback((instance: unknown) => {
-      setRfInstanceLocal(instance as ReactFlowInstance<AppNode, AppEdge>);
-      setRfInstance(instance as ReactFlowInstance<AppNode, AppEdge>);
-    }, [setRfInstance]);
+    const onCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
+      if (!diagram) return;
+      const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
+      const tableName = `new_table_${visibleNodes.length + 1}`;
+      const newNode: AppNode = {
+        id: `${tableName}-${+new Date()}`,
+        type: "table",
+        position: { x: position.x - 144, y: position.y - 50 },
+        data: {
+          label: tableName,
+          color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
+          columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
+          order: visibleNodes.length,
+        },
+      };
+      addNode(newNode);
+    }, [diagram, addNode]);
 
     const onCreateNoteAtPosition = useCallback((position: { x: number; y: number }) => {
       const newNote: AppNoteNode = {
-        id: `note-${+new Date()}`,
-        type: 'note',
-        position,
-        width: 192,
-        height: 192,
-        data: {
-          text: 'New Note',
-        },
+        id: `note-${+new Date()}`, type: 'note', position, width: 192, height: 192, data: { text: 'New Note' },
       };
-      setNotes(nds => [...nds, newNote]);
-    }, []);
+      addNode(newNote);
+    }, [addNode]);
 
     const onCreateZoneAtPosition = useCallback((position: { x: number; y: number }) => {
       const newZone: AppZoneNode = {
-        id: `zone-${+new Date()}`,
-        type: 'zone',
-        position,
-        width: 300,
-        height: 300,
-        zIndex: -1,
-        data: {
-          name: 'New Zone',
-        },
+        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: 'New Zone' },
       };
-      setZones(zns => [...zns, newZone]);
-    }, []);
+      addNode(newZone);
+    }, [addNode]);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
-      if (!rfInstance) return;
-
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
       if (!pane) return;
+      clickPositionRef.current = { x: event.clientX, y: event.clientY };
+      setLastCursorPosition({ x: event.clientX, y: event.clientY });
+    }, [setLastCursorPosition]);
 
-      const position = rfInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      clickPositionRef.current = position;
-    }, [rfInstance]);
+    const onPaneMouseMove = useCallback((event: React.MouseEvent | MouseEvent) => {
+      setLastCursorPosition({ x: event.clientX, y: event.clientY });
+    }, [setLastCursorPosition]);
 
-    const onNodeContextMenu = (event: React.MouseEvent, node: Node) => {
-      event.preventDefault();
-    };
-
-    const onEdgeContextMenu = (event: React.MouseEvent, _edge: Edge) => {
-      event.preventDefault();
-    };
-
-    // Expose methods to parent
     useImperativeHandle(ref, () => ({
-      updateNode: (updatedNode: AppNode) => {
-        setAllNodes((nds) =>
-          nds.map((node) =>
-            node.id === updatedNode.id
-              ? { ...node, data: { ...updatedNode.data } }
-              : node
-          )
-        );
-      },
-      deleteNode: deleteNode,
-      updateEdge: (updatedEdge: AppEdge) => {
-        setEdges((eds) =>
-          eds.map((edge) => (edge.id === updatedEdge.id ? updatedEdge : edge))
-        );
-      },
-      deleteEdge: (edgeId: string) => {
-        setEdges((eds) => eds.filter((e) => e.id !== edgeId));
-        onSelectionChange({ nodes: [], edges: [] });
-      },
-      addNode: (newNode: AppNode) => {
-        setAllNodes((nds) => nds.concat(newNode));
-      },
-      undoDelete: undoDelete,
-      batchUpdateNodes: (nodesToUpdate: AppNode[]) => {
-        const nodeUpdateMap = new Map(nodesToUpdate.map((n) => [n.id, n]));
-        setAllNodes((currentNodes) =>
-          currentNodes.map((node) => nodeUpdateMap.get(node.id) || node)
-        );
-      },
-    }), [deleteNode, undoDelete, onSelectionChange]);
+      undoDelete,
+      batchUpdateNodes,
+    }));
 
-    const notesWithCallbacks = useMemo(() => notes.map(n => ({
-      ...n,
+    const handleZoneUpdate = useCallback((id: string, data: Partial<import('@/lib/types').ZoneNodeData>) => {
+      const zone = zones.find(z => z.id === id);
+      if (zone) {
+        updateNode({ ...zone, data: { ...zone.data, ...data } });
+      }
+    }, [zones, updateNode]);
+
+    const handleZoneDelete = useCallback((ids: string[]) => {
+      deleteNodes(ids);
+    }, [deleteNodes]);
+
+    const handleNoteUpdate = useCallback((id: string, data: Partial<import('@/lib/types').NoteNodeData>) => {
+      const note = notes.find(n => n.id === id);
+      if (note) {
+        updateNode({ ...note, data: { ...note.data, ...data } });
+      }
+    }, [notes, updateNode]);
+
+    const handleNoteDelete = useCallback((ids: string[]) => {
+      deleteNodes(ids);
+    }, [deleteNodes]);
+
+    const handleTableDelete = useCallback((ids: string[]) => {
+      deleteNodes(ids);
+    }, [deleteNodes]);
+
+    const notesWithCallbacks = useMemo(() => notes.map(note => ({
+      ...note,
       data: {
-        ...n.data,
+        ...note.data,
         onUpdate: handleNoteUpdate,
-        onDelete: deleteNote,
+        onDelete: handleNoteDelete,
       }
-    })), [notes, handleNoteUpdate, deleteNote]);
+    })), [notes, handleNoteUpdate, handleNoteDelete]);
 
-    const zonesWithCallbacks = useMemo(() => zones.map(z => ({
-      ...z,
+    const zonesWithCallbacks = useMemo(() => zones.map(zone => ({
+      ...zone,
       data: {
-        ...z.data,
+        ...zone.data,
         onUpdate: handleZoneUpdate,
-        onDelete: deleteZone,
-        onCreateTableAtPosition: onCreateTableAtPosition,
-        onCreateNoteAtPosition: onCreateNoteAtPosition,
-        isGloballyLocked: isLocked,
+        onDelete: handleZoneDelete,
+        onCreateTableAtPosition,
+        onCreateNoteAtPosition
       }
-    })), [zones, handleZoneUpdate, deleteZone, onCreateTableAtPosition, onCreateNoteAtPosition, isLocked]);
+    })), [zones, handleZoneUpdate, handleZoneDelete, onCreateTableAtPosition, onCreateNoteAtPosition]);
 
-    const combinedNodes = useMemo(() => {
-      const processedContentNodes = [...visibleNodes, ...notesWithCallbacks].map(node => {
-        const isEffectivelyLocked = isLocked || node.data.isPositionLocked;
+    const combinedNodes = useMemo((): ProcessedNode[] => {
+      // Process nodes to set draggable property based on zone locking
+      const processedNodes = visibleNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          onDelete: handleTableDelete,
+        },
+        draggable: !isLocked && !isNodeInLockedZone(node, zonesWithCallbacks)
+      }));
 
-        return {
-          ...node,
-          draggable: !isEffectivelyLocked,
-          selectable: !isEffectivelyLocked,
-          connectable: !isEffectivelyLocked,
-        };
-      });
+      const processedNotes = notesWithCallbacks.map(note => ({
+        ...note,
+        data: {
+          ...note.data,
+          isPositionLocked: isLocked || isNodeInLockedZone(note, zonesWithCallbacks)
+        },
+        draggable: !isLocked && !isNodeInLockedZone(note, zonesWithCallbacks)
+      }));
 
-      const processedZones = zonesWithCallbacks.map(zone => {
-        const isDraggable = !isLocked && !zone.data.isLocked;
-        return {
-          ...zone,
-          draggable: isDraggable,
-          selectable: !isLocked,
-        };
-      });
+      const processedZones = zonesWithCallbacks.map(zone => ({
+        ...zone,
+        draggable: !isLocked && !zone.data.isLocked
+      }));
 
-      return [...processedContentNodes, ...processedZones];
-    }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, isLocked]);
+      return [...processedNodes, ...processedNotes, ...processedZones];
+    }, [visibleNodes, notesWithCallbacks, zonesWithCallbacks, isLocked, handleTableDelete]);
+
+    const onBeforeDelete = async ({ nodes }: { nodes: ProcessedNode[]; edges: ProcessedEdge[] }) => {
+      if (nodes.length > 0) {
+        const tableNodes = nodes.filter(node => node.type === "table");
+        const nonTableNodes = nodes.filter(node => node.type !== "table");
+        // Soft delete tables only
+        if (tableNodes.length > 0) {
+          const tableNodeIds = tableNodes.map(node => node.id);
+          deleteNodes(tableNodeIds);
+        }
+        return nonTableNodes.length > 0;
+      }
+      return true
+    };
 
     return (
       <div className="w-full h-full" ref={reactFlowWrapper}>
@@ -593,6 +374,7 @@ const DiagramEditor = forwardRef(
               edges={processedEdges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onBeforeDelete={onBeforeDelete} //prevent table permanent delete
               onConnect={onConnect}
               onSelectionChange={onSelectionChange}
               nodeTypes={nodeTypes}
@@ -601,24 +383,16 @@ const DiagramEditor = forwardRef(
               onEdgeMouseEnter={onEdgeMouseEnter}
               onEdgeMouseLeave={onEdgeMouseLeave}
               onPaneContextMenu={onPaneContextMenu}
-              onNodeContextMenu={onNodeContextMenu}
-              onEdgeContextMenu={onEdgeContextMenu}
-              nodesDraggable={!isLocked}
+              onPaneMouseMove={onPaneMouseMove}
+              onViewportChange={handleViewportChange}
               nodesConnectable={!isLocked}
-              elementsSelectable={true}
-              panOnDrag={true}
-              zoomOnScroll={true}
-              zoomOnDoubleClick={true}
+              elementsSelectable={!isLocked}
               deleteKeyCode={isLocked ? null : ["Backspace", "Delete"]}
               fitView
               colorMode={theme as ColorMode}
             >
               <Controls showInteractive={false}>
-                <ControlButton
-                  onClick={handleLockChange}
-                  title={isLocked ? "Unlock" : "Lock"}
-                  className="flex items-center justify-center"
-                >
+                <ControlButton onClick={handleLockChange} title={isLocked ? "Unlock" : "Lock"}>
                   {isLocked ? <IoLockClosedOutline size={18} /> : <IoLockOpenOutline size={18} />}
                 </ControlButton>
               </Controls>
@@ -626,36 +400,53 @@ const DiagramEditor = forwardRef(
             </ReactFlow>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            <ContextMenuItem onSelect={() => {
-              if (clickPositionRef.current) {
-                onCreateTableAtPosition(clickPositionRef.current);
-              }
-            }}
+            <ContextMenuItem
+              onSelect={() => {
+                if (clickPositionRef.current && rfInstanceRef.current) {
+                  const flowPosition = rfInstanceRef.current.screenToFlowPosition(clickPositionRef.current);
+                  onCreateTableAtPosition(flowPosition);
+                }
+              }}
               disabled={isLocked}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Table
+              <Plus className="h-4 w-4 mr-2" /> Add New Table
             </ContextMenuItem>
-            <ContextMenuItem onSelect={() => {
-              if (clickPositionRef.current) {
-                onCreateNoteAtPosition(clickPositionRef.current);
-              }
-            }}
+            <ContextMenuItem
+              onSelect={() => {
+                if (clickPositionRef.current && rfInstanceRef.current) {
+                  const flowPosition = rfInstanceRef.current.screenToFlowPosition(clickPositionRef.current);
+                  onCreateNoteAtPosition(flowPosition);
+                }
+              }}
               disabled={isLocked}
             >
-              <StickyNote className="h-4 w-4 mr-2" />
-              Add Note
+              <StickyNote className="h-4 w-4 mr-2" /> Add Note
             </ContextMenuItem>
-            <ContextMenuItem onSelect={() => {
-              if (clickPositionRef.current) {
-                onCreateZoneAtPosition(clickPositionRef.current);
-              }
-            }}
+            <ContextMenuItem
+              onSelect={() => {
+                if (clickPositionRef.current && rfInstanceRef.current) {
+                  const flowPosition = rfInstanceRef.current.screenToFlowPosition(clickPositionRef.current);
+                  onCreateZoneAtPosition(flowPosition);
+                }
+              }}
               disabled={isLocked}
             >
-              <SquareDashed className="h-4 w-4 mr-2" />
-              Add Zone
+              <SquareDashed className="h-4 w-4 mr-2" /> Add Zone
             </ContextMenuItem>
+            {(clipboard?.length || 0) > 0 &&
+              <ContextMenuItem
+                onSelect={() => {
+                  if (clickPositionRef.current && rfInstanceRef.current) {
+                    const flowPosition = rfInstanceRef.current.screenToFlowPosition(clickPositionRef.current);
+                    pasteNodes(flowPosition);
+                  }
+                }}
+                disabled={isLocked || !clipboard || clipboard.length === 0}
+              >
+                <Clipboard className="h-4 w-4 mr-2" /> Paste {clipboard?.length || 0} Items
+              </ContextMenuItem>
+            }
+
           </ContextMenuContent>
         </ContextMenu>
       </div>

@@ -1,6 +1,6 @@
-import { Diagram } from "./db";
 import { exporter } from "@dbml/core";
-import { AppNode, Column, Index } from "./types";
+import { type AppNode, type Column, type Diagram, type Index } from "./types";
+import { DbRelationship } from "./constants";
 
 const diagramToDbml = (diagram: Diagram): string => {
   const { nodes, edges } = diagram.data;
@@ -170,16 +170,16 @@ const diagramToDbml = (diagram: Diagram): string => {
     if (sourceNode && targetNode && sourceColumn && targetColumn) {
       let relationship = "-";
       switch (edge.data?.relationship) {
-        case "one-to-one":
+        case DbRelationship.ONE_TO_ONE:
           relationship = "-";
           break;
-        case "one-to-many":
+        case DbRelationship.ONE_TO_MANY:
           relationship = "<";
           break;
-        case "many-to-one":
+        case DbRelationship.MANY_TO_ONE:
           relationship = ">";
           break;
-        case "many-to-many":
+        case DbRelationship.MANY_TO_MANY:
           relationship = "<>";
           break;
       }

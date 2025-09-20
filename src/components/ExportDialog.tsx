@@ -13,10 +13,10 @@ import {
 import { generateDjangoMigration } from "@/lib/codegen/django/migration-generator";
 import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-generator";
 import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
-import { Diagram } from "@/lib/db";
 import { exportToDbml, exportToJson, exportToSql } from "@/lib/dbml";
 import { exportToMermaid } from "@/lib/mermaid";
-import { cn } from "@/lib/utils";
+import { type Diagram, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
+import { cn, downloadZip } from "@/lib/utils";
 import { showError } from "@/utils/toast";
 import {
   ReactFlowInstance,
@@ -25,7 +25,6 @@ import {
 } from "@xyflow/react";
 import { saveAs } from "file-saver";
 import { toPng, toSvg } from "html-to-image";
-import JSZip from "jszip";
 import { Database, FileJson, FileText, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -35,7 +34,7 @@ interface ExportDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   diagram: Diagram | null | undefined;
-  rfInstance: ReactFlowInstance | null;
+  rfInstance: ReactFlowInstance<ProcessedNode, ProcessedEdge> | null;
 }
 
 export function ExportDialog({
@@ -52,10 +51,10 @@ export function ExportDialog({
     if (!diagram || !selectedFormat) return;
 
     const filename = `${diagram.name.replace(/\s+/g, "_")}.${selectedFormat === "sql"
-        ? "sql"
-        : selectedFormat === "mermaid"
-          ? "mmd"
-          : selectedFormat
+      ? "sql"
+      : selectedFormat === "mermaid"
+        ? "mmd"
+        : selectedFormat
       }`;
     let data: string | Blob = "";
 
@@ -73,63 +72,45 @@ export function ExportDialog({
         case "mermaid":
           data = exportToMermaid(diagram);
           break;
-        case "laravel": { // Generate Laravel migration files and create a zip
+        case "laravel": {
           const migrationFiles = generateLaravelMigration(diagram);
           if (migrationFiles.length === 0) {
             showError("No tables found to generate migrations.");
             return;
           }
 
-          const zip = new JSZip();
-          migrationFiles.forEach((file) => {
-            zip.file(file.filename, file.content);
-          });
-
-          const zipBlob = await zip.generateAsync({ type: "blob" });
-          saveAs(
-            zipBlob,
+          await downloadZip(
+            migrationFiles,
             `${diagram.name.replace(/\s+/g, "_")}_laravel_migrations.zip`
           );
           onOpenChange(false);
           setSelectedFormat(null);
           return;
         }
-        case "typeorm": { // Generate TypeORM migration files and create a zip
+        case "typeorm": {
           const migrationFiles = generateTypeOrmMigration(diagram);
           if (migrationFiles.length === 0) {
             showError("No tables found to generate migrations.");
             return;
           }
 
-          const zip = new JSZip();
-          migrationFiles.forEach((file) => {
-            zip.file(file.filename, file.content);
-          });
-
-          const zipBlob = await zip.generateAsync({ type: "blob" });
-          saveAs(
-            zipBlob,
+          await downloadZip(
+            migrationFiles,
             `${diagram.name.replace(/\s+/g, "_")}_typeorm_migrations.zip`
           );
           onOpenChange(false);
           setSelectedFormat(null);
           return;
         }
-        case "django": { // Generate Django migration files and create a zip
+        case "django": {
           const migrationFiles = generateDjangoMigration(diagram);
           if (migrationFiles.length === 0) {
             showError("No tables found to generate migrations.");
             return;
           }
 
-          const zip = new JSZip();
-          migrationFiles.forEach((file) => {
-            zip.file(file.filename, file.content);
-          });
-
-          const zipBlob = await zip.generateAsync({ type: "blob" });
-          saveAs(
-            zipBlob,
+          await downloadZip(
+            migrationFiles,
             `${diagram.name.replace(/\s+/g, "_")}_django_migrations.zip`
           );
           onOpenChange(false);
@@ -279,7 +260,7 @@ export function ExportDialog({
     },
   ];
 
-  const codegenOptions = [
+  const codeGenOptions = [
     {
       id: "laravel",
       title: "Laravel",
@@ -309,7 +290,7 @@ export function ExportDialog({
             Select a format to export your diagram.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto pr-4">
+        <div className="py-4 space-y-6 max-h-[70vh] overflow-y-auto px-4">
           <div>
             <h3 className="text-lg font-semibold mb-4">Share</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -369,7 +350,7 @@ export function ExportDialog({
           <div>
             <h3 className="text-lg font-semibold mb-4">Code Generation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {codegenOptions.map((opt) => (
+              {codeGenOptions.map((opt) => (
                 <Card
                   key={opt.id}
                   onClick={() => setSelectedFormat(opt.id as ExportFormat)}

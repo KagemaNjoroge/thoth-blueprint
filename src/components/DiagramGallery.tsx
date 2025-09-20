@@ -32,12 +32,14 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table as UiTabl
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
-import { DatabaseType, db, Diagram } from "@/lib/db";
+import { colors } from "@/lib/constants";
+import { type DatabaseType, type Diagram } from "@/lib/types";
+import { useStore, type StoreState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
-import { useLiveQuery } from "dexie-react-hooks";
 import { Database, GitCommitHorizontal, Import, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { AppIntro } from "./AppIntro";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
 import { Features } from "./Features";
@@ -46,18 +48,39 @@ import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
 
 interface DiagramGalleryProps {
-  setSelectedDiagramId: (id: number) => void;
   onInstallAppRequest: () => void;
   onCheckForUpdate: () => void;
 }
 
-export default function DiagramGallery({ setSelectedDiagramId, onInstallAppRequest, onCheckForUpdate }: DiagramGalleryProps) {
+export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isLoadProjectDialogOpen, setIsLoadProjectDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
-  const diagrams = useLiveQuery(() => db.diagrams.orderBy("updatedAt").reverse().toArray());
+
+  const {
+    setSelectedDiagramId,
+    createDiagram,
+    importDiagram,
+    renameDiagram,
+    moveDiagramToTrash,
+    restoreDiagram,
+    permanentlyDeleteDiagram,
+  } = useStore(
+    useShallow((state: StoreState) => ({
+      setSelectedDiagramId: state.setSelectedDiagramId,
+      createDiagram: state.createDiagram,
+      importDiagram: state.importDiagram,
+      renameDiagram: state.renameDiagram,
+      moveDiagramToTrash: state.moveDiagramToTrash,
+      restoreDiagram: state.restoreDiagram,
+      permanentlyDeleteDiagram: state.permanentlyDeleteDiagram,
+    }))
+  );
+
+  const diagrams = useStore((state) => state.diagrams);
+
   const { setTheme } = useTheme();
   const { isInstalled } = usePWA();
 
@@ -65,43 +88,15 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
   const trashedDiagrams = diagrams?.filter(d => d.deletedAt);
 
   const handleCreateDiagram = async ({ name, dbType }: { name: string; dbType: DatabaseType }) => {
-    const newDiagram: Diagram = {
+    await createDiagram({
       name,
       dbType,
       data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
-    };
-    const id = await db.diagrams.add(newDiagram);
-    setSelectedDiagramId(id);
+    });
   };
 
   const handleImportDiagram = async (diagramData: { name: string; dbType: DatabaseType; data: Diagram['data'] }) => {
-    const newDiagram: Diagram = {
-      ...diagramData,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
-    };
-    const id = await db.diagrams.add(newDiagram);
-    setSelectedDiagramId(id);
-  };
-
-  const handleRenameDiagram = async (id: number, name: string) => {
-    await db.diagrams.update(id, { name, updatedAt: new Date() });
-  };
-
-  const handleDeleteDiagram = async (id: number) => {
-    await db.diagrams.update(id, { deletedAt: new Date(), updatedAt: new Date() });
-  };
-
-  const handleRestoreDiagram = async (id: number) => {
-    await db.diagrams.update(id, { deletedAt: null, updatedAt: new Date() });
-  };
-
-  const handlePermanentlyDeleteDiagram = async (id: number) => {
-    await db.diagrams.delete(id);
+    await importDiagram(diagramData);
   };
 
   const openRenameDialog = (diagram: Diagram) => {
@@ -181,7 +176,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
                       className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full overflow-hidden"
                       onClick={() => setSelectedDiagramId(diagram.id!)}
                     >
-                      <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || '#a1a1aa' }} className="h-2 w-full" />
+                      <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || colors.DEFAULT_DIAGRAM_COLOR }} className="h-2 w-full" />
                       <CardHeader>
                         <CardTitle className="truncate">{diagram.name}</CardTitle>
                         <CardDescription className="flex items-center gap-2 pt-1">
@@ -201,7 +196,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
                       </CardContent>
                       <CardFooter>
                         <p className="text-xs text-muted-foreground">
-                          Updated {formatDistanceToNow(diagram.updatedAt, { addSuffix: true })}
+                          Updated {formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}
                         </p>
                       </CardFooter>
                     </Card>
@@ -224,7 +219,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteDiagram(diagram.id!)}>Move to Trash</AlertDialogAction>
+                            <AlertDialogAction onClick={() => moveDiagramToTrash(diagram.id!)}>Move to Trash</AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -236,7 +231,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
               <div className="text-center py-24 border-2 border-dashed rounded-lg">
                 <h2 className="text-xl font-semibold">No diagrams yet</h2>
                 <p className="text-muted-foreground mt-2 mb-4">
-                  Click "Create New Diagram" to get started.
+                  Click "Create New" to get started.
                 </p>
               </div>
             )}
@@ -256,9 +251,9 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
                     {trashedDiagrams.map((diagram) => (
                       <TableRow key={diagram.id}>
                         <TableCell className="font-medium">{diagram.name}</TableCell>
-                        <TableCell>{formatDistanceToNow(diagram.deletedAt!, { addSuffix: true })}</TableCell>
+                        <TableCell>{formatDistanceToNow(new Date(diagram.deletedAt!), { addSuffix: true })}</TableCell>
                         <TableCell className="text-right space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleRestoreDiagram(diagram.id!)}>
+                          <Button variant="ghost" size="sm" onClick={() => restoreDiagram(diagram.id!)}>
                             <RotateCcw className="h-4 w-4 mr-2" /> Restore
                           </Button>
                           <AlertDialog>
@@ -276,7 +271,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handlePermanentlyDeleteDiagram(diagram.id!)}>Delete</AlertDialogAction>
+                                <AlertDialogAction onClick={() => permanentlyDeleteDiagram(diagram.id!)}>Delete</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -309,7 +304,7 @@ export default function DiagramGallery({ setSelectedDiagramId, onInstallAppReque
       <RenameDiagramDialog
         isOpen={isRenameDialogOpen}
         onOpenChange={setIsRenameDialogOpen}
-        onRenameDiagram={handleRenameDiagram}
+        onRenameDiagram={renameDiagram}
         diagram={diagramToEdit}
       />
       <LoadProjectDialog

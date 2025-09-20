@@ -20,7 +20,6 @@ export function ColorPicker({
   onColorChange,
   disabled,
 }: ColorPickerProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [currentColor, setCurrentColor] = useState(color);
   const { resolvedTheme } = useTheme();
 
@@ -60,7 +59,7 @@ export function ColorPicker({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover>
       <PopoverTrigger asChild disabled={disabled}>
         <Button variant="outline" className="w-full justify-start text-left">
           <div className="flex items-center gap-2">

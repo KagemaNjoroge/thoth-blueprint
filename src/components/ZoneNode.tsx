@@ -1,5 +1,5 @@
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { type AppZoneNode } from "@/lib/types";
+import { type AppZoneNode, type ZoneNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { type NodeProps, NodeResizer, useReactFlow } from "@xyflow/react";
 import { Lock, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
@@ -7,14 +7,29 @@ import { useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Input } from "./ui/input";
 
-export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>) {
+interface ZoneNodeProps extends NodeProps<AppZoneNode> {
+  onUpdate?: (id: string, data: Partial<ZoneNodeData>) => void;
+  onDelete?: (ids: string[]) => void;
+  onCreateTableAtPosition?: (position: { x: number; y: number }) => void;
+  onCreateNoteAtPosition?: (position: { x: number; y: number }) => void;
+}
+
+export default function ZoneNode({
+  id,
+  data,
+  selected,
+  onUpdate,
+  onDelete,
+  onCreateTableAtPosition,
+  onCreateNoteAtPosition
+}: ZoneNodeProps) {
   const [name, setName] = useState(data.name);
   const { screenToFlowPosition } = useReactFlow();
   const contextMenuPositionRef = useRef<{ x: number; y: number } | null>(null);
 
   const debouncedUpdate = useDebouncedCallback((newName: string) => {
-    if (data.onUpdate) {
-      data.onUpdate(id, { name: newName });
+    if (onUpdate) {
+      onUpdate(id, { name: newName });
     }
   }, 300);
 
@@ -32,8 +47,8 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
   };
 
   const handleToggleLock = () => {
-    if (data.onUpdate) {
-      data.onUpdate(id, { isLocked: !data.isLocked });
+    if (onUpdate) {
+      onUpdate(id, { isLocked: !data.isLocked });
     }
   };
 
@@ -87,8 +102,8 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
         </ContextMenuItem>
         <ContextMenuItem
           onSelect={() => {
-            if (data.onCreateTableAtPosition && contextMenuPositionRef.current) {
-              data.onCreateTableAtPosition(contextMenuPositionRef.current);
+            if (onCreateTableAtPosition && contextMenuPositionRef.current) {
+              onCreateTableAtPosition(contextMenuPositionRef.current);
             }
           }}
           disabled={isLocked || false}
@@ -98,8 +113,8 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
         </ContextMenuItem>
         <ContextMenuItem
           onSelect={() => {
-            if (data.onCreateNoteAtPosition && contextMenuPositionRef.current) {
-              data.onCreateNoteAtPosition(contextMenuPositionRef.current);
+            if (onCreateNoteAtPosition && contextMenuPositionRef.current) {
+              onCreateNoteAtPosition(contextMenuPositionRef.current);
             }
           }}
           disabled={isLocked || false}
@@ -109,8 +124,8 @@ export default function ZoneNode({ id, data, selected }: NodeProps<AppZoneNode>)
         </ContextMenuItem>
         <ContextMenuItem
           onSelect={() => {
-            if (data.onDelete) {
-              data.onDelete([id]);
+            if (onDelete) {
+              onDelete([id]);
             }
           }}
           className="text-destructive focus:text-destructive"
