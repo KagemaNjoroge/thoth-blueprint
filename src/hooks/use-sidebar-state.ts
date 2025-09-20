@@ -30,7 +30,12 @@ export function useSidebarState() {
     if (sidebarState === "hidden") {
       setSidebarState("docked");
     } else {
-      sidebarPanelRef.current?.expand();
+      // Toggle sidebar open/closed state
+      if (sidebarPanelRef.current?.isCollapsed()) {
+        sidebarPanelRef.current?.expand();
+      } else {
+        sidebarPanelRef.current?.collapse();
+      }
     }
   };
 

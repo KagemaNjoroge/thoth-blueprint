@@ -1,6 +1,7 @@
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarState } from "@/hooks/use-sidebar-state";
 import { tableColors } from "@/lib/colors";
-import { colors } from "@/lib/constants";
+import { colors, KeyboardShortcuts } from "@/lib/constants";
 import { ProcessedEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedNode } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { type ReactFlowInstance } from "@xyflow/react";
@@ -26,6 +27,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const allDiagrams = useStore((state) => state.diagrams);
   const isLoading = useStore((state) => state.isLoading);
+  const isMobile = useIsMobile();
 
   const diagram = useMemo(() =>
     allDiagrams.find((d) => d.id === selectedDiagramId),
@@ -67,19 +69,25 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           return;
         }
         // handle Ctrl+A to open table add dialog
-        if ((event.ctrlKey || event.metaKey) && event.key === "a") {
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.ADD_NEW_TABLE) {
           event.preventDefault();
           if (!isAddTableDialogOpen) {
             setIsAddTableDialogOpen(true);
           }
         }
         // Handle Ctrl+B to toggle sidebar
-        if ((event.ctrlKey || event.metaKey) && event.key === "b") {
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.SIDEBAR_TOGGLE) {
           event.preventDefault();
-          handleOpenSidebar();
+          if (isMobile) {
+            // For mobile (sheet), toggle isSidebarOpen
+            setIsSidebarOpen(!isSidebarOpen);
+          } else {
+            // For desktop (resizable panel), toggle via handleOpenSidebar
+            handleOpenSidebar();
+          }
         }
         //handle Ctrl+Z to undo table delete
-        if ((event.ctrlKey || event.metaKey) && event.key === "z") {
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.UNDO_TABLE_DELETE) {
           event.preventDefault();
           undoDelete();
         }
@@ -87,7 +95,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDiagramId, isAddTableDialogOpen, handleOpenSidebar, undoDelete]);
+  }, [selectedDiagramId, isAddTableDialogOpen, handleOpenSidebar, undoDelete, isMobile, setIsSidebarOpen, isSidebarOpen, sidebarPanelRef]);
 
   const handleCreateTable = (tableName: string) => {
     if (!diagram) return;

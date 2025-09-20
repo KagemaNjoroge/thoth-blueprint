@@ -4,7 +4,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
 import { type ReactNode, type RefObject } from "react";
@@ -38,6 +38,9 @@ export function DiagramLayout({
       <div className="lg:hidden">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetContent side="left" className="p-0 w-[350px] sm:w-[400px] flex">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Sidebar</SheetTitle>
+            </SheetHeader>
             {sidebarContent}
           </SheetContent>
         </Sheet>

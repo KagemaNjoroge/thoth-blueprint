@@ -1,10 +1,11 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Table,
   TableBody,
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Kbd } from "@/components/ui/kbd";
+import { KeyboardShortcuts } from "@/lib/constants";
 
 interface ShortcutsDialogProps {
   isOpen: boolean;
@@ -21,9 +22,9 @@ interface ShortcutsDialogProps {
 }
 
 const shortcuts = [
-  { command: "Add Table", keys: ["⌘", "A"] },
-  { command: "Toggle Sidebar", keys: ["⌘", "B"] },
-  { command: "Undo Delete Table", keys: ["⌘", "Z"] },
+  { command: "Add Table", keys: ["⌘", KeyboardShortcuts.ADD_NEW_TABLE.toUpperCase()] },
+  { command: "Toggle Sidebar", keys: ["⌘", KeyboardShortcuts.SIDEBAR_TOGGLE.toUpperCase()] },
+  { command: "Undo Delete Table", keys: ["⌘", KeyboardShortcuts.UNDO_TABLE_DELETE.toUpperCase()] },
 ];
 
 export function ShortcutsDialog({ isOpen, onOpenChange }: ShortcutsDialogProps) {

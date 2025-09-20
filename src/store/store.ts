@@ -515,8 +515,6 @@ export const useStore = create(
           return latestTime > currentTime ? latest : current;
         });
 
-        console.log("restoring node:", lastDeletedNode);
-
         const newNodes = (diagram.data.nodes || []).map((n) => {
           if (n.id === lastDeletedNode.id) {
             return {

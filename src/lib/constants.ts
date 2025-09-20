@@ -20,3 +20,9 @@ export enum DbRelationship {
   MANY_TO_ONE = "many-to-one",
   MANY_TO_MANY = "many-to-many",
 }
+
+export const KeyboardShortcuts = {
+  SIDEBAR_TOGGLE: "b",
+  UNDO_TABLE_DELETE: "z",
+  ADD_NEW_TABLE: "a",
+};
