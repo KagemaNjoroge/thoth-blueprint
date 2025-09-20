@@ -2,7 +2,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarState } from "@/hooks/use-sidebar-state";
 import { tableColors } from "@/lib/colors";
 import { colors, KeyboardShortcuts } from "@/lib/constants";
-import { ProcessedEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedNode } from "@/lib/types";
+import { type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { showSuccess } from "@/utils/toast";
 import { type ReactFlowInstance } from "@xyflow/react";

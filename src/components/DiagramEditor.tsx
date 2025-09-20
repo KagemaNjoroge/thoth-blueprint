@@ -109,7 +109,6 @@ const DiagramEditor = forwardRef(
       setSelectedEdgeId,
       setLastCursorPosition,
       pasteNodes,
-      copyNodes,
       clipboard,
       settings,
     } = useStore(
@@ -129,7 +128,6 @@ const DiagramEditor = forwardRef(
         setSelectedEdgeId: state.setSelectedEdgeId,
         setLastCursorPosition: state.setLastCursorPosition,
         pasteNodes: state.pasteNodes,
-        copyNodes: state.copyNodes,
         clipboard: state.clipboard,
         settings: state.settings,
       }))

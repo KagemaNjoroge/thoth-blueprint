@@ -1,6 +1,8 @@
+import { colors } from "@/lib/constants";
 import { dataTypes } from "@/lib/db-types";
-import { type DatabaseType, type AppNode, type Column, type Index } from "@/lib/types";
+import { type AppNode, type Column, type DatabaseType, type Index } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useStore, type StoreState } from "@/store/store";
 import {
   closestCenter,
   DndContext,
@@ -29,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { ColorPicker } from "./ColorPicker";
 import {
   Accordion,
@@ -57,9 +60,6 @@ import { Label } from "./ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Separator } from "./ui/separator";
 import { Textarea } from "./ui/textarea";
-import { colors } from "@/lib/constants";
-import { useStore, type StoreState } from "@/store/store";
-import { useShallow } from "zustand/react/shallow";
 
 interface TableAccordionContentProps {
   node: AppNode;
