@@ -1,4 +1,4 @@
-import { colors, DbRelationship } from "@/lib/constants";
+import { colors, DbRelationship, DbRelationShipLabel } from "@/lib/constants";
 import { type EdgeData } from "@/lib/types";
 import {
   BaseEdge,
@@ -105,24 +105,24 @@ export default function CustomEdge(props: EdgeProps) {
   let targetLabel = "";
   switch (relationship) {
     case DbRelationship.ONE_TO_ONE:
-      sourceLabel = "1";
-      targetLabel = "1";
+      sourceLabel = DbRelationShipLabel.ONE;
+      targetLabel = DbRelationShipLabel.ONE;
       break;
     case DbRelationship.ONE_TO_MANY:
-      sourceLabel = "1";
-      targetLabel = "n";
+      sourceLabel = DbRelationShipLabel.ONE;
+      targetLabel = DbRelationShipLabel.MANY;
       break;
     case DbRelationship.MANY_TO_ONE:
-      sourceLabel = "n";
-      targetLabel = "1";
+      sourceLabel = DbRelationShipLabel.MANY;
+      targetLabel = DbRelationShipLabel.ONE;
       break;
     case DbRelationship.MANY_TO_MANY:
-      sourceLabel = "n";
-      targetLabel = "n";
+      sourceLabel = DbRelationShipLabel.MANY;
+      targetLabel = DbRelationShipLabel.MANY;
       break;
     default:
-      sourceLabel = "1";
-      targetLabel = "n";
+      sourceLabel = DbRelationShipLabel.ONE;
+      targetLabel = DbRelationShipLabel.MANY;
       break;
   }
 

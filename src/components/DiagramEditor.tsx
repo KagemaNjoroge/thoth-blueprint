@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -107,6 +107,10 @@ const DiagramEditor = forwardRef(
       setSelectedNodeId,
       selectedEdgeId,
       setSelectedEdgeId,
+      setLastCursorPosition,
+      pasteNodes,
+      copyNodes,
+      clipboard,
       settings,
     } = useStore(
       useShallow((state: StoreState) => ({
@@ -123,6 +127,10 @@ const DiagramEditor = forwardRef(
         setSelectedNodeId: state.setSelectedNodeId,
         selectedEdgeId: state.selectedEdgeId,
         setSelectedEdgeId: state.setSelectedEdgeId,
+        setLastCursorPosition: state.setLastCursorPosition,
+        pasteNodes: state.pasteNodes,
+        copyNodes: state.copyNodes,
+        clipboard: state.clipboard,
         settings: state.settings,
       }))
     );
@@ -258,9 +266,13 @@ const DiagramEditor = forwardRef(
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
       if (!pane) return;
-      // Store the click position for later use
       clickPositionRef.current = { x: event.clientX, y: event.clientY };
-    }, []);
+      setLastCursorPosition({ x: event.clientX, y: event.clientY });
+    }, [setLastCursorPosition]);
+
+    const onPaneMouseMove = useCallback((event: React.MouseEvent | MouseEvent) => {
+      setLastCursorPosition({ x: event.clientX, y: event.clientY });
+    }, [setLastCursorPosition]);
 
     useImperativeHandle(ref, () => ({
       undoDelete,
@@ -319,7 +331,7 @@ const DiagramEditor = forwardRef(
         ...node,
         data: {
           ...node.data,
-          onDelete: handleTableDelete
+          onDelete: handleTableDelete,
         },
         draggable: !isLocked && !isNodeInLockedZone(node, zonesWithCallbacks)
       }));
@@ -373,6 +385,7 @@ const DiagramEditor = forwardRef(
               onEdgeMouseEnter={onEdgeMouseEnter}
               onEdgeMouseLeave={onEdgeMouseLeave}
               onPaneContextMenu={onPaneContextMenu}
+              onPaneMouseMove={onPaneMouseMove}
               onViewportChange={handleViewportChange}
               nodesConnectable={!isLocked}
               elementsSelectable={!isLocked}
@@ -422,6 +435,20 @@ const DiagramEditor = forwardRef(
             >
               <SquareDashed className="h-4 w-4 mr-2" /> Add Zone
             </ContextMenuItem>
+            {(clipboard?.length || 0) > 0 &&
+              <ContextMenuItem
+                onSelect={() => {
+                  if (clickPositionRef.current && rfInstanceRef.current) {
+                    const flowPosition = rfInstanceRef.current.screenToFlowPosition(clickPositionRef.current);
+                    pasteNodes(flowPosition);
+                  }
+                }}
+                disabled={isLocked || !clipboard || clipboard.length === 0}
+              >
+                <Clipboard className="h-4 w-4 mr-2" /> Paste {clipboard?.length || 0} Items
+              </ContextMenuItem>
+            }
+
           </ContextMenuContent>
         </ContextMenu>
       </div>

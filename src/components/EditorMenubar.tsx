@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/menubar";
 import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
+import { CtrlKey, KeyboardShortcuts } from "@/lib/constants";
 import { useStore, type StoreState } from "@/store/store";
 import { useTheme } from "next-themes";
 import { useMemo } from "react";
@@ -132,11 +133,11 @@ export default function EditorMenubar({
         <MenubarTrigger>Edit</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={undoDelete} disabled={isLocked}>
-            Undo Delete Table <MenubarShortcut>⌘Z</MenubarShortcut>
+            Undo Delete Table <MenubarShortcut>{CtrlKey} + {KeyboardShortcuts.UNDO_TABLE_DELETE.toUpperCase()}</MenubarShortcut>
           </MenubarItem>
           <MenubarSeparator />
           <MenubarItem onClick={onAddTable} disabled={isLocked}>
-            Add Table <MenubarShortcut>⌘A</MenubarShortcut>
+            Add Table <MenubarShortcut>{CtrlKey} + {KeyboardShortcuts.ADD_NEW_TABLE.toUpperCase()}</MenubarShortcut>
           </MenubarItem>
           <MenubarItem onClick={onAddNote} disabled={isLocked}>
             Add Note

@@ -4,6 +4,7 @@ import { tableColors } from "@/lib/colors";
 import { colors, KeyboardShortcuts } from "@/lib/constants";
 import { ProcessedEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedNode } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
+import { showSuccess } from "@/utils/toast";
 import { type ReactFlowInstance } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -34,10 +35,13 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     [allDiagrams, selectedDiagramId]
   );
 
-  const { addNode, undoDelete } = useStore(
+  const { addNode, undoDelete, copyNodes, pasteNodes, lastCursorPosition } = useStore(
     useShallow((state: StoreState) => ({
       addNode: state.addNode,
       undoDelete: state.undoDelete,
+      copyNodes: state.copyNodes,
+      pasteNodes: state.pasteNodes,
+      lastCursorPosition: state.lastCursorPosition,
     }))
   );
 
@@ -91,11 +95,57 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           event.preventDefault();
           undoDelete();
         }
+        // Handle Ctrl+C to copy selected nodes
+        if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+          event.preventDefault();
+          if (!rfInstance) return;
+          const selectedNodes = rfInstance.getNodes().filter(
+            (n) => n.selected && (n.type === 'table' || n.type === 'note')
+          ) as (AppNode | AppNoteNode)[];
+
+          if (selectedNodes.length > 0) {
+            copyNodes(selectedNodes);
+            showSuccess(`${selectedNodes.length} item(s) copied to clipboard.`);
+          }
+        }
+        // Handle Ctrl+V to paste nodes
+        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+          event.preventDefault();
+          if (!rfInstance) return;
+
+          // Use stored cursor position if available, otherwise use center of viewport
+          let position;
+          if (lastCursorPosition) {
+            position = rfInstance.screenToFlowPosition(lastCursorPosition);
+          } else {
+            // Fallback to center of viewport
+            const { x, y, zoom } = rfInstance.getViewport();
+            position = {
+              x: (window.innerWidth / 2 - x) / zoom,
+              y: (window.innerHeight / 2 - y) / zoom
+            };
+          }
+
+          pasteNodes(position);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDiagramId, isAddTableDialogOpen, handleOpenSidebar, undoDelete, isMobile, setIsSidebarOpen, isSidebarOpen, sidebarPanelRef]);
+  }, [
+    selectedDiagramId,
+    isAddTableDialogOpen,
+    handleOpenSidebar,
+    undoDelete,
+    isMobile,
+    setIsSidebarOpen,
+    isSidebarOpen,
+    sidebarPanelRef,
+    rfInstance,
+    copyNodes,
+    pasteNodes,
+    lastCursorPosition
+  ]);
 
   const handleCreateTable = (tableName: string) => {
     if (!diagram) return;

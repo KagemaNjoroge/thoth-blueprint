@@ -29,10 +29,13 @@ export interface StoreState {
   selectedEdgeId: string | null;
   settings: Settings;
   isLoading: boolean;
+  clipboard: (AppNode | AppNoteNode | AppZoneNode)[] | null;
+  lastCursorPosition: { x: number; y: number } | null;
   loadInitialData: () => Promise<void>;
   setSelectedDiagramId: (id: number | null) => void;
   setSelectedNodeId: (id: string | null) => void;
   setSelectedEdgeId: (id: string | null) => void;
+  setLastCursorPosition: (position: { x: number; y: number } | null) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   createDiagram: (
     diagram: Omit<Diagram, "id" | "createdAt" | "updatedAt">
@@ -57,6 +60,8 @@ export interface StoreState {
   addNode: (node: AppNode | AppNoteNode | AppZoneNode) => void;
   undoDelete: () => void;
   batchUpdateNodes: (nodes: AppNode[]) => void;
+  copyNodes: (nodes: (AppNode | AppNoteNode| AppZoneNode)[]) => void;
+  pasteNodes: (position: { x: number; y: number }) => void;
 }
 
 export const TABLE_SOFT_DELETE_LIMIT = 10
@@ -111,6 +116,8 @@ export const useStore = create(
     selectedEdgeId: null,
     settings: DEFAULT_SETTINGS,
     isLoading: true,
+    clipboard: null,
+    lastCursorPosition: null,
     loadInitialData: async () => {
       set({ isLoading: true });
       const diagrams = await db.diagrams.toArray();
@@ -149,6 +156,7 @@ export const useStore = create(
       }),
     setSelectedNodeId: (id) => set({ selectedNodeId: id }),
     setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+    setLastCursorPosition: (position) => set({ lastCursorPosition: position }),
     updateSettings: (newSettings) => {
       set((state) => {
         const updatedSettings = { ...state.settings, ...newSettings };
@@ -566,6 +574,82 @@ export const useStore = create(
                 }
               : d
           ),
+        };
+      });
+    },
+    copyNodes: (nodes) => {
+      set({ clipboard: nodes });
+    },
+    pasteNodes: (position) => {
+      set((state) => {
+        const { clipboard, diagrams, selectedDiagramId } = state;
+        if (!clipboard || clipboard.length === 0 || !selectedDiagramId) {
+          return state;
+        }
+
+        const diagram = diagrams.find((d) => d.id === selectedDiagramId);
+        if (!diagram) return state;
+
+        const existingLabels = new Set(diagram.data.nodes.map(n => n.data.label));
+
+        const newNodes: AppNode[] = [];
+        const newNotes: AppNoteNode[] = [];
+
+        clipboard.forEach((node, index) => {
+          const newNodeId = `${node.type}-${+new Date()}-${index}`;
+          const newPosition = {
+            x: position.x + index * 20,
+            y: position.y + index * 20,
+          };
+
+          if (node.type === 'table') {
+            let newLabel = `${node.data.label}_copy`;
+            let i = 1;
+            while (existingLabels.has(newLabel)) {
+              newLabel = `${node.data.label}_copy_${i++}`;
+            }
+            existingLabels.add(newLabel);
+
+            const newTableNode: AppNode = {
+              ...node,
+              id: newNodeId,
+              position: newPosition,
+              data: {
+                ...node.data,
+                label: newLabel,
+              },
+              selected: false,
+            };
+            newNodes.push(newTableNode);
+          } else if (node.type === 'note') {
+            const newNoteNode: AppNoteNode = {
+              ...node,
+              id: newNodeId,
+              position: newPosition,
+              selected: false,
+            };
+            newNotes.push(newNoteNode);
+          }
+        });
+
+        const updatedDiagram = {
+          ...diagram,
+          data: {
+            ...diagram.data,
+            nodes: [...(diagram.data.nodes || []), ...newNodes],
+            notes: [...(diagram.data.notes || []), ...newNotes],
+          },
+          updatedAt: new Date(),
+        };
+
+        set({ clipboard: null });
+
+        return {
+          diagrams: diagrams.map((d) =>
+            d.id === selectedDiagramId ? updatedDiagram : d
+          ),
+          // Clear the cursor position after paste
+          lastCursorPosition: null,
         };
       });
     },

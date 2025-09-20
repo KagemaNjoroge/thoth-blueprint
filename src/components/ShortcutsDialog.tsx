@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { KeyboardShortcuts } from "@/lib/constants";
+import { CtrlKey, KeyboardShortcuts } from "@/lib/constants";
 
 interface ShortcutsDialogProps {
   isOpen: boolean;
@@ -22,9 +22,12 @@ interface ShortcutsDialogProps {
 }
 
 const shortcuts = [
-  { command: "Add Table", keys: ["⌘", KeyboardShortcuts.ADD_NEW_TABLE.toUpperCase()] },
-  { command: "Toggle Sidebar", keys: ["⌘", KeyboardShortcuts.SIDEBAR_TOGGLE.toUpperCase()] },
-  { command: "Undo Delete Table", keys: ["⌘", KeyboardShortcuts.UNDO_TABLE_DELETE.toUpperCase()] },
+  { command: "Add Table", keys: [CtrlKey, KeyboardShortcuts.ADD_NEW_TABLE.toUpperCase()] },
+  { command: "Toggle Sidebar", keys: [CtrlKey, KeyboardShortcuts.SIDEBAR_TOGGLE.toUpperCase()] },
+  { command: "Undo Delete Table", keys: [CtrlKey, KeyboardShortcuts.UNDO_TABLE_DELETE.toUpperCase()] },
+  { command: "Copy Selection", keys: [CtrlKey, KeyboardShortcuts.COPY_SELECTION.toUpperCase()] },
+  { command: "Paste Selection", keys: [CtrlKey, KeyboardShortcuts.PASTE_COPIED.toUpperCase()] },
+  { command: "Select Multiple Nodes", keys: [CtrlKey, KeyboardShortcuts.SELECT_MULTIPLE] },
 ];
 
 export function ShortcutsDialog({ isOpen, onOpenChange }: ShortcutsDialogProps) {

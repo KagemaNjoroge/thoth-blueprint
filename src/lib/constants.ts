@@ -21,8 +21,19 @@ export enum DbRelationship {
   MANY_TO_MANY = "many-to-many",
 }
 
+export const DbRelationShipLabel = {
+  ONE: "1",
+  MANY: "n",
+}
+
 export const KeyboardShortcuts = {
   SIDEBAR_TOGGLE: "b",
   UNDO_TABLE_DELETE: "z",
   ADD_NEW_TABLE: "a",
+  COPY_SELECTION: "c",
+  PASTE_COPIED: "v",
+  SELECT_MULTIPLE: "Click"
 };
+
+const isMac = navigator.userAgent.includes("Mac");
+export const CtrlKey = isMac ? "⌘" : "Ctrl";

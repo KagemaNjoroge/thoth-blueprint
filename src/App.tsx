@@ -1,12 +1,12 @@
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Suspense, lazy, useState } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { LoadingSpinner } from "./components/LoadingSpinner";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { PWAStatus } from "./components/PWAStatus";
-import { Suspense, lazy, useState } from "react";
-import { LoadingSpinner } from "./components/LoadingSpinner";
 import { StoreInitializer } from "./components/StoreInitializer";
 
 const queryClient = new QueryClient();
@@ -33,9 +33,7 @@ const App = () => {
             <Routes>
               <Route
                 path="/"
-                element={
-                  <Index onInstallAppRequest={() => setIsInstallPromptForced(true)} />
-                }
+                element={<Index onInstallAppRequest={() => setIsInstallPromptForced(true)} />}
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
