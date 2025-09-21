@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
 import App from "./App.tsx";
@@ -24,5 +25,6 @@ window.updateSW = updateSW;
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <App />
+    <Analytics />
   </ThemeProvider>
 );

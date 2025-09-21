@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="40" height="40" style="vertical-align: middle;">
+  <img src="/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="50" height="50" style="vertical-align: middle;">
   <h1 align="center" style="vertical-align: middle;">Thoth Blueprint</h1>
 </p>
 
