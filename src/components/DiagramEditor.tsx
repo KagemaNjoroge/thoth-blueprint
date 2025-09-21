@@ -387,7 +387,7 @@ const DiagramEditor = forwardRef(
               onViewportChange={handleViewportChange}
               nodesConnectable={!isLocked}
               elementsSelectable={!isLocked}
-              deleteKeyCode={isLocked ? null : ["Backspace", "Delete"]}
+              deleteKeyCode={isLocked ? null : ["Delete"]}
               fitView
               colorMode={theme as ColorMode}
             >
