@@ -35,6 +35,7 @@ export const KeyboardShortcuts = {
   COPY_SELECTION: "c",
   PASTE_COPIED: "v",
   SELECT_MULTIPLE: "Click",
+  DELETE_ELEMENT: "Delete",
 };
 
 const isMac = navigator.userAgent.includes("Mac");
@@ -42,4 +43,5 @@ export const CtrlKey = isMac ? "⌘" : "Ctrl";
 
 export const DEFAULT_SETTINGS: Settings = {
   rememberLastPosition: true,
+  snapToGrid: false,
 };

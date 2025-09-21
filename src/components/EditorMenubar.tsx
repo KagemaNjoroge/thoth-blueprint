@@ -145,6 +145,13 @@ export default function EditorMenubar({
           <MenubarItem onClick={onAddZone} disabled={isLocked}>
             Add Zone
           </MenubarItem>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.snapToGrid}
+            onCheckedChange={(checked) => updateSettings({ snapToGrid: checked })}
+          >
+            Snap To Editor Grid
+          </MenubarCheckboxItem>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>

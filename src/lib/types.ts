@@ -99,6 +99,7 @@ export interface EdgeData extends Record<string, unknown> {
 
 export interface Settings {
   rememberLastPosition: boolean;
+  snapToGrid: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;

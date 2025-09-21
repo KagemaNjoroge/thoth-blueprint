@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -111,6 +111,7 @@ const DiagramEditor = forwardRef(
       pasteNodes,
       clipboard,
       settings,
+      updateSettings,
     } = useStore(
       useShallow((state: StoreState) => ({
         onNodesChange: state.onNodesChange,
@@ -130,6 +131,7 @@ const DiagramEditor = forwardRef(
         pasteNodes: state.pasteNodes,
         clipboard: state.clipboard,
         settings: state.settings,
+        updateSettings: state.updateSettings,
       }))
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -188,6 +190,11 @@ const DiagramEditor = forwardRef(
     const handleLockChange = useCallback(() => {
       updateCurrentDiagramData({ isLocked: !isLocked });
     }, [isLocked, updateCurrentDiagramData]);
+
+    const handleSnapToGridChange = useCallback(() => {
+      const snapToGrid = settings.snapToGrid;
+      updateSettings({ snapToGrid: !snapToGrid });
+    }, [settings.snapToGrid, updateSettings]);
 
     const onConnect: OnConnect = useCallback((connection: Connection) => {
       const { source, target, sourceHandle, targetHandle } = connection;
@@ -387,6 +394,7 @@ const DiagramEditor = forwardRef(
               onViewportChange={handleViewportChange}
               nodesConnectable={!isLocked}
               elementsSelectable={!isLocked}
+              snapToGrid={settings.snapToGrid}
               deleteKeyCode={isLocked ? null : ["Delete"]}
               fitView
               colorMode={theme as ColorMode}
@@ -394,6 +402,9 @@ const DiagramEditor = forwardRef(
               <Controls showInteractive={false}>
                 <ControlButton onClick={handleLockChange} title={isLocked ? "Unlock" : "Lock"}>
                   {isLocked ? <IoLockClosedOutline size={18} /> : <IoLockOpenOutline size={18} />}
+                </ControlButton>
+                <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
+                  {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
                 </ControlButton>
               </Controls>
               <Background />
