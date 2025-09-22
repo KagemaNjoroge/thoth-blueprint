@@ -78,6 +78,25 @@ Thoth Blueprint is a free, powerful database design tool that allows you to visu
    pnpm preview
    ```
 
+### Docker Deployment
+
+Alternatively, you can run ThothBlueprint using Docker for easy deployment:
+
+1. **Build and run with Docker**
+
+   ```bash
+   docker build -t thothblueprint .
+   docker run -d -p 8080:80 --name thothblueprint thothblueprint
+   ```
+
+2. **Or use Docker Compose**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+ThothBlueprint will be available at `http://localhost:8080`
+
 ## Usage
 
 1. **Create a new diagram** - Click the "New Diagram" button to start a new database design
@@ -117,6 +136,7 @@ ThothBlueprint includes several keyboard shortcuts to speed up your workflow:
 - `Ctrl+C` / `Cmd+C` - Copy Selection
 - `Ctrl+V` / `Cmd+V` - Paste Selection
 - `Ctrl+Click` / `Cmd+Click` - Select Multiple Nodes
+- `Delete` - Delete Elements
 
 ## Contributing
 
