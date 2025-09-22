@@ -145,6 +145,8 @@ export default function EditorSidebar({
     if (selectedEdgeId && edges.some((n) => n.id === selectedEdgeId)) {
       setCurrentInspectorTab("relationships");
       setInspectingEdgeId(selectedEdgeId)
+    } else if (!selectedEdgeId) {
+      setInspectingEdgeId(null);
     }
   }, [selectedEdgeId, edges]);
 
