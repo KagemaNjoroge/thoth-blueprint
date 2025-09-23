@@ -50,9 +50,10 @@ import { RenameDiagramDialog } from "./RenameDiagramDialog";
 interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
   onCheckForUpdate: () => void;
+  onViewAbout: () => void;
 }
 
-export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }: DiagramGalleryProps) {
+export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, onViewAbout }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -141,6 +142,8 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }
                 {!isInstalled && (
                   <DropdownMenuItem onClick={onInstallAppRequest}>Install App</DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onViewAbout}>About</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>

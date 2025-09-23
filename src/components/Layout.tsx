@@ -244,6 +244,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           <DiagramGallery
             onInstallAppRequest={onInstallAppRequest}
             onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
+            onViewAbout={() => setIsAboutDialogOpen(true)}
           />
         </div>
       )}
