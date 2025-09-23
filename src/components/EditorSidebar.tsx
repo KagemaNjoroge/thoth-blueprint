@@ -5,6 +5,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DbRelationship } from "@/lib/constants";
 import { type AppNode } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import {
@@ -37,7 +38,6 @@ import TableAccordionContent from "./TableAccordionContent";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
-import { DbRelationship } from "@/lib/constants";
 
 interface EditorSidebarProps {
   onAddTable: () => void;
@@ -91,17 +91,14 @@ export default function EditorSidebar({
   const allDiagrams = useStore((state) => state.diagrams);
   const selectedNodeId = useStore((state) => state.selectedNodeId);
   const setSelectedNodeId = useStore((state) => state.setSelectedNodeId);
-  const selectedEdgeId = useStore((state) => state.selectedEdgeId)
+  const selectedEdgeId = useStore((state) => state.selectedEdgeId);
 
-  const diagram = useMemo(() =>
-    allDiagrams.find((d) => d.id === selectedDiagramId),
+  const diagram = useMemo(
+    () => allDiagrams.find((d) => d.id === selectedDiagramId),
     [allDiagrams, selectedDiagramId]
   );
 
-  const {
-    updateNode,
-    batchUpdateNodes,
-  } = useStore(
+  const { updateNode, batchUpdateNodes } = useStore(
     useShallow((state: StoreState) => ({
       updateNode: state.updateNode,
       batchUpdateNodes: state.batchUpdateNodes,
@@ -112,6 +109,8 @@ export default function EditorSidebar({
   const [tableName, setTableName] = useState("");
   const [currentInspectorTab, setCurrentInspectorTab] = useState("tables");
   const [inspectingEdgeId, setInspectingEdgeId] = useState<string | null>(null);
+  const [tableFilter, setTableFilter] = useState("");
+  const [relationshipFilter, setRelationshipFilter] = useState("");
 
   const sortedNodesFromStore = useMemo(
     () =>
@@ -130,10 +129,40 @@ export default function EditorSidebar({
   }, [sortedNodesFromStore]);
 
   const edges = useMemo(() => diagram?.data.edges ?? [], [diagram?.data.edges]);
-  const isLocked = useMemo(() => diagram?.data.isLocked ?? false, [diagram?.data.isLocked]);
+  const isLocked = useMemo(
+    () => diagram?.data.isLocked ?? false,
+    [diagram?.data.isLocked]
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+
+  const filteredNodes = useMemo(() => {
+    if (!tableFilter) return nodes;
+    return nodes.filter((node) =>
+      node.data.label.toLowerCase().includes(tableFilter.toLowerCase())
+    );
+  }, [nodes, tableFilter]);
+
+  const filteredEdges = useMemo(() => {
+    if (!relationshipFilter) return edges;
+    const filter = relationshipFilter.toLowerCase();
+    return edges.filter((edge) => {
+      const sourceNode = sortedNodesFromStore.find(
+        (n) => n.id === edge.source
+      );
+      const targetNode = sortedNodesFromStore.find(
+        (n) => n.id === edge.target
+      );
+      const sourceName = sourceNode?.data.label.toLowerCase() || "";
+      const targetName = targetNode?.data.label.toLowerCase() || "";
+      const relationshipLabel = `${sourceName} to ${targetName}`;
+      const relationshipType = edge.data?.relationship || "";
+      return (
+        relationshipLabel.includes(filter) || relationshipType.includes(filter)
+      );
+    });
+  }, [edges, sortedNodesFromStore, relationshipFilter]);
 
   useEffect(() => {
     if (selectedNodeId && nodes.some((n) => n.id === selectedNodeId)) {
@@ -141,10 +170,10 @@ export default function EditorSidebar({
     }
   }, [selectedNodeId, nodes]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (selectedEdgeId && edges.some((n) => n.id === selectedEdgeId)) {
       setCurrentInspectorTab("relationships");
-      setInspectingEdgeId(selectedEdgeId)
+      setInspectingEdgeId(selectedEdgeId);
     } else if (!selectedEdgeId) {
       setInspectingEdgeId(null);
     }
@@ -193,7 +222,10 @@ export default function EditorSidebar({
   if (!diagram) return null;
 
   return (
-    <div className="h-full w-full flex flex-col bg-card" onContextMenu={(e) => e.preventDefault()}>
+    <div
+      className="h-full w-full flex flex-col bg-card"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="flex items-center border-b pl-2 flex-shrink-0">
         <img
           src="/ThothBlueprint-icon.svg"
@@ -250,133 +282,176 @@ export default function EditorSidebar({
           </div>
         </div>
         <div className="flex-grow min-h-0">
-          <TabsContent value="tables" className="m-0 h-full">
-            <ScrollArea className="h-full px-4">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={nodes.map((n) => n.id)}
-                  strategy={verticalListSortingStrategy}
+          <TabsContent value="tables" className="m-0 h-full flex flex-col">
+            <div className="px-4 pb-2 flex-shrink-0">
+              <Input
+                placeholder="Filter tables..."
+                value={tableFilter}
+                onChange={(e) => setTableFilter(e.target.value)}
+              />
+            </div>
+            <div className="flex-grow min-h-0">
+              <ScrollArea className="h-full px-4">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
                 >
-                  <Accordion
-                    type="single"
-                    collapsible
-                    value={selectedNodeId ?? ""}
-                    onValueChange={(value) => setSelectedNodeId(value || null)}
-                    className="w-full"
+                  <SortableContext
+                    items={filteredNodes.map((n) => n.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    {nodes.map((node) => (
-                      <SortableAccordionItem key={node.id} node={node}>
-                        {(attributes, listeners) => (
-                          <AccordionItem
-                            value={node.id}
-                            className="border rounded-md mb-1 data-[state=open]:bg-accent/50"
-                          >
-                            <AccordionTrigger className="px-2 group hover:no-underline">
-                              <div className="flex items-center gap-2 w-full">
-                                <div
-                                  {...attributes}
-                                  {...(isLocked ? {} : listeners)}
-                                  className={
-                                    isLocked
-                                      ? "cursor-not-allowed p-1 -ml-1"
-                                      : "cursor-grab p-1 -ml-1"
-                                  }
-                                >
-                                  <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: node.data.color }}
-                                />
-                                {editingTableName === node.id ? (
-                                  <Input
-                                    value={tableName}
-                                    onChange={handleNameChange}
-                                    onBlur={() => handleNameSave(node)}
-                                    onKeyDown={(e) =>
-                                      e.key === "Enter" && handleNameSave(node)
-                                    }
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="h-8"
-                                    autoFocus
-                                  />
-                                ) : (
-                                  <span
-                                    className="truncate"
-                                    onDoubleClick={
+                    <Accordion
+                      type="single"
+                      collapsible
+                      value={selectedNodeId ?? ""}
+                      onValueChange={(value) =>
+                        setSelectedNodeId(value || null)
+                      }
+                      className="w-full"
+                    >
+                      {filteredNodes.map((node) => (
+                        <SortableAccordionItem key={node.id} node={node}>
+                          {(attributes, listeners) => (
+                            <AccordionItem
+                              value={node.id}
+                              className="border rounded-md mb-1 data-[state=open]:bg-accent/50"
+                            >
+                              <AccordionTrigger className="px-2 group hover:no-underline">
+                                <div className="flex items-center gap-2 w-full">
+                                  <div
+                                    {...attributes}
+                                    {...(isLocked ? {} : listeners)}
+                                    className={
                                       isLocked
-                                        ? undefined
-                                        : () => handleStartEdit(node)
+                                        ? "cursor-not-allowed p-1 -ml-1"
+                                        : "cursor-grab p-1 -ml-1"
                                     }
                                   >
-                                    {node.data.label}
-                                  </span>
-                                )}
-                                <div className="flex-grow" />
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <TableAccordionContent
-                                node={node}
-                                onStartEdit={() => handleStartEdit(node)}
-                              />
-                            </AccordionContent>
-                          </AccordionItem>
-                        )}
-                      </SortableAccordionItem>
-                    ))}
-                  </Accordion>
-                </SortableContext>
-              </DndContext>
-            </ScrollArea>
+                                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                  <div
+                                    className="w-2 h-2 rounded-full"
+                                    style={{
+                                      backgroundColor: node.data.color,
+                                    }}
+                                  />
+                                  {editingTableName === node.id ? (
+                                    <Input
+                                      value={tableName}
+                                      onChange={handleNameChange}
+                                      onBlur={() => handleNameSave(node)}
+                                      onKeyDown={(e) =>
+                                        e.key === "Enter" &&
+                                        handleNameSave(node)
+                                      }
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="h-8"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <span
+                                      className="truncate"
+                                      onDoubleClick={
+                                        isLocked
+                                          ? undefined
+                                          : () => handleStartEdit(node)
+                                      }
+                                    >
+                                      {node.data.label}
+                                    </span>
+                                  )}
+                                  <div className="flex-grow" />
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <TableAccordionContent
+                                  node={node}
+                                  onStartEdit={() => handleStartEdit(node)}
+                                />
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+                        </SortableAccordionItem>
+                      ))}
+                    </Accordion>
+                  </SortableContext>
+                </DndContext>
+              </ScrollArea>
+            </div>
           </TabsContent>
-          <TabsContent value="relationships" className="m-0 h-full">
-            <ScrollArea className="h-full p-4">
-              {inspectingEdge ? (
-                <div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setInspectingEdgeId(null)}
-                    className="mb-2"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
-                  </Button>
-                  <EdgeInspectorPanel
-                    edge={inspectingEdge}
-                    nodes={nodes}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {edges.map((edge) => {
-                    const sourceNode = nodes.find((n) => n.id === edge.source);
-                    const targetNode = nodes.find((n) => n.id === edge.target);
-                    return (
-                      <Button
-                        key={edge.id}
-                        variant="ghost"
-                        className="w-full justify-start h-auto py-2"
-                        onClick={() => setInspectingEdgeId(edge.id)}
-                      >
-                        <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <div className="text-left text-sm">
-                          <p className="font-semibold">
-                            {sourceNode?.data.label} to {targetNode?.data.label}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {edge.data?.relationship ?? DbRelationship.ONE_TO_MANY}
-                          </p>
-                        </div>
-                      </Button>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
+          <TabsContent
+            value="relationships"
+            className="m-0 h-full flex flex-col"
+          >
+            <div className="flex-grow min-h-0">
+              <ScrollArea className="h-full">
+                {inspectingEdge ? (
+                  <div className="p-4">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setInspectingEdgeId(null)}
+                      className="mb-2"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
+                    </Button>
+                    <EdgeInspectorPanel
+                      edge={inspectingEdge}
+                      nodes={sortedNodesFromStore}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-4 pb-2 flex-shrink-0">
+                      <Input
+                        placeholder="Filter relationships..."
+                        value={relationshipFilter}
+                        onChange={(e) =>
+                          setRelationshipFilter(e.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="px-4">
+                      <div className="space-y-2">
+                        {filteredEdges.map((edge) => {
+                          const sourceNode = sortedNodesFromStore.find(
+                            (n) => n.id === edge.source
+                          );
+                          const targetNode = sortedNodesFromStore.find(
+                            (n) => n.id === edge.target
+                          );
+
+                          if (!sourceNode || !targetNode) {
+                            return null;
+                          }
+
+                          return (
+                            <Button
+                              key={edge.id}
+                              variant="ghost"
+                              className="w-full justify-start h-auto py-2"
+                              onClick={() => setInspectingEdgeId(edge.id)}
+                            >
+                              <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
+                              <div className="text-left text-sm">
+                                <p className="font-semibold">
+                                  {sourceNode.data.label} to{" "}
+                                  {targetNode.data.label}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {edge.data?.relationship ??
+                                    DbRelationship.ONE_TO_MANY}
+                                </p>
+                              </div>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </ScrollArea>
+            </div>
           </TabsContent>
         </div>
       </Tabs>
