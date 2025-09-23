@@ -49,6 +49,7 @@ interface EditorSidebarProps {
   onCheckForUpdate: () => void;
   onInstallAppRequest: () => void;
   onViewShortcuts: () => void;
+  onViewAbout: () => void;
 }
 
 function SortableAccordionItem({
@@ -87,6 +88,7 @@ export default function EditorSidebar({
   onCheckForUpdate,
   onInstallAppRequest,
   onViewShortcuts,
+  onViewAbout,
 }: EditorSidebarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const allDiagrams = useStore((state) => state.diagrams);
@@ -242,6 +244,7 @@ export default function EditorSidebar({
           onCheckForUpdate={onCheckForUpdate}
           onInstallAppRequest={onInstallAppRequest}
           onViewShortcuts={onViewShortcuts}
+          onViewAbout={onViewAbout}
         />
       </div>
       <div className="p-2 flex-shrink-0 border-b">
