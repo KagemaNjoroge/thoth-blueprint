@@ -8,6 +8,7 @@ import { showSuccess } from "@/utils/toast";
 import { type ReactFlowInstance } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { AboutDialog } from "./AboutDialog";
 import { AddNoteDialog } from "./AddNoteDialog";
 import { AddTableDialog } from "./AddTableDialog";
 import { AddZoneDialog } from "./AddZoneDialog";
@@ -62,6 +63,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const [isAddNoteDialogOpen, setIsAddNoteDialogOpen] = useState(false);
   const [isAddZoneDialogOpen, setIsAddZoneDialogOpen] = useState(false);
   const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
+  const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
 
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
 
@@ -218,6 +220,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
       onInstallAppRequest={onInstallAppRequest}
       onViewShortcuts={() => setIsShortcutsDialogOpen(true)}
+      onViewAbout={() => setIsAboutDialogOpen(true)}
     />
   ) : null;
 
@@ -241,6 +244,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           <DiagramGallery
             onInstallAppRequest={onInstallAppRequest}
             onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
+            onViewAbout={() => setIsAboutDialogOpen(true)}
           />
         </div>
       )}
@@ -250,6 +254,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />
       <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
       <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
+      <AboutDialog isOpen={isAboutDialogOpen} onOpenChange={setIsAboutDialogOpen} />
     </>
   );
 }

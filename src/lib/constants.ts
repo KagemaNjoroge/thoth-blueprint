@@ -1,3 +1,5 @@
+import { Settings } from "./types";
+
 export const relationshipTypes = [
   { value: "one-to-one", label: "One-to-One" },
   { value: "one-to-many", label: "One-to-Many" },
@@ -24,7 +26,7 @@ export enum DbRelationship {
 export const DbRelationShipLabel = {
   ONE: "1",
   MANY: "n",
-}
+};
 
 export const KeyboardShortcuts = {
   SIDEBAR_TOGGLE: "b",
@@ -32,8 +34,14 @@ export const KeyboardShortcuts = {
   ADD_NEW_TABLE: "a",
   COPY_SELECTION: "c",
   PASTE_COPIED: "v",
-  SELECT_MULTIPLE: "Click"
+  SELECT_MULTIPLE: "Click",
+  DELETE_ELEMENT: "Delete",
 };
 
 const isMac = navigator.userAgent.includes("Mac");
 export const CtrlKey = isMac ? "⌘" : "Ctrl";
+
+export const DEFAULT_SETTINGS: Settings = {
+  rememberLastPosition: true,
+  snapToGrid: false,
+};

@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="50" height="50" style="vertical-align: middle;">
-  <h1 align="center" style="vertical-align: middle;">Thoth Blueprint</h1>
+  <img src="https://raw.githubusercontent.com/AHS12/thoth-blueprint/refs/heads/main/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="50" height="50" style="vertical-align: middle;">
+  <span style="font-size: 2em; font-weight: bold; vertical-align: middle;">Thoth Blueprint</span>
 </p>
 
 <p align="center">
@@ -16,11 +16,11 @@
 </p>
 
 <p align="center">
-  <img src="image1.png" alt="Screenshot 1" width="45%">
-  <img src="image2.png" alt="Screenshot 2" width="45%">
+  <img src="https://raw.githubusercontent.com/AHS12/thoth-blueprint/refs/heads/main/image1.png" alt="Screenshot 1" width="45%">
+  <img src="https://raw.githubusercontent.com/AHS12/thoth-blueprint/refs/heads/main/image2.png" alt="Screenshot 2" width="45%">
 </p>
 
-Thoth Blueprint is a powerful database design tool that allows you to visualize your database schema with an intuitive drag-and-drop editor. Create, edit, and export your database designs to various formats, including SQL, DBML, JSON, and SVG. Generate migration files for popular frameworks/ORM like Laravel, TypeORM, and Django.
+Thoth Blueprint is a free, powerful database design tool that allows you to visualize your database schema with an intuitive drag-and-drop editor. Create, edit, and export your database designs to various formats, including SQL, DBML, JSON, and SVG. Generate migration files for popular frameworks/ORM like Laravel, TypeORM, and Django.
 
 ## Features
 
@@ -78,6 +78,25 @@ Thoth Blueprint is a powerful database design tool that allows you to visualize 
    pnpm preview
    ```
 
+### Docker Deployment
+
+Alternatively, you can run ThothBlueprint using Docker for easy deployment:
+
+1. **Build and run with Docker**
+
+   ```bash
+   docker build -t thothblueprint .
+   docker run -d -p 8080:80 --name thothblueprint thothblueprint
+   ```
+
+2. **Or use Docker Compose**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+ThothBlueprint will be available at `http://localhost:8080`
+
 ## Usage
 
 1. **Create a new diagram** - Click the "New Diagram" button to start a new database design
@@ -117,6 +136,7 @@ ThothBlueprint includes several keyboard shortcuts to speed up your workflow:
 - `Ctrl+C` / `Cmd+C` - Copy Selection
 - `Ctrl+V` / `Cmd+V` - Paste Selection
 - `Ctrl+Click` / `Cmd+Click` - Select Multiple Nodes
+- `Delete` - Delete Elements
 
 ## Contributing
 

@@ -28,6 +28,7 @@ const shortcuts = [
   { command: "Copy Selection", keys: [CtrlKey, KeyboardShortcuts.COPY_SELECTION.toUpperCase()] },
   { command: "Paste Selection", keys: [CtrlKey, KeyboardShortcuts.PASTE_COPIED.toUpperCase()] },
   { command: "Select Multiple Nodes", keys: [CtrlKey, KeyboardShortcuts.SELECT_MULTIPLE] },
+  { command: "Delete Table, Notes, Zones", keys: [KeyboardShortcuts.DELETE_ELEMENT] },
 ];
 
 export function ShortcutsDialog({ isOpen, onOpenChange }: ShortcutsDialogProps) {
