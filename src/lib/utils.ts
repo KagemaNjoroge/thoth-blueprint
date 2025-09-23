@@ -133,14 +133,7 @@ export function findNonOverlappingPosition(
   nodeHeight: number = 100,
   spacing: number = 50
 ): { x: number; y: number } {
-  const newRect = {
-    x: preferredPosition.x,
-    y: preferredPosition.y,
-    width: nodeWidth,
-    height: nodeHeight,
-  };
-
-  // Check if the default position overlaps with any existing node
+  // Check if preferred position is free
   const hasOverlap = existingNodes.some((node) => {
     if (!node.position) return false;
     
@@ -151,6 +144,13 @@ export function findNonOverlappingPosition(
       height: node.height || (node.type === "table" ? 100 : node.type === "note" ? 192 : 300),
     };
 
+    const newRect = {
+      x: preferredPosition.x,
+      y: preferredPosition.y,
+      width: nodeWidth,
+      height: nodeHeight,
+    };
+
     return doRectanglesOverlap(newRect, existingRect);
   });
 
@@ -158,51 +158,63 @@ export function findNonOverlappingPosition(
     return preferredPosition;
   }
 
-  // Try positions in a spiral pattern around the preferred position
-  const maxAttempts = 20;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const angle = (attempt * 0.5) * Math.PI; // Golden angle approximation
-    const radius = attempt * spacing;
-    
-    const offsetX = Math.cos(angle) * radius;
-    const offsetY = Math.sin(angle) * radius;
-    
-    const candidatePosition = {
-      x: preferredPosition.x + offsetX,
-      y: preferredPosition.y + offsetY,
-    };
+  // try positions in a grid around the preferred position
+  const gridSize = nodeWidth + spacing;
+  
+  for (let distance = 1; distance <= 10; distance++) {
+    const positions = [
+      { x: preferredPosition.x + distance * gridSize, y: preferredPosition.y },
+      { x: preferredPosition.x - distance * gridSize, y: preferredPosition.y },
+      { x: preferredPosition.x, y: preferredPosition.y + distance * gridSize },
+      { x: preferredPosition.x, y: preferredPosition.y - distance * gridSize },
+      { x: preferredPosition.x + distance * gridSize, y: preferredPosition.y + distance * gridSize },
+      { x: preferredPosition.x - distance * gridSize, y: preferredPosition.y - distance * gridSize },
+      { x: preferredPosition.x + distance * gridSize, y: preferredPosition.y - distance * gridSize },
+      { x: preferredPosition.x - distance * gridSize, y: preferredPosition.y + distance * gridSize },
+    ];
 
-    const candidateRect = {
-      x: candidatePosition.x,
-      y: candidatePosition.y,
-      width: nodeWidth,
-      height: nodeHeight,
-    };
-
-    const hasCandidateOverlap = existingNodes.some((node) => {
-      if (!node.position) return false;
-      
-      const existingRect = {
-        x: node.position.x,
-        y: node.position.y,
-        width: node.width || (node.type === "table" ? 288 : node.type === "note" ? 192 : 300),
-        height: node.height || (node.type === "table" ? 100 : node.type === "note" ? 192 : 300),
+    for (const candidate of positions) {
+      const candidateRect = {
+        x: candidate.x,
+        y: candidate.y,
+        width: nodeWidth,
+        height: nodeHeight,
       };
 
-      return doRectanglesOverlap(candidateRect, existingRect);
-    });
+      const hasCandidateOverlap = existingNodes.some((node) => {
+        if (!node.position) return false;
+        
+        const existingRect = {
+          x: node.position.x,
+          y: node.position.y,
+          width: node.width || (node.type === "table" ? 288 : node.type === "note" ? 192 : 300),
+          height: node.height || (node.type === "table" ? 100 : node.type === "note" ? 192 : 300),
+        };
 
-    if (!hasCandidateOverlap) {
-      return candidatePosition;
+        return doRectanglesOverlap(candidateRect, existingRect);
+      });
+
+      if (!hasCandidateOverlap) {
+        return candidate;
+      }
     }
   }
-
-  // Fallback: return a position far from existing nodes
-  const maxX = Math.max(...existingNodes.map(n => n.position?.x || 0), 0);
-  const maxY = Math.max(...existingNodes.map(n => n.position?.y || 0), 0);
   
-  return {
-    x: maxX + spacing * 2,
-    y: maxY + spacing * 2,
-  };
+  // If all else fails, overlap on the last added table
+  const lastAddedNode = existingNodes
+    .filter(node => node.position)
+    .sort((a, b) => {
+      const orderA = typeof a.data.order === 'number' ? a.data.order : 0;
+      const orderB = typeof b.data.order === 'number' ? b.data.order : 0;
+      return orderB - orderA;
+    })[0];
+  
+  if (lastAddedNode && lastAddedNode.position) {
+    return {
+      x: lastAddedNode.position.x + 20,
+      y: lastAddedNode.position.y + 20,
+    };
+  }
+  
+  return preferredPosition;
 }
