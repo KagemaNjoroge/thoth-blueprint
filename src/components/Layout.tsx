@@ -2,7 +2,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebarState } from "@/hooks/use-sidebar-state";
 import { tableColors } from "@/lib/colors";
 import { colors, KeyboardShortcuts } from "@/lib/constants";
-import { type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
+import {
+  type AppNode,
+  type AppNoteNode,
+  type AppZoneNode,
+  type ProcessedEdge,
+  type ProcessedNode,
+} from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { showSuccess } from "@/utils/toast";
 import { type ReactFlowInstance } from "@xyflow/react";
@@ -31,20 +37,28 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const isLoading = useStore((state) => state.isLoading);
   const isMobile = useIsMobile();
 
-  const diagram = useMemo(() =>
-    allDiagrams.find((d) => d.id === selectedDiagramId),
+  const diagram = useMemo(
+    () => allDiagrams.find((d) => d.id === selectedDiagramId),
     [allDiagrams, selectedDiagramId]
   );
 
-  const { addNode, undoDelete, copyNodes, pasteNodes, lastCursorPosition } = useStore(
-    useShallow((state: StoreState) => ({
-      addNode: state.addNode,
-      undoDelete: state.undoDelete,
-      copyNodes: state.copyNodes,
-      pasteNodes: state.pasteNodes,
-      lastCursorPosition: state.lastCursorPosition,
-    }))
-  );
+  const existingTableNames = useMemo(() => {
+    if (!diagram) return [];
+    return diagram.data.nodes
+      .filter((node: AppNode) => node.type === "table" && node.data?.label)
+      .map((node: AppNode) => node.data.label);
+  }, [diagram]);
+
+  const { addNode, undoDelete, copyNodes, pasteNodes, lastCursorPosition } =
+    useStore(
+      useShallow((state: StoreState) => ({
+        addNode: state.addNode,
+        undoDelete: state.undoDelete,
+        copyNodes: state.copyNodes,
+        pasteNodes: state.pasteNodes,
+        lastCursorPosition: state.lastCursorPosition,
+      }))
+    );
 
   const {
     // sidebarState,
@@ -65,24 +79,36 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
 
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<
+    ProcessedNode,
+    ProcessedEdge
+  > | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (selectedDiagramId) {
         const target = event.target as HTMLElement;
-        if (["INPUT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable) {
+        if (
+          ["INPUT", "TEXTAREA"].includes(target.tagName) ||
+          target.isContentEditable
+        ) {
           return;
         }
         // handle Ctrl+A to open table add dialog
-        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.ADD_NEW_TABLE) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === KeyboardShortcuts.ADD_NEW_TABLE
+        ) {
           event.preventDefault();
           if (!isAddTableDialogOpen) {
             setIsAddTableDialogOpen(true);
           }
         }
         // Handle Ctrl+B to toggle sidebar
-        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.SIDEBAR_TOGGLE) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === KeyboardShortcuts.SIDEBAR_TOGGLE
+        ) {
           event.preventDefault();
           if (isMobile) {
             // For mobile (sheet), toggle isSidebarOpen
@@ -93,17 +119,22 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           }
         }
         //handle Ctrl+Z to undo table delete
-        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.UNDO_TABLE_DELETE) {
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === KeyboardShortcuts.UNDO_TABLE_DELETE
+        ) {
           event.preventDefault();
           undoDelete();
         }
         // Handle Ctrl+C to copy selected nodes
-        if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+        if ((event.ctrlKey || event.metaKey) && event.key === "c") {
           event.preventDefault();
           if (!rfInstance) return;
-          const selectedNodes = rfInstance.getNodes().filter(
-            (n) => n.selected && (n.type === 'table' || n.type === 'note')
-          ) as (AppNode | AppNoteNode)[];
+          const selectedNodes = rfInstance
+            .getNodes()
+            .filter(
+              (n) => n.selected && (n.type === "table" || n.type === "note")
+            ) as (AppNode | AppNoteNode)[];
 
           if (selectedNodes.length > 0) {
             copyNodes(selectedNodes);
@@ -111,7 +142,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           }
         }
         // Handle Ctrl+V to paste nodes
-        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+        if ((event.ctrlKey || event.metaKey) && event.key === "v") {
           event.preventDefault();
           if (!rfInstance) return;
 
@@ -124,7 +155,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
             const { x, y, zoom } = rfInstance.getViewport();
             position = {
               x: (window.innerWidth / 2 - x) / zoom,
-              y: (window.innerHeight / 2 - y) / zoom
+              y: (window.innerHeight / 2 - y) / zoom,
             };
           }
 
@@ -146,25 +177,39 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     rfInstance,
     copyNodes,
     pasteNodes,
-    lastCursorPosition
+    lastCursorPosition,
   ]);
 
   const handleCreateTable = (tableName: string) => {
     if (!diagram) return;
     let position = { x: 200, y: 200 };
     if (rfInstance) {
-      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      const flowPosition = rfInstance.screenToFlowPosition({
+        x: window.innerWidth * 0.6,
+        y: window.innerHeight / 2,
+      });
       position = { x: flowPosition.x - 144, y: flowPosition.y - 50 };
     }
-    const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
+    const visibleNodes =
+      diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,
       type: "table",
       position,
       data: {
         label: tableName,
-        color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
-        columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
+        color:
+          tableColors[Math.floor(Math.random() * tableColors.length)] ??
+          colors.DEFAULT_TABLE_COLOR,
+        columns: [
+          {
+            id: `col_${Date.now()}`,
+            name: "id",
+            type: "INT",
+            pk: true,
+            nullable: false,
+          },
+        ],
         order: visibleNodes.length,
       },
     };
@@ -174,7 +219,10 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const handleCreateNote = (text: string) => {
     let position = { x: 200, y: 200 };
     if (rfInstance) {
-      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      const flowPosition = rfInstance.screenToFlowPosition({
+        x: window.innerWidth * 0.6,
+        y: window.innerHeight / 2,
+      });
       position = { x: flowPosition.x - 96, y: flowPosition.y - 96 };
     }
     const newNote: AppNoteNode = {
@@ -191,7 +239,10 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const handleCreateZone = (name: string) => {
     let position = { x: 200, y: 200 };
     if (rfInstance) {
-      const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
+      const flowPosition = rfInstance.screenToFlowPosition({
+        x: window.innerWidth * 0.6,
+        y: window.innerHeight / 2,
+      });
       position = { x: flowPosition.x - 150, y: flowPosition.y - 150 };
     }
     const newZone: AppZoneNode = {
@@ -212,9 +263,18 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
 
   const sidebarContent = diagram ? (
     <EditorSidebar
-      onAddTable={() => { setIsAddTableDialogOpen(true); setIsSidebarOpen(false); }}
-      onAddNote={() => { setIsAddNoteDialogOpen(true); setIsSidebarOpen(false); }}
-      onAddZone={() => { setIsAddZoneDialogOpen(true); setIsSidebarOpen(false); }}
+      onAddTable={() => {
+        setIsAddTableDialogOpen(true);
+        setIsSidebarOpen(false);
+      }}
+      onAddNote={() => {
+        setIsAddNoteDialogOpen(true);
+        setIsSidebarOpen(false);
+      }}
+      onAddZone={() => {
+        setIsAddZoneDialogOpen(true);
+        setIsSidebarOpen(false);
+      }}
       onSetSidebarState={setSidebarState}
       onExport={() => setIsExportDialogOpen(true)}
       onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
@@ -248,13 +308,40 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           />
         </div>
       )}
-      <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} />
-      <AddNoteDialog isOpen={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen} onCreateNote={handleCreateNote} />
-      <AddZoneDialog isOpen={isAddZoneDialogOpen} onOpenChange={setIsAddZoneDialogOpen} onCreateZone={handleCreateZone} />
-      <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />
-      <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
-      <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
-      <AboutDialog isOpen={isAboutDialogOpen} onOpenChange={setIsAboutDialogOpen} />
+      <AddTableDialog
+        isOpen={isAddTableDialogOpen}
+        onOpenChange={setIsAddTableDialogOpen}
+        onCreateTable={handleCreateTable}
+        existingTableNames={existingTableNames}
+      />
+      <AddNoteDialog
+        isOpen={isAddNoteDialogOpen}
+        onOpenChange={setIsAddNoteDialogOpen}
+        onCreateNote={handleCreateNote}
+      />
+      <AddZoneDialog
+        isOpen={isAddZoneDialogOpen}
+        onOpenChange={setIsAddZoneDialogOpen}
+        onCreateZone={handleCreateZone}
+      />
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        diagram={diagram}
+        rfInstance={rfInstance}
+      />
+      <UpdateDialog
+        isOpen={isUpdateDialogOpen}
+        onOpenChange={setIsUpdateDialogOpen}
+      />
+      <ShortcutsDialog
+        isOpen={isShortcutsDialogOpen}
+        onOpenChange={setIsShortcutsDialogOpen}
+      />
+      <AboutDialog
+        isOpen={isAboutDialogOpen}
+        onOpenChange={setIsAboutDialogOpen}
+      />
     </>
   );
 }
