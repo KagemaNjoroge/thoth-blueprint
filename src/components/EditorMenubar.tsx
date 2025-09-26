@@ -167,9 +167,12 @@ export default function EditorMenubar({
           <MenubarItem onClick={() => onSetSidebarState("hidden")}>
             Hide Sidebar
           </MenubarItem>
-          <MenubarItem onClick={onViewShortcuts}>
-            View Shortcuts
-          </MenubarItem>
+          <MenubarCheckboxItem
+            checked={settings.focusTableDuringSelection}
+            onCheckedChange={(checked) => updateSettings({ focusTableDuringSelection: checked })}
+          >
+            Focus During Table Selection
+          </MenubarCheckboxItem>
           <MenubarSeparator />
           <MenubarCheckboxItem
             checked={settings.rememberLastPosition}

@@ -31,6 +31,7 @@ import { useTheme } from "next-themes";
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -149,6 +150,19 @@ const DiagramEditor = forwardRef(
 
     const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
     const visibleNodes = useMemo(() => nodes.filter((n) => !n.data.isDeleted), [nodes]);
+
+    useEffect(() => {
+      if (selectedNodeId && rfInstanceRef.current && settings.focusTableDuringSelection) {
+        const node = rfInstanceRef.current.getNode(selectedNodeId);
+        if (node) {
+          rfInstanceRef.current.fitView({
+            nodes: [{ id: selectedNodeId }],
+            duration: 300, // smooth transition
+            maxZoom: 1.2,   // prevent zooming in too close
+          });
+        }
+      }
+    }, [selectedNodeId, settings.focusTableDuringSelection]);
 
     const onSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
       if (nodes.length === 1 && edges.length === 0 && nodes[0]) {
