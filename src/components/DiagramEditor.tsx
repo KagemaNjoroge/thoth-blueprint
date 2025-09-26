@@ -262,11 +262,14 @@ const DiagramEditor = forwardRef(
     }, [addNode]);
 
     const onCreateZoneAtPosition = useCallback((position: { x: number; y: number }) => {
+      if (!diagram) return;
+      const visibleZones = diagram?.data?.zones || [];
+      const zoneName = `New Zone ${visibleZones.length + 1}`;
       const newZone: AppZoneNode = {
-        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: 'New Zone' },
+        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: zoneName },
       };
       addNode(newZone);
-    }, [addNode]);
+    }, [addNode, diagram]);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();

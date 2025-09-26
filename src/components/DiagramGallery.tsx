@@ -87,6 +87,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
 
   const activeDiagrams = diagrams?.filter(d => !d.deletedAt);
   const trashedDiagrams = diagrams?.filter(d => d.deletedAt);
+  const activeDiagramNames = activeDiagrams.map(d => d.name);
 
   const handleCreateDiagram = async ({ name, dbType }: { name: string; dbType: DatabaseType }) => {
     await createDiagram({
@@ -298,6 +299,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onCreateDiagram={handleCreateDiagram}
+        existingDiagramNames={activeDiagramNames}
       />
       <ImportDialog
         isOpen={isImportDialogOpen}
@@ -309,6 +311,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
         onOpenChange={setIsRenameDialogOpen}
         onRenameDiagram={renameDiagram}
         diagram={diagramToEdit}
+        existingDiagramNames={activeDiagramNames}
       />
       <LoadProjectDialog
         isOpen={isLoadProjectDialogOpen}

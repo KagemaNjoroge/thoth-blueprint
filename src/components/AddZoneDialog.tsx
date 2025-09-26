@@ -20,17 +20,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-const formSchema = z.object({
-  name: z.string().min(1, "Zone name is required"),
-});
 
 interface AddZoneDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onCreateZone: (name: string) => void;
+  existingZoneNames: string[];
 }
 
-export function AddZoneDialog({ isOpen, onOpenChange, onCreateZone }: AddZoneDialogProps) {
+export function AddZoneDialog({ isOpen, onOpenChange, onCreateZone, existingZoneNames }: AddZoneDialogProps) {
+
+  const formSchema = z.object({
+    name: z.string().min(1, "Zone name is required").refine(
+      (name) => !existingZoneNames.includes(name),
+      {
+        message: "A zone with this name already exists in this diagram.",
+      }
+    ),
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {

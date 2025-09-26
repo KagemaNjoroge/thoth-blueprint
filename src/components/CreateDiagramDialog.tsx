@@ -28,18 +28,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-const formSchema = z.object({
-  name: z.string().min(1, "Diagram name is required"),
-  dbType: z.enum(["mysql", "postgres"]),
-});
-
 interface CreateDiagramDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onCreateDiagram: (values: { name: string; dbType: DatabaseType }) => void;
+  existingDiagramNames: string[];
 }
 
-export function CreateDiagramDialog({ isOpen, onOpenChange, onCreateDiagram }: CreateDiagramDialogProps) {
+export function CreateDiagramDialog({ isOpen, onOpenChange, onCreateDiagram, existingDiagramNames }: CreateDiagramDialogProps) {
+  const formSchema = z.object({
+    name: z.string().min(1, "Diagram name is required").refine(
+      (name) => !existingDiagramNames.includes(name),
+      {
+        message: "A diagram with this name already exists.",
+      }
+    ),
+    dbType: z.enum(["mysql", "postgres"]),
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {

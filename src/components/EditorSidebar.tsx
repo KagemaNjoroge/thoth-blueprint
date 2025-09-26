@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DbRelationship } from "@/lib/constants";
 import { type AppNode } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
+import { showError } from "@/utils/toast";
 import {
   closestCenter,
   DndContext,
@@ -185,6 +186,8 @@ export default function EditorSidebar({
     });
   }, [edges, sortedNodesFromStore, relationshipFilter]);
 
+  console.log(filteredRels);
+
   const handleInspectorTabChange = (tab: string) => {
     setCurrentInspectorTab(tab);
   };
@@ -199,7 +202,27 @@ export default function EditorSidebar({
   };
 
   const handleNameSave = (node: AppNode) => {
-    updateNode({ ...node, data: { ...node.data, label: tableName } });
+    const trimmedTableName = tableName.trim();
+
+    if (!trimmedTableName) {
+      showError("Table name cannot be empty.");
+      setTableName(node.data.label); // Revert to original name
+      setEditingTableName(null);
+      return;
+    }
+
+    const otherTableNames = nodes
+      .filter(n => n.id !== node.id)
+      .map(n => n.data.label);
+
+    if (otherTableNames.includes(trimmedTableName)) {
+      showError("A table with this name already exists in this diagram.");
+      setTableName(node.data.label); // Revert to original name
+      setEditingTableName(null);
+      return;
+    }
+
+    updateNode({ ...node, data: { ...node.data, label: trimmedTableName } });
     setEditingTableName(null);
   };
 
@@ -224,6 +247,7 @@ export default function EditorSidebar({
     }
   };
   const inspectingEdge = edges.find((e) => e.id === inspectingEdgeId);
+  console.log("inspectingEdge :" + inspectingEdge);
 
   if (!diagram) return null;
 
@@ -286,7 +310,7 @@ export default function EditorSidebar({
           </div>
         </div>
         <div className="flex-grow min-h-0">
-          <TabsContent value="tables" className="m-0 h-full">
+          <TabsContent value="tables" className="m-0 flex-1 flex flex-col">
             <div className="px-4 pb-2 flex-shrink-0">
               <div className="relative">
                 <Input
@@ -307,7 +331,7 @@ export default function EditorSidebar({
                 )}
               </div>
             </div>
-            <ScrollArea className="h-full px-4">
+            <ScrollArea className="flex-1 px-4">
               {filteredTables.length > 0 ? (
                 <DndContext
                   sensors={sensors}
@@ -415,94 +439,99 @@ export default function EditorSidebar({
               )}
             </ScrollArea>
           </TabsContent>
-          <TabsContent value="relationships" className="m-0 h-full">
-            <ScrollArea className="h-full p-4">
-              {inspectingEdge ? (
-                <div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setInspectingEdgeId(null)}
-                    className="mb-2"
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
-                  </Button>
+          <TabsContent value="relationships" className="m-0 flex-1 flex flex-col">
+            {inspectingEdge ? (
+              <div className="flex-1 flex flex-col p-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => setInspectingEdgeId(null)}
+                  className="mb-2 self-start"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back to list
+                </Button>
+                <div className="flex-1 overflow-auto">
                   <EdgeInspectorPanel
                     edge={inspectingEdge}
                     nodes={nodes}
                   />
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="px-4 mt-1 pb-2 flex-shrink-0">
-                    <div className="relative">
-                      <Input
-                        placeholder="Filter relationships..."
-                        value={relationshipFilter}
-                        onChange={(e) => setRelationshipFilter(e.target.value)}
-                        className="pr-8"
-                      />
-                      {relationshipFilter && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-                          onClick={() => setRelationshipFilter("")}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+              </div>
+            ) : (
+              <>
+                <div className="px-4 pb-2 flex-shrink-0">
+                  <div className="relative">
+                    <Input
+                      placeholder="Filter relationships..."
+                      value={relationshipFilter}
+                      onChange={(e) => setRelationshipFilter(e.target.value)}
+                      className="pr-8"
+                    />
+                    {relationshipFilter && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                        onClick={() => setRelationshipFilter("")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  {filteredRels.length > 0 ? (
-                    filteredRels.map((edge) => {
-                      const sourceNode = nodes.find((n) => n.id === edge.source);
-                      const targetNode = nodes.find((n) => n.id === edge.target);
-                      return (
-                        <Button
-                          key={edge.id}
-                          variant="ghost"
-                          className="w-full justify-start h-auto py-2"
-                          onClick={() => setInspectingEdgeId(edge.id)}
-                        >
-                          <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
-                          <div className="text-left text-sm">
-                            <p className="font-semibold">
-                              {sourceNode?.data.label} to {targetNode?.data.label}
-                            </p>
-                            <p className="text-muted-foreground text-xs">
-                              {edge.data?.relationship ?? DbRelationship.ONE_TO_MANY}
-                            </p>
-                          </div>
-                        </Button>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-10">
-                      {relationshipFilter ? (
-                        <>
-                          <p className="text-sm text-muted-foreground">
-                            No relationships found matching your filter.
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-4"
-                            onClick={() => setRelationshipFilter("")}
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Clear Filter
-                          </Button>
-                        </>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No relationships in this diagram yet.
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
-              )}
-            </ScrollArea>
+                <ScrollArea className="flex-1 px-4">
+                  <div className="space-y-2">
+                    {filteredRels.length > 0 ? (
+                      filteredRels.map((edge) => {
+                        console.log(edge)
+                        const sourceNode = nodes.find((n) => n.id === edge.source);
+                        const targetNode = nodes.find((n) => n.id === edge.target);
+                        return (
+                          <Button
+                            key={edge.id}
+                            variant="ghost"
+                            className="w-full justify-start h-auto py-2"
+                            onClick={() => setInspectingEdgeId(edge.id)}
+                          >
+                            <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
+                            <div className="text-left text-sm">
+                              <p className="font-semibold">
+                                {sourceNode?.data.label} to {targetNode?.data.label}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {edge.data?.relationship ?? DbRelationship.ONE_TO_MANY}
+                              </p>
+                            </div>
+                          </Button>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-10">
+                        {relationshipFilter ? (
+                          <>
+                            <p className="text-sm text-muted-foreground">
+                              No relationships found matching your filter.
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-4"
+                              onClick={() => setRelationshipFilter("")}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Clear Filter
+                            </Button>
+                          </>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            No relationships in this diagram yet.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
           </TabsContent>
         </div>
       </Tabs>

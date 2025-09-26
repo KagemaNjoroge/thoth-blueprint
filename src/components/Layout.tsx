@@ -36,6 +36,16 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     [allDiagrams, selectedDiagramId]
   );
 
+  const existingTableNames = useMemo(() =>
+    diagram?.data.nodes.map(n => n.data.label) ?? [],
+    [diagram]
+  );
+
+  const existingZoneNames = useMemo(() =>
+    (diagram?.data?.zones || []).map(z => z.data.name) ?? [],
+    [diagram]
+  )
+
   const { addNode, undoDelete, copyNodes, pasteNodes, lastCursorPosition } = useStore(
     useShallow((state: StoreState) => ({
       addNode: state.addNode,
@@ -248,9 +258,9 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           />
         </div>
       )}
-      <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} />
+      <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} existingTableNames={existingTableNames} />
       <AddNoteDialog isOpen={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen} onCreateNote={handleCreateNote} />
-      <AddZoneDialog isOpen={isAddZoneDialogOpen} onOpenChange={setIsAddZoneDialogOpen} onCreateZone={handleCreateZone} />
+      <AddZoneDialog isOpen={isAddZoneDialogOpen} onOpenChange={setIsAddZoneDialogOpen} onCreateZone={handleCreateZone} existingZoneNames={existingZoneNames} />
       <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />
       <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
       <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
