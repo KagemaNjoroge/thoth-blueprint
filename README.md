@@ -1,7 +1,7 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/AHS12/thoth-blueprint/refs/heads/main/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="50" height="50" style="vertical-align: middle;">
-  <span style="font-size: 2em; font-weight: bold; vertical-align: middle;">Thoth Blueprint</span>
-</p>
+<div align="center">
+  <img src="https://raw.githubusercontent.com/AHS12/thoth-blueprint/refs/heads/main/public/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" width="64" height="64">
+  <h1>Thoth Blueprint</h1>
+</div>
 
 <p align="center">
   <a href="https://github.com/AHS12/thoth-blueprint/stargazers">

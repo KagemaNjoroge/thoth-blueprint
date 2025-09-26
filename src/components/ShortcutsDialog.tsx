@@ -29,6 +29,10 @@ const shortcuts = [
   { command: "Paste Selection", keys: [CtrlKey, KeyboardShortcuts.PASTE_COPIED.toUpperCase()] },
   { command: "Select Multiple Nodes", keys: [CtrlKey, KeyboardShortcuts.SELECT_MULTIPLE] },
   { command: "Delete Table, Notes, Zones", keys: [KeyboardShortcuts.DELETE_ELEMENT] },
+  { command: "Zoom In", keys: [CtrlKey, KeyboardShortcuts.ZOOM_IN_KEY_1] },
+  { command: "Zoom In", keys: [CtrlKey, KeyboardShortcuts.ZOOM_IN_KEY_2] },
+  { command: "Zoom Out", keys: [CtrlKey, KeyboardShortcuts.ZOOM_OUT_KEY] },
+  { command: "Reset Zoom", keys: [CtrlKey, KeyboardShortcuts.ZOOM_RESET_KEY] },
 ];
 
 export function ShortcutsDialog({ isOpen, onOpenChange }: ShortcutsDialogProps) {

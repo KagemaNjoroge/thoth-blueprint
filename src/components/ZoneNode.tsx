@@ -1,10 +1,12 @@
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { type AppZoneNode, type ZoneNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { type NodeProps, NodeResizer, useReactFlow } from "@xyflow/react";
-import { Lock, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
+import { useStore, type StoreState } from "@/store/store";
+import { NodeResizer, useReactFlow, type NodeProps } from "@xyflow/react";
+import { GitCommitHorizontal, Lock, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
 import { useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { useShallow } from "zustand/react/shallow";
 import { Input } from "./ui/input";
 
 interface ZoneNodeProps extends NodeProps<AppZoneNode> {
@@ -26,6 +28,11 @@ export default function ZoneNode({
   const [name, setName] = useState(data.name);
   const { screenToFlowPosition } = useReactFlow();
   const contextMenuPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const { setIsAddRelationshipDialogOpen } = useStore(
+    useShallow((state: StoreState) => ({
+      setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen,
+    }))
+  );
 
   const debouncedUpdate = useDebouncedCallback((newName: string) => {
     if (onUpdate) {
@@ -109,7 +116,12 @@ export default function ZoneNode({
           disabled={isLocked || false}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add New Table
+          Add Table
+        </ContextMenuItem>
+        <ContextMenuItem
+          onSelect={() => { setIsAddRelationshipDialogOpen(true) }}
+        >
+          <GitCommitHorizontal className="h-4 w-4 mr-2" /> Add Relationship
         </ContextMenuItem>
         <ContextMenuItem
           onSelect={() => {
