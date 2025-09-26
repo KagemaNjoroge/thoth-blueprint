@@ -108,7 +108,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           undoDelete();
         }
         // Handle Ctrl+C to copy selected nodes
-        if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.COPY_SELECTION) {
           event.preventDefault();
           if (!rfInstance) return;
           const selectedNodes = rfInstance.getNodes().filter(
@@ -121,7 +121,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           }
         }
         // Handle Ctrl+V to paste nodes
-        if ((event.ctrlKey || event.metaKey) && event.key === 'v') {
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.PASTE_COPIED) {
           event.preventDefault();
           if (!rfInstance) return;
 
@@ -139,6 +139,27 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
           }
 
           pasteNodes(position);
+        }
+        // Handle Ctrl+Plus to zoom in
+        if ((event.ctrlKey || event.metaKey) && (event.key === KeyboardShortcuts.ZOOM_IN_KEY_1 || event.key === KeyboardShortcuts.ZOOM_IN_KEY_2)) {
+          event.preventDefault();
+          if (rfInstance) {
+            rfInstance.zoomIn({ duration: 200 });
+          }
+        }
+        // Handle Ctrl+Minus to zoom out
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.ZOOM_OUT_KEY) {
+          event.preventDefault();
+          if (rfInstance) {
+            rfInstance.zoomOut({ duration: 200 });
+          }
+        }
+        // Handle Ctrl+0 to fit view
+        if ((event.ctrlKey || event.metaKey) && event.key === KeyboardShortcuts.ZOOM_RESET_KEY) {
+          event.preventDefault();
+          if (rfInstance) {
+            rfInstance.fitView({ duration: 200 });
+          }
         }
       }
     };

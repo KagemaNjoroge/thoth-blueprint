@@ -206,6 +206,9 @@ export default function EditorMenubar({
         <MenubarTrigger className="px-2">Help</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={onViewAbout}>About</MenubarItem>
+          <MenubarItem onClick={onViewShortcuts}>
+            View Shortcuts
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

@@ -36,6 +36,10 @@ export const KeyboardShortcuts = {
   PASTE_COPIED: "v",
   SELECT_MULTIPLE: "Click",
   DELETE_ELEMENT: "Delete",
+  ZOOM_IN_KEY_1: "+",
+  ZOOM_IN_KEY_2: "=",
+  ZOOM_OUT_KEY: "-",
+  ZOOM_RESET_KEY: "0",
 };
 
 const isMac = navigator.userAgent.includes("Mac");
