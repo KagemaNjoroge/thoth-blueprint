@@ -173,113 +173,115 @@ export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabPr
             </div>
 
             {/* Content */}
-            <div className="flex-1 px-4 overflow-hidden">
+            <div className="flex-1 pl-4 overflow-hidden">
                 <ScrollArea className="h-full">
-                    {filteredTables.length > 0 ? (
-                        <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={handleDragEnd}
-                        >
-                            <SortableContext
-                                items={filteredTables.map((n) => n.id)}
-                                strategy={verticalListSortingStrategy}
+                    <div className="pr-4">
+                        {filteredTables.length > 0 ? (
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
                             >
-                                <Accordion
-                                    type="single"
-                                    collapsible
-                                    value={selectedNodeId ?? ""}
-                                    onValueChange={(value) => setSelectedNodeId(value || null)}
-                                    className="w-full space-y-1"
+                                <SortableContext
+                                    items={filteredTables.map((n) => n.id)}
+                                    strategy={verticalListSortingStrategy}
                                 >
-                                    {filteredTables.map((node) => (
-                                        <SortableAccordionItem key={node.id} node={node}>
-                                            {(attributes, listeners) => (
-                                                <AccordionItem
-                                                    value={node.id}
-                                                    className="border rounded-md data-[state=open]:bg-accent/50"
-                                                >
-                                                    <AccordionTrigger className="px-2 group hover:no-underline">
-                                                        <div className="flex items-center gap-2 w-full">
-                                                            <div
-                                                                {...attributes}
-                                                                {...(isLocked ? {} : listeners)}
-                                                                className={
-                                                                    isLocked
-                                                                        ? "cursor-not-allowed p-1 -ml-1"
-                                                                        : "cursor-grab p-1 -ml-1"
-                                                                }
-                                                            >
-                                                                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                                            </div>
-                                                            <div
-                                                                className="w-2 h-2 rounded-full"
-                                                                style={{ backgroundColor: node.data.color }}
-                                                            />
-                                                            {editingTableName === node.id ? (
-                                                                <Input
-                                                                    value={tableName}
-                                                                    onChange={handleNameChange}
-                                                                    onBlur={() => handleNameSave(node)}
-                                                                    onKeyDown={(e) =>
-                                                                        e.key === "Enter" && handleNameSave(node)
-                                                                    }
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    className="h-8"
-                                                                    autoFocus
-                                                                />
-                                                            ) : (
-                                                                <span
-                                                                    className="truncate"
-                                                                    onDoubleClick={
+                                    <Accordion
+                                        type="single"
+                                        collapsible
+                                        value={selectedNodeId ?? ""}
+                                        onValueChange={(value) => setSelectedNodeId(value || null)}
+                                        className="w-full space-y-1"
+                                    >
+                                        {filteredTables.map((node) => (
+                                            <SortableAccordionItem key={node.id} node={node}>
+                                                {(attributes, listeners) => (
+                                                    <AccordionItem
+                                                        value={node.id}
+                                                        className="border rounded-md data-[state=open]:bg-accent/50"
+                                                    >
+                                                        <AccordionTrigger className="px-2 group hover:no-underline">
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <div
+                                                                    {...attributes}
+                                                                    {...(isLocked ? {} : listeners)}
+                                                                    className={
                                                                         isLocked
-                                                                            ? undefined
-                                                                            : () => handleStartEdit(node)
+                                                                            ? "cursor-not-allowed p-1 -ml-1"
+                                                                            : "cursor-grab p-1 -ml-1"
                                                                     }
                                                                 >
-                                                                    {node.data.label}
-                                                                </span>
-                                                            )}
-                                                            <div className="flex-grow" />
-                                                        </div>
-                                                    </AccordionTrigger>
-                                                    <AccordionContent>
-                                                        <TableAccordionContent
-                                                            node={node}
-                                                            onStartEdit={() => handleStartEdit(node)}
-                                                        />
-                                                    </AccordionContent>
-                                                </AccordionItem>
-                                            )}
-                                        </SortableAccordionItem>
-                                    ))}
-                                </Accordion>
-                            </SortableContext>
-                        </DndContext>
-                    ) : (
-                        <div className="text-center py-10">
-                            {tableFilter ? (
-                                <>
+                                                                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                                                </div>
+                                                                <div
+                                                                    className="w-2 h-2 rounded-full"
+                                                                    style={{ backgroundColor: node.data.color }}
+                                                                />
+                                                                {editingTableName === node.id ? (
+                                                                    <Input
+                                                                        value={tableName}
+                                                                        onChange={handleNameChange}
+                                                                        onBlur={() => handleNameSave(node)}
+                                                                        onKeyDown={(e) =>
+                                                                            e.key === "Enter" && handleNameSave(node)
+                                                                        }
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="h-8"
+                                                                        autoFocus
+                                                                    />
+                                                                ) : (
+                                                                    <span
+                                                                        className="truncate"
+                                                                        onDoubleClick={
+                                                                            isLocked
+                                                                                ? undefined
+                                                                                : () => handleStartEdit(node)
+                                                                        }
+                                                                    >
+                                                                        {node.data.label}
+                                                                    </span>
+                                                                )}
+                                                                <div className="flex-grow" />
+                                                            </div>
+                                                        </AccordionTrigger>
+                                                        <AccordionContent>
+                                                            <TableAccordionContent
+                                                                node={node}
+                                                                onStartEdit={() => handleStartEdit(node)}
+                                                            />
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                )}
+                                            </SortableAccordionItem>
+                                        ))}
+                                    </Accordion>
+                                </SortableContext>
+                            </DndContext>
+                        ) : (
+                            <div className="text-center py-10">
+                                {tableFilter ? (
+                                    <>
+                                        <p className="text-sm text-muted-foreground">
+                                            No tables found matching your filter.
+                                        </p>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-4"
+                                            onClick={() => setTableFilter("")}
+                                        >
+                                            <X className="h-4 w-4 mr-2" />
+                                            Clear Filter
+                                        </Button>
+                                    </>
+                                ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        No tables found matching your filter.
+                                        No tables in this diagram yet.
                                     </p>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-4"
-                                        onClick={() => setTableFilter("")}
-                                    >
-                                        <X className="h-4 w-4 mr-2" />
-                                        Clear Filter
-                                    </Button>
-                                </>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">
-                                    No tables in this diagram yet.
-                                </p>
-                            )}
-                        </div>
-                    )}
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </ScrollArea>
             </div>
         </div>

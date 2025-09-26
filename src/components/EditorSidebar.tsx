@@ -111,15 +111,15 @@ export default function EditorSidebar({
       {/* Tab Navigation */}
       <div className="flex-shrink-0 px-4 my-4">
         <div className="flex items-center gap-2">
-          <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground flex-grow grid-cols-2">
+          <div className="flex h-10 items-center rounded-md bg-muted p-1 text-muted-foreground flex-grow">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => handleTabChange("tables")}
               className={cn(
-                "relative h-8 rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                "flex-1 relative h-8 rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
                 currentTab === "tables"
-                  ? "bg-background text-foreground shadow-sm"
+                  ? "bg-background text-foreground shadow-sm hover:bg-background"
                   : "hover:bg-muted-foreground/10"
               )}
             >
@@ -133,9 +133,9 @@ export default function EditorSidebar({
               size="sm"
               onClick={() => handleTabChange("relationships")}
               className={cn(
-                "relative h-8 rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                "flex-1 relative h-8 rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
                 currentTab === "relationships"
-                  ? "bg-background text-foreground shadow-sm"
+                  ? "bg-background text-foreground shadow-sm hover:bg-background"
                   : "hover:bg-muted-foreground/10"
               )}
             >

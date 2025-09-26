@@ -352,7 +352,6 @@ export const useStore = create(
     isLoading: true,
     clipboard: null,
     lastCursorPosition: null,
-    creationPosition: null,
     isRelationshipDialogOpen: false,
     loadInitialData: async () => {
       set({ isLoading: true });
