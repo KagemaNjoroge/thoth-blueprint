@@ -66,7 +66,8 @@ export default function EditorMenubar({
     setSelectedDiagramId,
     undoDelete,
     settings,
-    updateSettings
+    updateSettings,
+    setIsRelationshipDialogOpen,
   } = useStore(
     useShallow((state: StoreState) => ({
       moveDiagramToTrash: state.moveDiagramToTrash,
@@ -74,6 +75,7 @@ export default function EditorMenubar({
       undoDelete: state.undoDelete,
       settings: state.settings,
       updateSettings: state.updateSettings,
+      setIsRelationshipDialogOpen: state.setIsRelationshipDialogOpen,
     }))
   );
 
@@ -140,6 +142,9 @@ export default function EditorMenubar({
           <MenubarSeparator />
           <MenubarItem onClick={onAddTable} disabled={isLocked}>
             Add Table <MenubarShortcut>{CtrlKey} + {KeyboardShortcuts.ADD_NEW_TABLE.toUpperCase()}</MenubarShortcut>
+          </MenubarItem>
+          <MenubarItem onClick={() => setIsRelationshipDialogOpen(true)} disabled={isLocked}>
+            Add Relationship
           </MenubarItem>
           <MenubarItem onClick={onAddNote} disabled={isLocked}>
             Add Note

@@ -42,6 +42,7 @@ import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 
 interface EditorSidebarProps {
+  onAddElement: () => void;
   onAddTable: () => void;
   onAddNote: () => void;
   onAddZone: () => void;
@@ -81,6 +82,7 @@ function SortableAccordionItem({
 }
 
 export default function EditorSidebar({
+  onAddElement,
   onAddTable,
   onAddNote,
   onAddZone,
@@ -301,11 +303,11 @@ export default function EditorSidebar({
             <Button
               variant="outline"
               size="icon"
-              onClick={onAddTable}
+              onClick={onAddElement}
               disabled={isLocked}
             >
               <Plus className="h-4 w-4" />
-              <span className="sr-only">Add Table</span>
+              <span className="sr-only">Add Element</span>
             </Button>
           </div>
         </div>

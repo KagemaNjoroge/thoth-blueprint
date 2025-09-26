@@ -29,6 +29,7 @@ export interface StoreState {
   isLoading: boolean;
   clipboard: (AppNode | AppNoteNode | AppZoneNode)[] | null;
   lastCursorPosition: { x: number; y: number } | null;
+  isRelationshipDialogOpen: boolean;
   loadInitialData: () => Promise<void>;
   setSelectedDiagramId: (id: number | null) => void;
   setSelectedNodeId: (id: string | null) => void;
@@ -60,6 +61,7 @@ export interface StoreState {
   batchUpdateNodes: (nodes: AppNode[]) => void;
   copyNodes: (nodes: (AppNode | AppNoteNode | AppZoneNode)[]) => void;
   pasteNodes: (position: { x: number; y: number }) => void;
+  setIsRelationshipDialogOpen: (value: boolean) => void;
 }
 
 export const TABLE_SOFT_DELETE_LIMIT = 10;
@@ -350,8 +352,11 @@ export const useStore = create(
     isLoading: true,
     clipboard: null,
     lastCursorPosition: null,
+    creationPosition: null,
+    isRelationshipDialogOpen: false,
     loadInitialData: async () => {
       set({ isLoading: true });
+      set({ isRelationshipDialogOpen: false });
       const diagrams = await db.diagrams.toArray();
       const selectedDiagramIdState = await db.appState.get("selectedDiagramId");
 
@@ -887,6 +892,9 @@ export const useStore = create(
           lastCursorPosition: null,
         };
       });
+    },
+    setIsRelationshipDialogOpen: (value) => {
+      set({ isRelationshipDialogOpen: value });
     },
   }))
 );

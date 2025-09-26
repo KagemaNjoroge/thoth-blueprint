@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -112,6 +112,7 @@ const DiagramEditor = forwardRef(
       clipboard,
       settings,
       updateSettings,
+      setIsAddRelationshipDialogOpen,
     } = useStore(
       useShallow((state: StoreState) => ({
         onNodesChange: state.onNodesChange,
@@ -132,6 +133,7 @@ const DiagramEditor = forwardRef(
         clipboard: state.clipboard,
         settings: state.settings,
         updateSettings: state.updateSettings,
+        setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen
       }))
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -423,7 +425,13 @@ const DiagramEditor = forwardRef(
               }}
               disabled={isLocked}
             >
-              <Plus className="h-4 w-4 mr-2" /> Add New Table
+              <Plus className="h-4 w-4 mr-2" /> Add Table
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => { setIsAddRelationshipDialogOpen(true) }}
+              disabled={isLocked}
+            >
+              <GitCommitHorizontal className="h-4 w-4 mr-2" /> Add Relationship
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {
