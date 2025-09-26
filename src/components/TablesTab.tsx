@@ -23,7 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import TableAccordionContent from "./TableAccordionContent";
 import { Button } from "./ui/button";
@@ -38,12 +38,14 @@ interface TablesTabProps {
 function SortableAccordionItem({
     node,
     children,
+    itemRef,
 }: {
     node: AppNode;
     children: (
         attributes: Record<string, unknown>,
         listeners: Record<string, unknown>
     ) => React.ReactNode;
+    itemRef: (el: HTMLDivElement | null) => void;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition } =
         useSortable({ id: node.id });
@@ -52,8 +54,13 @@ function SortableAccordionItem({
         transition,
     };
 
+    const combinedRef = (el: HTMLDivElement | null) => {
+        setNodeRef(el);
+        itemRef(el);
+    };
+
     return (
-        <div ref={setNodeRef} style={style}>
+        <div ref={combinedRef} style={style}>
             {children(
                 attributes as unknown as Record<string, unknown>,
                 listeners || {}
@@ -77,6 +84,7 @@ export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabPr
     const [editingTableName, setEditingTableName] = useState<string | null>(null);
     const [tableName, setTableName] = useState("");
     const [tableFilter, setTableFilter] = useState<string>("");
+    const itemRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -85,6 +93,25 @@ export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabPr
     useEffect(() => {
         setNodes(initialNodes);
     }, [initialNodes]);
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    useEffect(() => {
+        if (selectedNodeId) {
+            const itemEl = itemRefs.current.get(selectedNodeId);
+            // The accordion animation takes a moment. A small timeout ensures the element is in its final position.
+            const scrollTimeout = setTimeout(() => {
+                if (itemEl) {
+                    itemEl.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                    });
+                }
+            }, 20); // shadcn accordion animation is 200ms
+
+            return () => clearTimeout(scrollTimeout);
+        }
+    }, [selectedNodeId]);
 
     const filteredTables = useMemo(() => {
         if (!tableFilter) return nodes;
@@ -194,7 +221,11 @@ export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabPr
                                         className="w-full space-y-1"
                                     >
                                         {filteredTables.map((node) => (
-                                            <SortableAccordionItem key={node.id} node={node}>
+                                            <SortableAccordionItem
+                                                key={node.id}
+                                                node={node}
+                                                itemRef={(el) => itemRefs.current.set(node.id, el)}
+                                            >
                                                 {(attributes, listeners) => (
                                                     <AccordionItem
                                                         value={node.id}
