@@ -102,6 +102,7 @@ export interface Settings {
   rememberLastPosition: boolean;
   snapToGrid: boolean;
   focusTableDuringSelection: boolean;
+  focusRelDuringSelection: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;

@@ -164,6 +164,21 @@ const DiagramEditor = forwardRef(
       }
     }, [selectedNodeId, settings.focusTableDuringSelection]);
 
+    useEffect(() => {
+      if (selectedEdgeId && rfInstanceRef.current && settings.focusRelDuringSelection) {
+        const edge = rfInstanceRef.current.getEdge(selectedEdgeId);
+        if (edge) {
+          const sourceNodeId = edge?.source || '';
+          const targetNodeId = edge?.target || '';
+          rfInstanceRef.current.fitView({
+            nodes: [{ id: sourceNodeId }, {id: targetNodeId}],
+            duration: 300, // smooth transition
+            maxZoom: 1.2,   // prevent zooming in too close
+          });
+        }
+      }
+    }, [selectedEdgeId, settings.focusRelDuringSelection]);
+
     const onSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
       if (nodes.length === 1 && edges.length === 0 && nodes[0]) {
         if (nodes[0].type === 'table') {

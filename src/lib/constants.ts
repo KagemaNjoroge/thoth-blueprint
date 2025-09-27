@@ -49,4 +49,5 @@ export const DEFAULT_SETTINGS: Settings = {
   rememberLastPosition: true,
   snapToGrid: false,
   focusTableDuringSelection: true,
+  focusRelDuringSelection: true,
 };

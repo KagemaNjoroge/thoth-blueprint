@@ -173,6 +173,12 @@ export default function EditorMenubar({
           >
             Focus During Table Selection
           </MenubarCheckboxItem>
+          <MenubarCheckboxItem
+            checked={settings.focusRelDuringSelection}
+            onCheckedChange={(checked) => updateSettings({ focusRelDuringSelection: checked })}
+          >
+            Focus During Relationship Selection
+          </MenubarCheckboxItem>
           <MenubarSeparator />
           <MenubarCheckboxItem
             checked={settings.rememberLastPosition}

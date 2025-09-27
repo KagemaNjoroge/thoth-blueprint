@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { colors } from "@/lib/constants";
 import { type TableNodeData } from "@/lib/types";
+import { useStore } from "@/store/store";
 import {
   Handle,
   Position,
@@ -43,6 +44,8 @@ function TableNode({
 }: TableNodeProps) {
   const updateNodeInternals = useUpdateNodeInternals();
   const prevColumnsRef = useRef(data.columns);
+  const selectedNodeId = useStore((state) => state.selectedNodeId);
+  const isSelected = selected || selectedNodeId === id;
 
   useEffect(() => {
     if (prevColumnsRef.current !== data.columns) {
@@ -52,16 +55,16 @@ function TableNode({
   }, [id, data.columns, updateNodeInternals]);
 
   const cardStyle = {
-    border: `1px solid ${selected ? data.color || colors.DEFAULT_TABLE_COLOR : "hsl(var(--border))"
+    border: `1px solid ${isSelected ? data.color || colors.DEFAULT_TABLE_COLOR : "hsl(var(--border))"
       }`,
-    boxShadow: selected
+    boxShadow: isSelected
       ? `0 0 8px ${data.color || colors.DEFAULT_TABLE_COLOR}40`
       : "var(--tw-shadow, 0 0 #0000)",
     width: 288,
   };
 
   const handleStyle = {
-    opacity: selected ? 1 : 0,
+    opacity: isSelected ? 1 : 0,
     transition: "opacity 0.15s ease-in-out",
   };
 
