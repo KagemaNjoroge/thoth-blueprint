@@ -71,7 +71,16 @@ function SortableAccordionItem({
 
 export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabProps) {
     const selectedNodeId = useStore((state) => state.selectedNodeId);
-    const setSelectedNodeId = useStore((state) => state.setSelectedNodeId);
+
+      const {
+        setSelectedNodeId,
+        setSelectedEdgeId,
+      } = useStore(
+        useShallow((state: StoreState) => ({
+          setSelectedNodeId: state.setSelectedNodeId,
+          setSelectedEdgeId: state.setSelectedEdgeId,
+        }))
+      );
 
     const { updateNode, batchUpdateNodes } = useStore(
         useShallow((state: StoreState) => ({
@@ -175,6 +184,11 @@ export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabPr
         }
     };
 
+    const handleSetSelectedNodeId = (id:string) => {
+        setSelectedNodeId(id);
+        setSelectedEdgeId(null);
+    }
+
     return (
         <div className="flex flex-col h-full">
             {/* Filter */}
@@ -217,7 +231,7 @@ export default function TablesTab({ nodes: initialNodes, isLocked }: TablesTabPr
                                         type="single"
                                         collapsible
                                         value={selectedNodeId ?? ""}
-                                        onValueChange={(value) => setSelectedNodeId(value || null)}
+                                        onValueChange={(value) => handleSetSelectedNodeId(value)}
                                         className="w-full space-y-1"
                                     >
                                         {filteredTables.map((node) => (

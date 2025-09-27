@@ -19,9 +19,10 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
     const [inspectingEdgeId, setInspectingEdgeId] = useState<string | null>(selectedEdgeId);
     const [relationshipFilter, setRelationshipFilter] = useState<string>("");
 
-    const { setSelectedEdgeId } = useStore(
+    const { setSelectedEdgeId, setSelectedNodeId } = useStore(
         useShallow((state: StoreState) => ({
             setSelectedEdgeId: state.setSelectedEdgeId,
+            setSelectedNodeId: state.setSelectedNodeId,
 
         }))
     );
@@ -56,6 +57,7 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
     const handleRelSelect = (id:string) => {
         setInspectingEdgeId(id);
         setSelectedEdgeId(id);
+        setSelectedNodeId(null);
     }
 
     if (inspectingEdge) {
