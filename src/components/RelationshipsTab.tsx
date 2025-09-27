@@ -1,8 +1,9 @@
 import { DbRelationship } from "@/lib/constants";
 import { AppEdge, type AppNode } from "@/lib/types";
-import { useStore } from "@/store/store";
+import { type StoreState, useStore } from "@/store/store";
 import { ArrowLeft, GitCommitHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import EdgeInspectorPanel from "./EdgeInspectorPanel";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -17,6 +18,14 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
     const selectedEdgeId = useStore((state) => state.selectedEdgeId);
     const [inspectingEdgeId, setInspectingEdgeId] = useState<string | null>(selectedEdgeId);
     const [relationshipFilter, setRelationshipFilter] = useState<string>("");
+
+    const { setSelectedEdgeId, setSelectedNodeId } = useStore(
+        useShallow((state: StoreState) => ({
+            setSelectedEdgeId: state.setSelectedEdgeId,
+            setSelectedNodeId: state.setSelectedNodeId,
+
+        }))
+    );
 
     useEffect(() => {
         if (selectedEdgeId && edges.some((edge) => edge.id === selectedEdgeId)) {
@@ -44,6 +53,12 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
     }, [edges, nodes, relationshipFilter]);
 
     const inspectingEdge = edges.find((e) => e.id === inspectingEdgeId);
+
+    const handleRelSelect = (id:string) => {
+        setInspectingEdgeId(id);
+        setSelectedEdgeId(id);
+        setSelectedNodeId(null);
+    }
 
     if (inspectingEdge) {
         return (
@@ -104,7 +119,7 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
                                         key={edge.id}
                                         variant="ghost"
                                         className="w-full justify-start h-auto py-2"
-                                        onClick={() => setInspectingEdgeId(edge.id)}
+                                        onClick={() => handleRelSelect(edge.id)}
                                     >
                                         <GitCommitHorizontal className="h-4 w-4 mr-2 flex-shrink-0" />
                                         <div className="text-left text-sm">
