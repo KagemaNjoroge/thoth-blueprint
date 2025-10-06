@@ -2,10 +2,11 @@ import { type Edge, type Node } from "@xyflow/react";
 
 export type DatabaseType = "mysql" | "postgres";
 export type CombinedNode = AppNode | AppNoteNode | AppZoneNode;
+export type ElementType = "table" | "note" | "zone" | "relationship";
 export type ProcessedNode = (AppNode | AppNoteNode | AppZoneNode) & {
   draggable: boolean;
 };
-export type ProcessedEdge = Omit<AppEdge, 'type'> & {
+export type ProcessedEdge = Omit<AppEdge, "type"> & {
   type: string;
   selectable: boolean;
   data: {
@@ -95,6 +96,13 @@ export interface EdgeData extends Record<string, unknown> {
   relationship: string;
   isHighlighted?: boolean;
   isPositionLocked?: boolean;
+}
+
+export interface Settings {
+  rememberLastPosition: boolean;
+  snapToGrid: boolean;
+  focusTableDuringSelection: boolean;
+  focusRelDuringSelection: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;

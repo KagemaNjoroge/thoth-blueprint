@@ -1,5 +1,7 @@
+import { DEFAULT_SETTINGS } from "@/lib/constants";
 import { db } from "@/lib/db";
 import {
+  Settings,
   type AppEdge,
   type AppNode,
   type AppNoteNode,
@@ -8,19 +10,15 @@ import {
   type Diagram,
 } from "@/lib/types";
 import {
-  type EdgeChange,
-  type NodeChange,
   applyEdgeChanges,
   applyNodeChanges,
+  type EdgeChange,
+  type NodeChange,
 } from "@xyflow/react";
 import debounce from "lodash/debounce";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { shallow } from "zustand/shallow";
-
-export interface Settings {
-  rememberLastPosition: boolean;
-}
 
 export interface StoreState {
   diagrams: Diagram[];
@@ -31,6 +29,7 @@ export interface StoreState {
   isLoading: boolean;
   clipboard: (AppNode | AppNoteNode | AppZoneNode)[] | null;
   lastCursorPosition: { x: number; y: number } | null;
+  isRelationshipDialogOpen: boolean;
   loadInitialData: () => Promise<void>;
   setSelectedDiagramId: (id: number | null) => void;
   setSelectedNodeId: (id: string | null) => void;
@@ -60,13 +59,60 @@ export interface StoreState {
   addNode: (node: AppNode | AppNoteNode | AppZoneNode) => void;
   undoDelete: () => void;
   batchUpdateNodes: (nodes: AppNode[]) => void;
-  copyNodes: (nodes: (AppNode | AppNoteNode| AppZoneNode)[]) => void;
+  copyNodes: (nodes: (AppNode | AppNoteNode | AppZoneNode)[]) => void;
   pasteNodes: (position: { x: number; y: number }) => void;
+  setIsRelationshipDialogOpen: (value: boolean) => void;
 }
 
-export const TABLE_SOFT_DELETE_LIMIT = 10
+export const TABLE_SOFT_DELETE_LIMIT = 10;
 
-const debouncedSave = debounce(
+let previousDiagrams: Diagram[] = [];
+let previousSelectedDiagramId: number | null = null;
+
+const debouncedSavePositions = debounce(
+  async (diagrams: Diagram[], selectedDiagramId: number | null) => {
+    try {
+      const currentDiagram = diagrams.find((d) => d.id === selectedDiagramId);
+      const previousDiagram = previousDiagrams.find(
+        (d) => d.id === previousSelectedDiagramId
+      );
+
+      if (!currentDiagram || !previousDiagram) {
+        await debouncedSaveFull(diagrams, selectedDiagramId);
+        return;
+      }
+
+      const onlyPositionsChanged =
+        checkIfOnlyPositionsChanged(
+          currentDiagram.data.nodes || [],
+          previousDiagram.data.nodes || []
+        ) &&
+        checkIfOnlyPositionsChanged(
+          currentDiagram.data.notes || [],
+          previousDiagram.data.notes || []
+        ) &&
+        checkIfOnlyPositionsChanged(
+          currentDiagram.data.zones || [],
+          previousDiagram.data.zones || []
+        );
+
+      if (onlyPositionsChanged) {
+        // Use partial updates for position-only changes
+        await savePositionChanges(currentDiagram, previousDiagram);
+      } else {
+        await debouncedSaveFull(diagrams, selectedDiagramId);
+      }
+
+      previousDiagrams = diagrams;
+      previousSelectedDiagramId = selectedDiagramId;
+    } catch (error) {
+      console.error("Failed to save position changes to IndexedDB:", error);
+    }
+  },
+  300
+);
+
+const debouncedSaveFull = debounce(
   async (diagrams: Diagram[], selectedDiagramId: number | null) => {
     try {
       await db.transaction("rw", db.diagrams, db.appState, async () => {
@@ -97,6 +143,9 @@ const debouncedSave = debounce(
           await db.appState.delete("selectedDiagramId").catch(() => {});
         }
       });
+
+      previousDiagrams = diagrams;
+      previousSelectedDiagramId = selectedDiagramId;
     } catch (error) {
       console.error("Failed to save state to IndexedDB:", error);
     }
@@ -104,9 +153,194 @@ const debouncedSave = debounce(
   1000
 );
 
-const DEFAULT_SETTINGS: Settings = {
-  rememberLastPosition: true,
+// Helper function to check if only positions changed
+function checkIfOnlyPositionsChanged(
+  currentNodes: (AppNode | AppNoteNode | AppZoneNode)[],
+  previousNodes: (AppNode | AppNoteNode | AppZoneNode)[]
+): boolean {
+  if (currentNodes.length !== previousNodes.length) {
+    return false;
+  }
+  const previousNodeMap = new Map(previousNodes.map((node) => [node.id, node]));
+
+  for (const currentNode of currentNodes) {
+    const previousNode = previousNodeMap.get(currentNode.id);
+
+    if (!previousNode) {
+      return false;
+    }
+
+    if (currentNode.type !== previousNode.type) {
+      return false;
+    }
+
+    const { position: _, ...currentWithoutPosition } = currentNode;
+    const { position: __, ...previousWithoutPosition } = previousNode;
+
+    if (
+      JSON.stringify(currentWithoutPosition) !==
+      JSON.stringify(previousWithoutPosition)
+    ) {
+      return false;
+    }
+
+    if (
+      currentNode.position.x !== previousNode.position.x ||
+      currentNode.position.y !== previousNode.position.y
+    ) {
+      // Position changed, continue checking
+      continue;
+    }
+  }
+
+  return true;
+}
+
+// Helper function to save only position changes using Dexie's modify
+async function savePositionChanges(
+  currentDiagram: Diagram,
+  previousDiagram: Diagram
+) {
+  try {
+    const changedNodes: {
+      id: string;
+      position: { x: number; y: number };
+      type: string;
+    }[] = [];
+
+    const currentTableMap = new Map(
+      (currentDiagram.data.nodes || []).map((n) => [n.id, n])
+    );
+    for (const prevNode of previousDiagram.data.nodes || []) {
+      const currentNode = currentTableMap.get(prevNode.id);
+      if (
+        currentNode &&
+        (currentNode.position.x !== prevNode.position.x ||
+          currentNode.position.y !== prevNode.position.y)
+      ) {
+        changedNodes.push({
+          id: currentNode.id,
+          position: currentNode.position,
+          type: "table",
+        });
+      }
+    }
+
+    const currentNoteMap = new Map(
+      (currentDiagram.data.notes || []).map((n) => [n.id, n])
+    );
+    for (const prevNote of previousDiagram.data.notes || []) {
+      const currentNote = currentNoteMap.get(prevNote.id);
+      if (
+        currentNote &&
+        (currentNote.position.x !== prevNote.position.x ||
+          currentNote.position.y !== prevNote.position.y)
+      ) {
+        changedNodes.push({
+          id: currentNote.id,
+          position: currentNote.position,
+          type: "note",
+        });
+      }
+    }
+
+    const currentZoneMap = new Map(
+      (currentDiagram.data.zones || []).map((z) => [z.id, z])
+    );
+    for (const prevZone of previousDiagram.data.zones || []) {
+      const currentZone = currentZoneMap.get(prevZone.id);
+      if (
+        currentZone &&
+        (currentZone.position.x !== prevZone.position.x ||
+          currentZone.position.y !== prevZone.position.y)
+      ) {
+        changedNodes.push({
+          id: currentZone.id,
+          position: currentZone.position,
+          type: "zone",
+        });
+      }
+    }
+
+    if (changedNodes.length === 0) {
+      return;
+    }
+
+    await saveSpecificNodePositions(currentDiagram.id!, changedNodes);
+  } catch (error) {
+    console.error("Failed to save position changes:", error);
+    throw error;
+  }
+}
+
+// Main debounced save function that determines which strategy to use
+const debouncedSave = async (
+  diagrams: Diagram[],
+  selectedDiagramId: number | null
+) => {
+  await debouncedSavePositions(diagrams, selectedDiagramId);
 };
+
+async function saveSpecificNodePositions(
+  diagramId: number,
+  updatedNodes: {
+    id: string;
+    position: { x: number; y: number };
+    type: string;
+  }[]
+) {
+  try {
+    await db.transaction("rw", db.diagrams, async () => {
+      // Update only the specific nodes that have changed
+      await db.diagrams
+        .where("id")
+        .equals(diagramId)
+        .modify((diagram) => {
+          const updatedNodeMap = new Map(
+            updatedNodes.map((node) => [node.id, node.position])
+          );
+          const updatedNodeTypes = new Map(
+            updatedNodes.map((node) => [node.id, node.type])
+          );
+
+          if (diagram.data.nodes) {
+            diagram.data.nodes = diagram.data.nodes.map((node) => {
+              const newPosition = updatedNodeMap.get(node.id);
+              if (newPosition && updatedNodeTypes.get(node.id) === "table") {
+                return { ...node, position: newPosition };
+              }
+              return node;
+            });
+          }
+
+          if (diagram.data.notes) {
+            diagram.data.notes = diagram.data.notes.map((note) => {
+              const newPosition = updatedNodeMap.get(note.id);
+              if (newPosition && updatedNodeTypes.get(note.id) === "note") {
+                return { ...note, position: newPosition };
+              }
+              return note;
+            });
+          }
+
+          if (diagram.data.zones) {
+            diagram.data.zones = diagram.data.zones.map((zone) => {
+              const newPosition = updatedNodeMap.get(zone.id);
+              if (newPosition && updatedNodeTypes.get(zone.id) === "zone") {
+                return { ...zone, position: newPosition };
+              }
+              return zone;
+            });
+          }
+
+          diagram.updatedAt = new Date();
+        });
+    });
+  } catch (error) {
+    console.error("Failed to save specific node positions:", error);
+    throw error;
+  }
+}
 
 export const useStore = create(
   subscribeWithSelector<StoreState>((set) => ({
@@ -118,8 +352,10 @@ export const useStore = create(
     isLoading: true,
     clipboard: null,
     lastCursorPosition: null,
+    isRelationshipDialogOpen: false,
     loadInitialData: async () => {
       set({ isLoading: true });
+      set({ isRelationshipDialogOpen: false });
       const diagrams = await db.diagrams.toArray();
       const selectedDiagramIdState = await db.appState.get("selectedDiagramId");
 
@@ -394,7 +630,8 @@ export const useStore = create(
             return aTime - bTime;
           });
 
-          const tablesToRemoveCount = allDeletedTables.length - TABLE_SOFT_DELETE_LIMIT;
+          const tablesToRemoveCount =
+            allDeletedTables.length - TABLE_SOFT_DELETE_LIMIT;
           const tablesToRemove = sortedDeletedTables.slice(
             0,
             tablesToRemoveCount
@@ -590,7 +827,9 @@ export const useStore = create(
         const diagram = diagrams.find((d) => d.id === selectedDiagramId);
         if (!diagram) return state;
 
-        const existingLabels = new Set(diagram.data.nodes.map(n => n.data.label));
+        const existingLabels = new Set(
+          diagram.data.nodes.map((n) => n.data.label)
+        );
 
         const newNodes: AppNode[] = [];
         const newNotes: AppNoteNode[] = [];
@@ -602,7 +841,7 @@ export const useStore = create(
             y: position.y + index * 20,
           };
 
-          if (node.type === 'table') {
+          if (node.type === "table") {
             let newLabel = `${node.data.label}_copy`;
             let i = 1;
             while (existingLabels.has(newLabel)) {
@@ -621,7 +860,7 @@ export const useStore = create(
               selected: false,
             };
             newNodes.push(newTableNode);
-          } else if (node.type === 'note') {
+          } else if (node.type === "note") {
             const newNoteNode: AppNoteNode = {
               ...node,
               id: newNodeId,
@@ -652,6 +891,9 @@ export const useStore = create(
           lastCursorPosition: null,
         };
       });
+    },
+    setIsRelationshipDialogOpen: (value) => {
+      set({ isRelationshipDialogOpen: value });
     },
   }))
 );

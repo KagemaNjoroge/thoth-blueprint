@@ -50,9 +50,10 @@ import { RenameDiagramDialog } from "./RenameDiagramDialog";
 interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
   onCheckForUpdate: () => void;
+  onViewAbout: () => void;
 }
 
-export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }: DiagramGalleryProps) {
+export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, onViewAbout }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -86,6 +87,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }
 
   const activeDiagrams = diagrams?.filter(d => !d.deletedAt);
   const trashedDiagrams = diagrams?.filter(d => d.deletedAt);
+  const activeDiagramNames = activeDiagrams.map(d => d.name);
 
   const handleCreateDiagram = async ({ name, dbType }: { name: string; dbType: DatabaseType }) => {
     await createDiagram({
@@ -141,6 +143,8 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }
                 {!isInstalled && (
                   <DropdownMenuItem onClick={onInstallAppRequest}>Install App</DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onViewAbout}>About</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>
@@ -295,6 +299,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onCreateDiagram={handleCreateDiagram}
+        existingDiagramNames={activeDiagramNames}
       />
       <ImportDialog
         isOpen={isImportDialogOpen}
@@ -306,6 +311,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate }
         onOpenChange={setIsRenameDialogOpen}
         onRenameDiagram={renameDiagram}
         diagram={diagramToEdit}
+        existingDiagramNames={activeDiagramNames}
       />
       <LoadProjectDialog
         isOpen={isLoadProjectDialogOpen}

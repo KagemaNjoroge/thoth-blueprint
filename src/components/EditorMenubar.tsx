@@ -39,6 +39,7 @@ interface EditorMenubarProps {
   onCheckForUpdate: () => void;
   onInstallAppRequest: () => void;
   onViewShortcuts: () => void;
+  onViewAbout: () => void;
 }
 
 export default function EditorMenubar({
@@ -50,6 +51,7 @@ export default function EditorMenubar({
   onCheckForUpdate,
   onInstallAppRequest,
   onViewShortcuts,
+  onViewAbout,
 }: EditorMenubarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const allDiagrams = useStore((state) => state.diagrams);
@@ -64,7 +66,8 @@ export default function EditorMenubar({
     setSelectedDiagramId,
     undoDelete,
     settings,
-    updateSettings
+    updateSettings,
+    setIsRelationshipDialogOpen,
   } = useStore(
     useShallow((state: StoreState) => ({
       moveDiagramToTrash: state.moveDiagramToTrash,
@@ -72,6 +75,7 @@ export default function EditorMenubar({
       undoDelete: state.undoDelete,
       settings: state.settings,
       updateSettings: state.updateSettings,
+      setIsRelationshipDialogOpen: state.setIsRelationshipDialogOpen,
     }))
   );
 
@@ -95,7 +99,7 @@ export default function EditorMenubar({
   return (
     <Menubar className="rounded-none border-none bg-transparent">
       <MenubarMenu>
-        <MenubarTrigger>File</MenubarTrigger>
+        <MenubarTrigger className="px-2">File</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={onBackToGallery}>
             Back to Gallery
@@ -130,7 +134,7 @@ export default function EditorMenubar({
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
-        <MenubarTrigger>Edit</MenubarTrigger>
+        <MenubarTrigger className="px-2">Edit</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={undoDelete} disabled={isLocked}>
             Undo Delete Table <MenubarShortcut>{CtrlKey} + {KeyboardShortcuts.UNDO_TABLE_DELETE.toUpperCase()}</MenubarShortcut>
@@ -139,23 +143,42 @@ export default function EditorMenubar({
           <MenubarItem onClick={onAddTable} disabled={isLocked}>
             Add Table <MenubarShortcut>{CtrlKey} + {KeyboardShortcuts.ADD_NEW_TABLE.toUpperCase()}</MenubarShortcut>
           </MenubarItem>
+          <MenubarItem onClick={() => setIsRelationshipDialogOpen(true)} disabled={isLocked}>
+            Add Relationship
+          </MenubarItem>
           <MenubarItem onClick={onAddNote} disabled={isLocked}>
             Add Note
           </MenubarItem>
           <MenubarItem onClick={onAddZone} disabled={isLocked}>
             Add Zone
           </MenubarItem>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.snapToGrid}
+            onCheckedChange={(checked) => updateSettings({ snapToGrid: checked })}
+          >
+            Snap To Editor Grid
+          </MenubarCheckboxItem>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
-        <MenubarTrigger>View</MenubarTrigger>
+        <MenubarTrigger className="px-2">View</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={() => onSetSidebarState("hidden")}>
             Hide Sidebar
           </MenubarItem>
-          <MenubarItem onClick={onViewShortcuts}>
-            View Shortcuts
-          </MenubarItem>
+          <MenubarCheckboxItem
+            checked={settings.focusTableDuringSelection}
+            onCheckedChange={(checked) => updateSettings({ focusTableDuringSelection: checked })}
+          >
+            Focus During Table Selection
+          </MenubarCheckboxItem>
+          <MenubarCheckboxItem
+            checked={settings.focusRelDuringSelection}
+            onCheckedChange={(checked) => updateSettings({ focusRelDuringSelection: checked })}
+          >
+            Focus During Relationship Selection
+          </MenubarCheckboxItem>
           <MenubarSeparator />
           <MenubarCheckboxItem
             checked={settings.rememberLastPosition}
@@ -167,7 +190,7 @@ export default function EditorMenubar({
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
-        <MenubarTrigger>Settings</MenubarTrigger>
+        <MenubarTrigger className="px-2">Settings</MenubarTrigger>
         <MenubarContent>
           <MenubarSub>
             <MenubarSubTrigger>Theme</MenubarSubTrigger>
@@ -191,6 +214,15 @@ export default function EditorMenubar({
               Install App
             </MenubarItem>
           )}
+        </MenubarContent>
+      </MenubarMenu>
+      <MenubarMenu>
+        <MenubarTrigger className="px-2">Help</MenubarTrigger>
+        <MenubarContent>
+          <MenubarItem onClick={onViewAbout}>About</MenubarItem>
+          <MenubarItem onClick={onViewShortcuts}>
+            View Shortcuts
+          </MenubarItem>
         </MenubarContent>
       </MenubarMenu>
     </Menubar>

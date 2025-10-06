@@ -26,11 +26,12 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -111,6 +112,8 @@ const DiagramEditor = forwardRef(
       pasteNodes,
       clipboard,
       settings,
+      updateSettings,
+      setIsAddRelationshipDialogOpen,
     } = useStore(
       useShallow((state: StoreState) => ({
         onNodesChange: state.onNodesChange,
@@ -130,6 +133,8 @@ const DiagramEditor = forwardRef(
         pasteNodes: state.pasteNodes,
         clipboard: state.clipboard,
         settings: state.settings,
+        updateSettings: state.updateSettings,
+        setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen
       }))
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -145,6 +150,34 @@ const DiagramEditor = forwardRef(
 
     const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
     const visibleNodes = useMemo(() => nodes.filter((n) => !n.data.isDeleted), [nodes]);
+
+    useEffect(() => {
+      if (selectedNodeId && rfInstanceRef.current && settings.focusTableDuringSelection) {
+        const node = rfInstanceRef.current.getNode(selectedNodeId);
+        if (node) {
+          rfInstanceRef.current.fitView({
+            nodes: [{ id: selectedNodeId }],
+            duration: 300, // smooth transition
+            maxZoom: 1.2,   // prevent zooming in too close
+          });
+        }
+      }
+    }, [selectedNodeId, settings.focusTableDuringSelection]);
+
+    useEffect(() => {
+      if (selectedEdgeId && rfInstanceRef.current && settings.focusRelDuringSelection) {
+        const edge = rfInstanceRef.current.getEdge(selectedEdgeId);
+        if (edge) {
+          const sourceNodeId = edge?.source || '';
+          const targetNodeId = edge?.target || '';
+          rfInstanceRef.current.fitView({
+            nodes: [{ id: sourceNodeId }, {id: targetNodeId}],
+            duration: 300, // smooth transition
+            maxZoom: 1.2,   // prevent zooming in too close
+          });
+        }
+      }
+    }, [selectedEdgeId, settings.focusRelDuringSelection]);
 
     const onSelectionChange = useCallback(({ nodes, edges }: OnSelectionChangeParams) => {
       if (nodes.length === 1 && edges.length === 0 && nodes[0]) {
@@ -188,6 +221,11 @@ const DiagramEditor = forwardRef(
     const handleLockChange = useCallback(() => {
       updateCurrentDiagramData({ isLocked: !isLocked });
     }, [isLocked, updateCurrentDiagramData]);
+
+    const handleSnapToGridChange = useCallback(() => {
+      const snapToGrid = settings.snapToGrid;
+      updateSettings({ snapToGrid: !snapToGrid });
+    }, [settings.snapToGrid, updateSettings]);
 
     const onConnect: OnConnect = useCallback((connection: Connection) => {
       const { source, target, sourceHandle, targetHandle } = connection;
@@ -258,11 +296,14 @@ const DiagramEditor = forwardRef(
     }, [addNode]);
 
     const onCreateZoneAtPosition = useCallback((position: { x: number; y: number }) => {
+      if (!diagram) return;
+      const visibleZones = diagram?.data?.zones || [];
+      const zoneName = `New Zone ${visibleZones.length + 1}`;
       const newZone: AppZoneNode = {
-        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: 'New Zone' },
+        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: zoneName },
       };
       addNode(newZone);
-    }, [addNode]);
+    }, [addNode, diagram]);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
@@ -390,13 +431,17 @@ const DiagramEditor = forwardRef(
               onViewportChange={handleViewportChange}
               nodesConnectable={!isLocked}
               elementsSelectable={!isLocked}
-              deleteKeyCode={isLocked ? null : ["Backspace", "Delete"]}
+              snapToGrid={settings.snapToGrid}
+              deleteKeyCode={isLocked ? null : ["Delete"]}
               fitView
               colorMode={theme as ColorMode}
             >
               <Controls showInteractive={false}>
                 <ControlButton onClick={handleLockChange} title={isLocked ? "Unlock" : "Lock"}>
                   {isLocked ? <IoLockClosedOutline size={18} /> : <IoLockOpenOutline size={18} />}
+                </ControlButton>
+                <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
+                  {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
                 </ControlButton>
               </Controls>
               <Background />
@@ -412,7 +457,13 @@ const DiagramEditor = forwardRef(
               }}
               disabled={isLocked}
             >
-              <Plus className="h-4 w-4 mr-2" /> Add New Table
+              <Plus className="h-4 w-4 mr-2" /> Add Table
+            </ContextMenuItem>
+            <ContextMenuItem
+              onSelect={() => { setIsAddRelationshipDialogOpen(true) }}
+              disabled={isLocked}
+            >
+              <GitCommitHorizontal className="h-4 w-4 mr-2" /> Add Relationship
             </ContextMenuItem>
             <ContextMenuItem
               onSelect={() => {

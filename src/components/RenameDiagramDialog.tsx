@@ -22,18 +22,29 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-const formSchema = z.object({
-  name: z.string().min(1, "Diagram name is required"),
-});
-
 interface RenameDiagramDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onRenameDiagram: (id: number, name: string) => void;
   diagram: Diagram | null;
+  existingDiagramNames: string[];
 }
 
-export function RenameDiagramDialog({ isOpen, onOpenChange, onRenameDiagram, diagram }: RenameDiagramDialogProps) {
+export function RenameDiagramDialog({ isOpen, onOpenChange, onRenameDiagram, diagram, existingDiagramNames }: RenameDiagramDialogProps) {
+  const formSchema = z.object({
+    name: z.string().min(1, "Diagram name is required").refine(
+      (name) => {
+        if (diagram && name === diagram.name) {
+          return true;
+        }
+        return !existingDiagramNames.includes(name);
+      },
+      {
+        message: "A diagram with this name already exists.",
+      }
+    ),
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
