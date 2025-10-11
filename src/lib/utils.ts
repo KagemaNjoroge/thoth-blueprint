@@ -4,15 +4,32 @@ import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { twMerge } from "tailwind-merge";
 
-const MAX_SEARCH_DISTANCE = 10;
-const OVERLAP_OFFSET = 20;
-const DEFAULT_TABLE_WIDTH = 288;
-const DEFAULT_TABLE_HEIGHT = 100;
-const DEFAULT_NOTE_WIDTH = 192;
-const DEFAULT_NOTE_HEIGHT = 192;
-const DEFAULT_ZONE_WIDTH = 300;
-const DEFAULT_ZONE_HEIGHT = 300;
-const DEFAULT_NODE_SPACING = 50;
+export const MAX_SEARCH_DISTANCE = 10;
+export const OVERLAP_OFFSET = 20;
+export const DEFAULT_TABLE_WIDTH = 288;
+export const DEFAULT_TABLE_HEIGHT = 100;
+export const DEFAULT_NOTE_WIDTH = 192;
+export const DEFAULT_NOTE_HEIGHT = 192;
+export const DEFAULT_ZONE_WIDTH = 300;
+export const DEFAULT_ZONE_HEIGHT = 300;
+export const DEFAULT_NODE_SPACING = 50;
+
+export function getCanvasDimensions(): { width: number; height: number } {
+  const reactFlowViewport = document.querySelector('.react-flow__viewport');
+  if (reactFlowViewport) {
+    const rect = reactFlowViewport.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
+  
+  const diagramPanel = document.querySelector('[data-panel-id]');
+  if (diagramPanel) {
+    const rect = diagramPanel.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
+  
+  // fallback: use window dimensions
+  return { width: window.innerWidth, height: window.innerHeight };
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -135,42 +152,62 @@ function doRectanglesOverlap(
   );
 }
 
-// Find a non-overlapping position for a new table
+function isPositionInViewport(
+  position: { x: number; y: number },
+  nodeWidth: number,
+  nodeHeight: number,
+  viewportBounds?: { x: number; y: number; width: number; height: number; zoom: number }
+): boolean {
+  if (!viewportBounds) return true; 
+  
+  // Convert viewport bounds to flow coordinates
+  const viewportX = -viewportBounds.x / viewportBounds.zoom;
+  const viewportY = -viewportBounds.y / viewportBounds.zoom;
+  const viewportWidth = viewportBounds.width / viewportBounds.zoom;
+  const viewportHeight = viewportBounds.height / viewportBounds.zoom;
+  
+  // Check if the node (with some padding) fits within the viewport
+  const padding = DEFAULT_NODE_SPACING;
+  return (
+    position.x >= viewportX + padding &&
+    position.x + nodeWidth <= viewportX + viewportWidth - padding &&
+    position.y >= viewportY + padding &&
+    position.y + nodeHeight <= viewportY + viewportHeight - padding
+  );
+}
+
 export function findNonOverlappingPosition(
   existingNodes: CombinedNode[],
   preferredPosition: { x: number; y: number },
   nodeWidth: number = DEFAULT_TABLE_WIDTH,
   nodeHeight: number = DEFAULT_TABLE_HEIGHT,
-  spacing: number = DEFAULT_NODE_SPACING
+  spacing: number = DEFAULT_NODE_SPACING,
+  viewportBounds?: { x: number; y: number; width: number; height: number; zoom: number }
 ): { x: number; y: number } {
-  // Check if preferred position is free
-  const hasOverlap = existingNodes.some((node) => {
-    if (!node.position) return false;
+  
+  const isValidPosition = (position: { x: number; y: number }): boolean => {
+    const hasOverlap = existingNodes.some((node) => {
+      if (!node.position) return false;
+      
+      const existingRect = {
+        x: node.position.x,
+        y: node.position.y,
+        width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
+        height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
+      };
+
+      const newRect = { x: position.x, y: position.y, width: nodeWidth, height: nodeHeight };
+      return doRectanglesOverlap(newRect, existingRect);
+    });
     
-    const existingRect = {
-      x: node.position.x,
-      y: node.position.y,
-      width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
-      height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
-    };
+    return !hasOverlap && isPositionInViewport(position, nodeWidth, nodeHeight, viewportBounds);
+  };
 
-    const newRect = {
-      x: preferredPosition.x,
-      y: preferredPosition.y,
-      width: nodeWidth,
-      height: nodeHeight,
-    };
-
-    return doRectanglesOverlap(newRect, existingRect);
-  });
-
-  if (!hasOverlap) {
+  if (isValidPosition(preferredPosition)) {
     return preferredPosition;
   }
 
   const gridSize = nodeWidth + spacing;
-  
-  // try positions in a grid around the preferred position
   for (let distance = 1; distance <= MAX_SEARCH_DISTANCE; distance++) {
     const positions = [
       { x: preferredPosition.x + distance * gridSize, y: preferredPosition.y },
@@ -184,33 +221,31 @@ export function findNonOverlappingPosition(
     ];
 
     for (const candidate of positions) {
-      const candidateRect = {
-        x: candidate.x,
-        y: candidate.y,
-        width: nodeWidth,
-        height: nodeHeight,
-      };
-
-      const hasCandidateOverlap = existingNodes.some((node) => {
-        if (!node.position) return false;
-        
-        const existingRect = {
-          x: node.position.x,
-          y: node.position.y,
-          width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
-          height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
-        };
-
-        return doRectanglesOverlap(candidateRect, existingRect);
-      });
-
-      if (!hasCandidateOverlap) {
+      if (isValidPosition(candidate)) {
         return candidate;
       }
     }
   }
   
-  // If all else fails, overlap on the last added table
+  // If viewport is full, allow overlap but keep within viewport
+  if (viewportBounds) {
+    const viewportX = -viewportBounds.x / viewportBounds.zoom;
+    const viewportY = -viewportBounds.y / viewportBounds.zoom;
+    const viewportWidth = viewportBounds.width / viewportBounds.zoom;
+    const viewportHeight = viewportBounds.height / viewportBounds.zoom;
+    
+    // Try center of viewport first
+    const centerPosition = {
+      x: viewportX + viewportWidth / 2 - nodeWidth / 2,
+      y: viewportY + viewportHeight / 2 - nodeHeight / 2
+    };
+    
+    if (isPositionInViewport(centerPosition, nodeWidth, nodeHeight, viewportBounds)) {
+      return centerPosition;
+    }
+  }
+  
+  // Final fallback: overlap on last added table
   const lastAddedNode = existingNodes
     .filter(node => node.position)
     .sort((a, b) => {

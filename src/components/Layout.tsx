@@ -3,7 +3,7 @@ import { useSidebarState } from "@/hooks/use-sidebar-state";
 import { tableColors } from "@/lib/colors";
 import { colors, KeyboardShortcuts } from "@/lib/constants";
 import { ElementType, type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
-import { findNonOverlappingPosition } from "@/lib/utils";
+import { findNonOverlappingPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, getCanvasDimensions } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { showError, showSuccess } from "@/utils/toast";
 import { type ReactFlowInstance } from "@xyflow/react";
@@ -209,7 +209,15 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     }
     
     const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
-    const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition);
+    const canvasDimensions = getCanvasDimensions();
+    const viewportBounds = rfInstance ? {
+      x: rfInstance.getViewport().x,
+      y: rfInstance.getViewport().y,
+      width: canvasDimensions.width,
+      height: canvasDimensions.height,
+      zoom: rfInstance.getViewport().zoom
+    } : undefined;
+    const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
     
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,

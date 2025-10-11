@@ -7,7 +7,7 @@ import {
 import { tableColors } from "@/lib/colors";
 import { colors, DbRelationship, relationshipTypes } from "@/lib/constants";
 import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
-import { findNonOverlappingPosition, isNodeInLockedZone } from "@/lib/utils";
+import { findNonOverlappingPosition, isNodeInLockedZone, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, getCanvasDimensions } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { showError } from "@/utils/toast";
 import {
@@ -272,7 +272,15 @@ const DiagramEditor = forwardRef(
       const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
       const tableName = `new_table_${visibleNodes.length + 1}`;
       const defaultPosition = { x: position.x - 144, y: position.y - 50 };
-      const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition);
+      const canvasDimensions = getCanvasDimensions();
+      const viewportBounds = rfInstanceRef.current ? {
+        x: rfInstanceRef.current.getViewport().x,
+        y: rfInstanceRef.current.getViewport().y,
+        width: canvasDimensions.width,
+        height: canvasDimensions.height,
+        zoom: rfInstanceRef.current.getViewport().zoom
+      } : undefined;
+      const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
       
       const newNode: AppNode = {
         id: `${tableName}-${+new Date()}`,
