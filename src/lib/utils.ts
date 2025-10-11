@@ -4,7 +4,7 @@ import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { twMerge } from "tailwind-merge";
 
-export const MAX_SEARCH_DISTANCE = 10;
+export const MAX_SEARCH_DISTANCE = 20;
 export const OVERLAP_OFFSET = 20;
 export const DEFAULT_TABLE_WIDTH = 288;
 export const DEFAULT_TABLE_HEIGHT = 100;
@@ -15,16 +15,21 @@ export const DEFAULT_ZONE_HEIGHT = 300;
 export const DEFAULT_NODE_SPACING = 50;
 
 export function getCanvasDimensions(): { width: number; height: number } {
-  const reactFlowViewport = document.querySelector('.react-flow__viewport');
-  if (reactFlowViewport) {
-    const rect = reactFlowViewport.getBoundingClientRect();
-    return { width: rect.width, height: rect.height };
-  }
+  const selectors = [
+    '.react-flow__viewport',
+    '.react-flow',
+    '[data-panel-id]',
+    '.react-flow__renderer'
+  ];
   
-  const diagramPanel = document.querySelector('[data-panel-id]');
-  if (diagramPanel) {
-    const rect = diagramPanel.getBoundingClientRect();
-    return { width: rect.width, height: rect.height };
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width > 100 && rect.height > 100) {
+        return { width: rect.width, height: rect.height };
+      }
+    }
   }
   
   // fallback: use window dimensions
@@ -227,14 +232,47 @@ export function findNonOverlappingPosition(
     }
   }
   
-  // If viewport is full, allow overlap but keep within viewport
+  // If viewport is full, try systematic search across entire viewport
   if (viewportBounds) {
     const viewportX = -viewportBounds.x / viewportBounds.zoom;
     const viewportY = -viewportBounds.y / viewportBounds.zoom;
     const viewportWidth = viewportBounds.width / viewportBounds.zoom;
     const viewportHeight = viewportBounds.height / viewportBounds.zoom;
     
-    // Try center of viewport first
+    // Try systematic grid search across the entire viewport
+    const gridSpacing = nodeWidth + spacing;
+    const maxX = Math.floor(viewportWidth / gridSpacing);
+    const maxY = Math.floor(viewportHeight / gridSpacing);
+    
+    for (let x = 0; x < maxX; x++) {
+      for (let y = 0; y < maxY; y++) {
+        const candidate = {
+          x: viewportX + x * gridSpacing + spacing,
+          y: viewportY + y * gridSpacing + spacing
+        };
+        
+        // Check if position has no overlap (allow overlap with viewport bounds)
+        const hasOverlap = existingNodes.some((node) => {
+          if (!node.position) return false;
+          
+          const existingRect = {
+            x: node.position.x,
+            y: node.position.y,
+            width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
+            height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
+          };
+
+          const newRect = { x: candidate.x, y: candidate.y, width: nodeWidth, height: nodeHeight };
+          return doRectanglesOverlap(newRect, existingRect);
+        });
+        
+        if (!hasOverlap && isPositionInViewport(candidate, nodeWidth, nodeHeight, viewportBounds)) {
+          return candidate;
+        }
+      }
+    }
+    
+    // Try center of viewport as last resort before overlap
     const centerPosition = {
       x: viewportX + viewportWidth / 2 - nodeWidth / 2,
       y: viewportY + viewportHeight / 2 - nodeHeight / 2
