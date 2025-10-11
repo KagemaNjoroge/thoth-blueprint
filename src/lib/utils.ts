@@ -211,9 +211,10 @@ export function findNonOverlappingPosition(
     })[0];
   
   if (lastAddedNode && lastAddedNode.position) {
+    const OVERLAP_OFFSET = 20;
     return {
-      x: lastAddedNode.position.x + 20,
-      y: lastAddedNode.position.y + 20,
+      x: lastAddedNode.position.x + OVERLAP_OFFSET,
+      y: lastAddedNode.position.y + OVERLAP_OFFSET,
     };
   }
   
