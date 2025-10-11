@@ -4,6 +4,16 @@ import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { twMerge } from "tailwind-merge";
 
+const MAX_SEARCH_DISTANCE = 10;
+const OVERLAP_OFFSET = 20;
+const DEFAULT_TABLE_WIDTH = 288;
+const DEFAULT_TABLE_HEIGHT = 100;
+const DEFAULT_NOTE_WIDTH = 192;
+const DEFAULT_NOTE_HEIGHT = 192;
+const DEFAULT_ZONE_WIDTH = 300;
+const DEFAULT_ZONE_HEIGHT = 300;
+const DEFAULT_NODE_SPACING = 50;
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -56,13 +66,13 @@ export function isNodeInsideZone(
   // Get node dimensions (use defaults if not specified)
   const nodeWidth =
     node.width ||
-    (node.type === "table" ? 288 : node.type === "note" ? 192 : 300);
+    (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH);
   const nodeHeight =
     node.height ||
-    (node.type === "table" ? 100 : node.type === "note" ? 192 : 300);
+    (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT);
 
-  const zoneWidth = zone.width || 300;
-  const zoneHeight = zone.height || 300;
+  const zoneWidth = zone.width || DEFAULT_ZONE_WIDTH;
+  const zoneHeight = zone.height || DEFAULT_ZONE_HEIGHT;
 
   // Check if all four corners of the node are inside the zone
   const topLeft = { x: node.position.x, y: node.position.y };
@@ -129,9 +139,9 @@ function doRectanglesOverlap(
 export function findNonOverlappingPosition(
   existingNodes: CombinedNode[],
   preferredPosition: { x: number; y: number },
-  nodeWidth: number = 288,
-  nodeHeight: number = 100,
-  spacing: number = 50
+  nodeWidth: number = DEFAULT_TABLE_WIDTH,
+  nodeHeight: number = DEFAULT_TABLE_HEIGHT,
+  spacing: number = DEFAULT_NODE_SPACING
 ): { x: number; y: number } {
   // Check if preferred position is free
   const hasOverlap = existingNodes.some((node) => {
@@ -140,8 +150,8 @@ export function findNonOverlappingPosition(
     const existingRect = {
       x: node.position.x,
       y: node.position.y,
-      width: node.width || (node.type === "table" ? 288 : node.type === "note" ? 192 : 300),
-      height: node.height || (node.type === "table" ? 100 : node.type === "note" ? 192 : 300),
+      width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
+      height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
     };
 
     const newRect = {
@@ -158,7 +168,6 @@ export function findNonOverlappingPosition(
     return preferredPosition;
   }
 
-  const MAX_SEARCH_DISTANCE = 10;
   const gridSize = nodeWidth + spacing;
   
   // try positions in a grid around the preferred position
@@ -188,8 +197,8 @@ export function findNonOverlappingPosition(
         const existingRect = {
           x: node.position.x,
           y: node.position.y,
-          width: node.width || (node.type === "table" ? 288 : node.type === "note" ? 192 : 300),
-          height: node.height || (node.type === "table" ? 100 : node.type === "note" ? 192 : 300),
+          width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
+          height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
         };
 
         return doRectanglesOverlap(candidateRect, existingRect);
@@ -211,7 +220,6 @@ export function findNonOverlappingPosition(
     })[0];
   
   if (lastAddedNode && lastAddedNode.position) {
-    const OVERLAP_OFFSET = 20;
     return {
       x: lastAddedNode.position.x + OVERLAP_OFFSET,
       y: lastAddedNode.position.y + OVERLAP_OFFSET,
