@@ -158,10 +158,11 @@ export function findNonOverlappingPosition(
     return preferredPosition;
   }
 
-  // try positions in a grid around the preferred position
+  const MAX_SEARCH_DISTANCE = 10;
   const gridSize = nodeWidth + spacing;
   
-  for (let distance = 1; distance <= 10; distance++) {
+  // try positions in a grid around the preferred position
+  for (let distance = 1; distance <= MAX_SEARCH_DISTANCE; distance++) {
     const positions = [
       { x: preferredPosition.x + distance * gridSize, y: preferredPosition.y },
       { x: preferredPosition.x - distance * gridSize, y: preferredPosition.y },
