@@ -3,174 +3,402 @@ import { DbRelationship } from "@/lib/constants";
 import {
   type AppEdge,
   type AppNode,
+  type AppNoteNode,
   type Column,
   type Diagram,
   type Index,
+  type IndexType,
+  type EdgeData,
 } from "@/lib/types";
 
 interface ParsedForeignKey {
   sourceTable: string;
-  sourceColumn: string;
+  sourceColumns: string[];
   targetTable: string;
-  targetColumn: string;
+  targetColumns: string[];
   constraintName: string;
+  onDelete?: string;
+  onUpdate?: string;
 }
 
-export function parseMySqlDdl(ddl: string): Diagram["data"] {
+interface Diagnostic {
+  level: "warning" | "error";
+  message: string;
+  table?: string;
+  detail?: string;
+}
+
+function uuid(): string {
+  try {
+    // Prefer Web Crypto API
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // ignore crypto.randomUUID() errors, fallback will be used
+  }
+  // Fallback
+  return `uuid_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+}
+
+function stripComments(sql: string): string {
+  return sql
+    // Remove single-line comments
+    .replace(/--.*$/gm, "")
+    // Remove block comments
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+function splitStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inBacktick = false;
+
+  const pushCurrent = () => {
+    const s = current.trim();
+    if (s.length) statements.push(s);
+    current = "";
+  };
+
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+
+    // Handle escapes inside quotes
+    const prev = sql[i - 1];
+    const isEscaped = prev === "\\";
+
+    if (!isEscaped) {
+      if (ch === "'" && !inDouble && !inBacktick) inSingle = !inSingle;
+      else if (ch === '"' && !inSingle && !inBacktick) inDouble = !inDouble;
+      else if (ch === "`" && !inSingle && !inDouble) inBacktick = !inBacktick;
+      else if (!inSingle && !inDouble && !inBacktick) {
+        if (ch === "(") depth++;
+        else if (ch === ")" && depth > 0) depth--;
+      }
+    }
+
+    if (ch === ";" && !inSingle && !inDouble && !inBacktick && depth === 0) {
+      pushCurrent();
+    } else {
+      current += ch;
+    }
+  }
+
+  pushCurrent();
+
+  // Keep only CREATE TABLE and similar DDL statements
+  return statements.filter((s) => /^\s*CREATE\s+TABLE/i.test(s));
+}
+
+function normalizeIdentifier(raw: string): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  // If quoted with backticks, take literal content
+  if (trimmed.startsWith("`") && trimmed.endsWith("`")) {
+    return trimmed.slice(1, -1);
+  }
+  // If quoted with double-quotes (rare in MySQL), strip
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1);
+  }
+  // If schema-qualified, take the last segment
+  if (trimmed.includes(".")) {
+    const parts = trimmed.split(".");
+    const lastPart = parts[parts.length - 1];
+    return lastPart ? normalizeIdentifier(lastPart) : "";
+  }
+  return trimmed;
+}
+
+function splitTopLevelItems(body: string): string[] {
+  const items: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inBacktick = false;
+
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    const prev = body[i - 1];
+    const isEscaped = prev === "\\";
+
+    if (!isEscaped) {
+      if (ch === "'" && !inDouble && !inBacktick) inSingle = !inSingle;
+      else if (ch === '"' && !inSingle && !inBacktick) inDouble = !inDouble;
+      else if (ch === "`" && !inSingle && !inDouble) inBacktick = !inBacktick;
+      else if (!inSingle && !inDouble && !inBacktick) {
+        if (ch === "(") depth++;
+        else if (ch === ")" && depth > 0) depth--;
+      }
+    }
+
+    if (ch === "," && !inSingle && !inDouble && !inBacktick && depth === 0) {
+      const item = current.trim();
+      if (item.length) items.push(item);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  const last = current.trim();
+  if (last.length) items.push(last);
+  return items;
+}
+
+function parseQuotedList(listStr: string): string[] {
+  // Expect input like: 'a','b','c' or "a","b"
+  const result: string[] = [];
+  let token = "";
+  let inSingle = false;
+  let inDouble = false;
+
+  for (let i = 0; i < listStr.length; i++) {
+    const ch = listStr[i];
+    const prev = listStr[i - 1];
+    const isEscaped = prev === "\\";
+
+    if (!isEscaped) {
+      if (ch === "'" && !inDouble) {
+        if (inSingle) {
+          // end token
+          result.push(token);
+          token = "";
+          inSingle = false;
+          // skip next comma if any
+          continue;
+        } else {
+          inSingle = true;
+          continue;
+        }
+      } else if (ch === '"' && !inSingle) {
+        if (inDouble) {
+          result.push(token);
+          token = "";
+          inDouble = false;
+          continue;
+        } else {
+          inDouble = true;
+          continue;
+        }
+      }
+    }
+
+    if (inSingle || inDouble) {
+      token += ch;
+    }
+  }
+
+  return result.map((s) => s.replace(/''/g, "'"));
+}
+
+function extractTableOptionsTail(statement: string) {
+  const match = statement.match(/\)\s*(.*)$/i);
+  return match ? match[1] : "";
+}
+
+export async function parseMySqlDdlAsync(
+  ddl: string,
+  onProgress?: (progress: number, label?: string) => void
+): Promise<Diagram["data"]> {
+  const diagnostics: Diagnostic[] = [];
   const nodes: AppNode[] = [];
   const foreignKeys: ParsedForeignKey[] = [];
 
-  // Remove comments and split into statements
-  const statements = ddl
-    .replace(/--.*$/gm, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.toUpperCase().startsWith("CREATE TABLE"));
+  // adaptive layout parameters to avoid overlapping (same as sync)
+  const NUM_COLUMNS = 4;
+  const CARD_WIDTH = 288;
+  const X_GAP = 64;
+  const Y_GAP = 64;
+  const columnYOffset: number[] = Array(NUM_COLUMNS).fill(20);
+  const estimateHeight = (columnCount: number) => 60 + columnCount * 28;
 
-  statements.forEach((statement, statementIndex) => {
-    const tableNameMatch = statement.match(/CREATE TABLE\s+`?(\w+)`?/i);
-    if (!tableNameMatch) return;
+  const cleaned = stripComments(ddl);
+  const statements = splitStatements(cleaned);
+  const total = statements.length || 1;
 
-    const tableName = tableNameMatch[1];
+  for (let statementIndex = 0; statementIndex < statements.length; statementIndex++) {
+    const statement = statements[statementIndex];
+
+    // Table name
+    const tableNameMatch = statement?.match(/CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?([^\s(]+)/i);
+    if (!tableNameMatch) {
+      diagnostics.push({ level: "warning", message: "Unable to parse table name", detail: statement?.slice(0, 120) || "" });
+      continue;
+    }
+
+    const rawTableName = tableNameMatch[2];
+    const tableName = normalizeIdentifier(rawTableName ?? "");
+
     const columns: Column[] = [];
     const indices: Index[] = [];
     let tableComment = "";
 
-    const tableBodyMatch = statement.match(/\(([\s\S]*)\)/);
-    if (!tableBodyMatch) return;
+    const tableBodyMatch = statement?.match(/\(([\s\S]*)\)/);
+    if (!tableBodyMatch) {
+      diagnostics.push({ level: "warning", message: "Missing table body", table: tableName });
+      continue;
+    }
 
-    const tableBody = tableBodyMatch[1] || '';
-    const lines = tableBody
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .map((l) => l.replace(/,$/, ""));
+    const tableBody = tableBodyMatch[1] || "";
 
-    lines.forEach((line) => {
+    const items = splitTopLevelItems(tableBody);
+
+    items.forEach((rawLine) => {
+      const line = rawLine.trim();
       if (!line) return;
 
-      // Skip constraint definitions
-      if (
-        /^(PRIMARY|CONSTRAINT|UNIQUE|KEY|INDEX|FULLTEXT|SPATIAL)/i.test(line)
-      ) {
-        // Handle PRIMARY KEY constraint
-        if (line.toUpperCase().startsWith("PRIMARY KEY")) {
-          const pkMatch = line.match(/PRIMARY\s+KEY\s*\(([^)]+)\)/i);
-          if (pkMatch) {
-            const pkCols = (pkMatch[1] || '')
-              .replace(/`/g, "")
-              .split(",")
-              .map((c) => c.trim());
-            columns.forEach((c) => {
-              if (pkCols.includes(c.name)) {
-                c.pk = true;
-                c.nullable = false; // PKs are always NOT NULL
-              }
-            });
-          }
-        }
-        // Handle UNIQUE KEY / KEY / INDEX
-        else if (/^(UNIQUE\s+)?(KEY|INDEX)/i.test(line)) {
-          const indexMatch = line.match(
-            /(?:UNIQUE\s+)?(?:KEY|INDEX)\s+(?:`?(\w+)`?\s+)?\(([^)]+)\)/i
-          );
-          if (indexMatch) {
-            const indexName = indexMatch[1] || `idx_${Date.now()}`;
-            const indexColsStr = indexMatch[2];
-            const isUnique = /^UNIQUE/i.test(line);
-
-            const indexColNames = (indexColsStr || '')
-              .replace(/`/g, "")
-              .split(",")
-              .map((c) => c?.trim()?.split("(")[0]?.split(" ")[0]);
-
-            const indexColIds = indexColNames
-              .map((name) => columns.find((c) => c.name === name)?.id)
-              .filter((id): id is string => id !== undefined);
-
-            if (indexColIds.length > 0) {
-              indices.push({
-                id: `idx_${tableName}_${indexName}_${Date.now()}`,
-                name: indexName,
-                columns: indexColIds,
-                isUnique,
-              });
+      if (/^PRIMARY\s+KEY/i.test(line)) {
+        const pkMatch = line.match(/PRIMARY\s+KEY\s*\(([^)]+)\)/i);
+        if (pkMatch) {
+          const pkCols = (pkMatch[1] || "")
+            .split(",")
+            .map((c) => normalizeIdentifier(c.split(" ")[0]?.trim() ?? ""))
+            .filter(Boolean);
+          columns.forEach((c) => {
+            if (pkCols.includes(c.name)) {
+              c.pk = true;
+              c.nullable = false;
             }
-          }
+          });
         }
-        // Handle FOREIGN KEY constraint
-        else if (/^CONSTRAINT.*FOREIGN\s+KEY/i.test(line)) {
-          const fkMatch = line.match(
-            /CONSTRAINT\s+`?(\w+)`?\s+FOREIGN\s+KEY\s*\(`?(\w+)`?\)\s+REFERENCES\s+`?(\w+)`?\s*\(`?(\w+)`?\)/i
-          );
-          if (fkMatch) {
-            const [, constraintName, sourceColumn, targetTable, targetColumn] =
-              fkMatch;
-            foreignKeys.push({
-              sourceTable: tableName || '',
-              sourceColumn: sourceColumn || '',
-              targetTable: targetTable || '',
-              targetColumn: targetColumn || '',
-              constraintName: constraintName || '',
+        return;
+      }
+
+      if (/^(UNIQUE\s+)?(KEY|INDEX|FULLTEXT|SPATIAL)/i.test(line)) {
+        let indexType: IndexType = "INDEX";
+        if (/^UNIQUE/i.test(line)) indexType = "UNIQUE";
+        else if (/^FULLTEXT/i.test(line)) indexType = "FULLTEXT";
+        else if (/^SPATIAL/i.test(line)) indexType = "SPATIAL";
+
+        const idxMatch = line.match(/(?:UNIQUE\s+)?(?:FULLTEXT\s+|SPATIAL\s+)?(?:KEY|INDEX)\s+(?:`?([^`\s]+)`?\s+)?\(([^)]+)\)/i);
+        if (idxMatch) {
+          const indexName = normalizeIdentifier(idxMatch[1] || `idx_${tableName}`);
+          const colsStr = idxMatch[2];
+          const colNames = (colsStr ?? "")
+            .split(",")
+            .map((c) => c.trim())
+            .map((c) => normalizeIdentifier(c.split(" ")[0]?.split("(")[0] ?? ""))
+            .filter(Boolean);
+
+          const prefixLengths: Record<string, number> = {};
+          (colsStr ?? "")
+            .split(",")
+            .map((c) => c.trim())
+            .forEach((c) => {
+              const name = normalizeIdentifier(c.split(" ")[0]?.split("(")[0] ?? "");
+              const p = c.match(/\((\d+)\)/);
+              if (name && p && p[1]) prefixLengths[name] = parseInt(p[1], 10);
+            });
+
+          const colIds = colNames
+            .map((n) => columns.find((c) => c.name === n)?.id)
+            .filter((id): id is string => !!id);
+
+          if (colIds.length > 0) {
+            indices.push({
+              id: uuid(),
+              name: indexName,
+              columns: colIds,
+              isUnique: indexType === "UNIQUE",
+              type: indexType,
+              // @ts-expect-error store prefix lengths for future use
+              prefixLengths,
             });
           }
         }
         return;
       }
 
-      // Parse column definition
-      const colMatch = line.match(
-        /^`?(\w+)`?\s+(\w+(?:\([^)]+\))?(?:\s+(?:UNSIGNED|ZEROFILL))*)(.*)/i
-      );
+      if (/^(CONSTRAINT\s+[^\s]+\s+)?FOREIGN\s+KEY/i.test(line)) {
+        const namedFkMatch = line.match(/CONSTRAINT\s+`?([^`\s]+)`?\s+FOREIGN\s+KEY\s*\(([^)]+)\)\s+REFERENCES\s+([^\s(]+)\s*\(([^)]+)\)/i);
+        const simpleFkMatch = !namedFkMatch
+          ? line.match(/FOREIGN\s+KEY\s*(?:`?([^`\s]+)`?\s*)?\(([^)]+)\)\s+REFERENCES\s+([^\s(]+)\s*\(([^)]+)\)/i)
+          : null;
+        const m = namedFkMatch || simpleFkMatch;
+        if (m) {
+          const constraintName = normalizeIdentifier(m[1] || `fk_${tableName}_${uuid().slice(0, 8)}`);
+          const sourceCols = (m[2] ?? "")
+            .split(",")
+            .map((c) => normalizeIdentifier(c.split(" ")[0]?.trim() ?? ""))
+            .filter(Boolean);
+          const targetTbl = normalizeIdentifier(m[3] ?? "");
+          const targetCols = (m[4] ?? "")
+            .split(",")
+            .map((c) => normalizeIdentifier(c.split(" ")[0]?.trim() ?? ""))
+            .filter(Boolean);
+
+          let onDelete: string | undefined;
+          let onUpdate: string | undefined;
+          const delMatch = line.match(/ON\s+DELETE\s+(RESTRICT|CASCADE|SET\s+NULL|NO\s+ACTION)/i);
+          const updMatch = line.match(/ON\s+UPDATE\s+(RESTRICT|CASCADE|SET\s+NULL|NO\s+ACTION)/i);
+          if (delMatch && delMatch[1]) onDelete = delMatch[1].toUpperCase().replace(/\s+/g, " ");
+          if (updMatch && updMatch[1]) onUpdate = updMatch[1].toUpperCase().replace(/\s+/g, " ");
+
+          const fkObj: ParsedForeignKey = {
+            sourceTable: tableName,
+            sourceColumns: sourceCols,
+            targetTable: targetTbl,
+            targetColumns: targetCols,
+            constraintName,
+          };
+          if (onDelete) fkObj.onDelete = onDelete;
+          if (onUpdate) fkObj.onUpdate = onUpdate;
+
+          foreignKeys.push(fkObj);
+        }
+        return;
+      }
+
+      const colMatch = line.match(/^`?([^`\s]+)`?\s+([^\s]+(?:\([^)]*\))?(?:\s+(?:UNSIGNED|ZEROFILL))?)(.*)$/i);
       if (!colMatch) return;
 
-      const name = colMatch[1] || '';
-      const typeString = (colMatch[2] || '').trim();
-      const rest = (colMatch[3] || '').trim();
+      const name = normalizeIdentifier(colMatch[1] || "");
+      const typeString = (colMatch[2] || "").trim();
+      const rest = (colMatch[3] || "").trim();
 
       const [type, length, precision, scale] = parseType(typeString);
 
-      // Parse constraints more carefully
       const isNotNull = /\bNOT\s+NULL\b/i.test(rest);
       const isPrimaryKey = /\bPRIMARY\s+KEY\b/i.test(rest);
       const isAutoIncrement = /\bAUTO_INCREMENT\b/i.test(rest);
       const isUnique = /\bUNIQUE\b/i.test(rest);
       const isUnsigned = /\bUNSIGNED\b/i.test(typeString);
 
-      // Extract default value
       let defaultValue: string | number | null | undefined;
-      const defaultMatch = rest.match(
-        /\bDEFAULT\s+(?:'([^']*(?:''[^']*)*)'|(NULL)|([^\s,]+))/i
-      );
+      const defaultMatch = rest.match(/\bDEFAULT\s+(?:'([^']*(?:''[^']*)*)'|(NULL)|([^\s,]+))/i);
       if (defaultMatch) {
-        if (defaultMatch[2]) {
-          defaultValue = null; // NULL
-        } else if (defaultMatch[1]) {
-          defaultValue = defaultMatch[1].replace(/''/g, "'"); // Handle escaped quotes
-        } else if (defaultMatch[3]) {
+        if (defaultMatch[2]) defaultValue = null;
+        else if (defaultMatch[1]) defaultValue = defaultMatch[1].replace(/''/g, "'");
+        else if (defaultMatch[3]) {
           const val = defaultMatch[3];
-          // Try to parse as number
-          if (/^-?\d+(\.\d+)?$/.test(val)) {
-            defaultValue = parseFloat(val);
-          } else {
-            defaultValue = val; // Function or keyword
-          }
+          if (/^-?\d+(\.\d+)?$/.test(val)) defaultValue = parseFloat(val);
+          else defaultValue = val;
         }
       }
 
-      // Extract comment
       const commentMatch = rest.match(/\bCOMMENT\s+'([^']*)'/i);
-      const comment = commentMatch?.[1];
+      const comment = commentMatch?.[1] || "";
+
+      let enumValues: string | undefined;
+      const enumMatch = typeString.match(/^(ENUM|SET)\s*\((.*)\)/i);
+      if (enumMatch) {
+        const raw = enumMatch[2];
+        const values = parseQuotedList(raw || "");
+        enumValues = values.join(",");
+      }
 
       const column: Column = {
-        id: `col_${tableName}_${name}_${Date.now()}_${Math.random()}`,
+        id: uuid(),
         name,
         type,
-        length,
-        precision,
-        scale,
-        nullable: !isNotNull && !isPrimaryKey, // PKs are implicitly NOT NULL
+        length: length || 0,
+        precision: precision || 0,
+        scale: scale || 0,
+        nullable: !isNotNull && !isPrimaryKey,
         pk: isPrimaryKey,
         isAutoIncrement,
         isUnique,
@@ -178,83 +406,187 @@ export function parseMySqlDdl(ddl: string): Diagram["data"] {
         defaultValue,
         comment,
       };
+      if (enumValues) column.enumValues = enumValues;
       columns.push(column);
+
+      if (/\bREFERENCES\b/i.test(rest)) {
+        const refMatch = rest.match(/REFERENCES\s+([^\s(]+)\s*\(([^)]+)\)/i);
+        if (refMatch) {
+          const targetTbl = normalizeIdentifier(refMatch[1] || "");
+          const targetCol = normalizeIdentifier(refMatch[2]?.split(",")[0] || "");
+          let onDelete: string | undefined;
+          let onUpdate: string | undefined;
+          const delMatch = rest.match(/ON\s+DELETE\s+(RESTRICT|CASCADE|SET\s+NULL|NO\s+ACTION)/i);
+          const updMatch = rest.match(/ON\s+UPDATE\s+(RESTRICT|CASCADE|SET\s+NULL|NO\s+ACTION)/i);
+          if (delMatch && delMatch[1]) onDelete = delMatch[1].toUpperCase().replace(/\s+/g, " ");
+          if (updMatch && updMatch[1]) onUpdate = updMatch[1].toUpperCase().replace(/\s+/g, " ");
+
+          const fkObj: ParsedForeignKey = {
+            sourceTable: tableName,
+            sourceColumns: [name],
+            targetTable: targetTbl,
+            targetColumns: [targetCol],
+            constraintName: `fk_${tableName}_${name}`,
+          };
+          if (onDelete) fkObj.onDelete = onDelete;
+          if (onUpdate) fkObj.onUpdate = onUpdate;
+
+          foreignKeys.push(fkObj);
+        } else {
+          diagnostics.push({ level: "warning", message: "Unrecognized inline REFERENCES syntax", table: tableName, detail: rest });
+        }
+      }
     });
 
-    // Extract table comment
-    const tableOptionsMatch = statement.match(/\)\s*(.*)$/i);
-    if (tableOptionsMatch) {
-      const tableOptions = tableOptionsMatch[1];
-      const commentMatch = tableOptions?.match(/\bCOMMENT\s*=?\s*'([^']*)'/i);
-      if (commentMatch) {
-        tableComment = commentMatch[1] || '';
-      }
+    const tableOptions = extractTableOptionsTail(statement || "") ?? "";
+    const tCommentMatch = tableOptions?.match(/\bCOMMENT\s*=?\s*'([^']*)'/i);
+    if (tCommentMatch) tableComment = tCommentMatch[1] || "";
+    const engineMatch = tableOptions?.match(/\bENGINE\s*=\s*([A-Za-z0-9_]+)/i);
+    const charsetMatch = tableOptions?.match(/\b(?:DEFAULT\s+)?CHARSET\s*=\s*([A-Za-z0-9_]+)/i) || tableOptions?.match(/\bCHARACTER\s+SET\s*=\s*([A-Za-z0-9_]+)/i);
+    const collateMatch = tableOptions?.match(/\bCOLLATE\s*=\s*([A-Za-z0-9_]+)/i);
+
+    const opts: string[] = [];
+    if (engineMatch) opts.push(`ENGINE=${engineMatch[1]}`);
+    if (charsetMatch) opts.push(`CHARSET=${charsetMatch[1]}`);
+    if (collateMatch) opts.push(`COLLATE=${collateMatch[1]}`);
+    if (opts.length) {
+      tableComment = tableComment ? `${tableComment} | ${opts.join("; ")}` : opts.join("; ");
     }
 
-    nodes.push({
-      id: `node_${tableName}_${Date.now()}`,
+    const colIndex = statementIndex % NUM_COLUMNS;
+    const x = colIndex * (CARD_WIDTH + X_GAP);
+    const y = columnYOffset[colIndex] ?? 0;
+
+    const node: AppNode = {
+      id: uuid(),
       type: "table",
-      position: {
-        x: (statementIndex % 4) * 320,
-        y: Math.floor(statementIndex / 4) * 250,
-      },
+      position: { x, y },
       data: {
-        label: tableName || '',
+        label: tableName,
         columns,
         indices,
         comment: tableComment,
-        color: tableColors[statementIndex % tableColors.length] || '',
+        color: tableColors[statementIndex % tableColors.length] || "",
         order: statementIndex,
       },
-    });
-  });
+    };
+    nodes.push(node);
+    columnYOffset[colIndex] = (columnYOffset[colIndex] ?? 0) + estimateHeight(columns.length) + Y_GAP;
 
-  const edges: AppEdge[] = foreignKeys
-    .flatMap((fk) => {
-      const sourceNode = nodes.find((n) => n.data.label === fk.sourceTable);
-      const targetNode = nodes.find((n) => n.data.label === fk.targetTable);
+    if (onProgress) {
+      const pct = Math.round(((statementIndex + 1) / total) * 100);
+      onProgress(pct, `Parsed ${statementIndex + 1}/${total} tables`);
+    }
+    // Yield to the event loop to keep UI responsive
+    await new Promise((r) => setTimeout(r, 0));
+  }
 
-      if (!sourceNode || !targetNode) return [];
+  const tableMap = new Map<string, AppNode>();
+  nodes.forEach((n) => tableMap.set(n.data.label, n));
 
-      const sourceColumn = sourceNode.data.columns.find(
-        (c) => c.name === fk.sourceColumn
-      );
-      const targetColumn = targetNode.data.columns.find(
-        (c) => c.name === fk.targetColumn
-      );
+  const edges: AppEdge[] = foreignKeys.flatMap((fk) => {
+    const sourceNode = tableMap.get(fk.sourceTable);
+    const targetNode = tableMap.get(fk.targetTable);
+    if (!sourceNode || !targetNode) {
+      diagnostics.push({ level: "warning", message: "FK references unknown table", detail: `${fk.sourceTable} -> ${fk.targetTable}` });
+      return [];
+    }
 
-      if (!sourceColumn || !targetColumn) return [];
+    const sourceCols = fk.sourceColumns
+      .map((name) => sourceNode.data.columns.find((c) => c.name === name))
+      .filter((c): c is Column => !!c);
+    const targetCols = fk.targetColumns
+      .map((name) => targetNode.data.columns.find((c) => c.name === name))
+      .filter((c): c is Column => !!c);
 
-      return [{
-        id: `edge_${fk.constraintName}`,
+    if (sourceCols.length !== fk.sourceColumns.length || targetCols.length !== fk.targetColumns.length) {
+      diagnostics.push({ level: "warning", message: "FK columns not found", detail: fk.constraintName });
+      return [];
+    }
+
+    const relationship = determineRelationshipComposite(sourceCols, targetCols, sourceNode, targetNode);
+
+    const edgeList: AppEdge[] = [];
+    const pairCount = Math.min(sourceCols.length, targetCols.length);
+    for (let i = 0; i < pairCount; i++) {
+      const sc = sourceCols[i];
+      const tc = targetCols[i];
+      const edgeData: EdgeData = {
+        relationship,
+        constraintName: fk.constraintName,
+        sourceColumns: fk.sourceColumns,
+        targetColumns: fk.targetColumns,
+        isComposite: fk.sourceColumns.length > 1 || fk.targetColumns.length > 1,
+        ...(fk.onDelete ? { onDelete: fk.onDelete } : {}),
+        ...(fk.onUpdate ? { onUpdate: fk.onUpdate } : {}),
+      };
+      edgeList.push({
+        id: uuid(),
         source: sourceNode.id,
         target: targetNode.id,
-        sourceHandle: `${sourceColumn.id}-right-source`,
-        targetHandle: `${targetColumn.id}-left-target`,
+        sourceHandle: `${sc?.id}-right-source`,
+        targetHandle: `${tc?.id}-left-target`,
         type: "custom",
-        data: {
-          relationship: DbRelationship.MANY_TO_ONE,
-        },
-      }];
-    });
+        data: edgeData,
+      });
+    }
 
-  return {
-    nodes,
-    edges,
-    notes: [],
-    zones: [],
-    viewport: { x: 0, y: 0, zoom: 1 },
-    isLocked: false,
+    return edgeList;
+  });
+
+  const notes: AppNoteNode[] = [];
+  if (diagnostics.length > 0) {
+    const text = diagnostics
+      .map((d) => `${d.level.toUpperCase()}: ${d.message}${d.table ? ` [${d.table}]` : ""}${d.detail ? ` - ${d.detail}` : ""}`)
+      .join("\n");
+    notes.push({ id: uuid(), type: "note", position: { x: 20, y: 20 }, data: { text, color: "#fde68a" } });
+  }
+
+  return { nodes, edges, notes, zones: [], viewport: { x: 0, y: 0, zoom: 1 }, isLocked: false };
+}
+
+function determineRelationshipComposite(
+  sourceColumns: Column[],
+  targetColumns: Column[],
+  sourceTable: AppNode,
+  targetTable: AppNode
+): string {
+  const sourceIds = new Set(sourceColumns.map((c) => c.id));
+  const targetIds = new Set(targetColumns.map((c) => c.id));
+
+  const hasUniqueIndexFor = (node: AppNode, ids: Set<string>): boolean => {
+    const indices = node.data.indices || [];
+    return indices.some((idx) => {
+      if (!idx.isUnique) return false;
+      if (idx.columns.length !== ids.size) return false;
+      return idx.columns.every((cid) => ids.has(cid));
+    });
   };
+
+  const isSourceUnique =
+    // single-column unique or composite index match
+    (sourceColumns.length === 1 && (sourceColumns[0]?.isUnique || sourceColumns[0]?.pk)) ||
+    hasUniqueIndexFor(sourceTable, sourceIds);
+
+  const isTargetUnique =
+    (targetColumns.length === 1 && (targetColumns[0]?.pk || targetColumns[0]?.isUnique)) ||
+    hasUniqueIndexFor(targetTable, targetIds) ||
+    // Composite PK treated as unique
+    (() => {
+      const pkCols = (targetTable.data.columns as Column[]).filter((c) => c.pk).map((c) => c.id);
+      return pkCols.length === targetIds.size && pkCols.every((id) => targetIds.has(id));
+    })();
+
+  if (isSourceUnique && isTargetUnique) return DbRelationship.ONE_TO_ONE;
+  if (isTargetUnique) return DbRelationship.MANY_TO_ONE;
+  return DbRelationship.MANY_TO_ONE;
 }
 
 function parseType(
   typeString: string
 ): [string, number | undefined, number | undefined, number | undefined] {
-  // Remove UNSIGNED, ZEROFILL etc from type string for parsing
   const cleanType = typeString.replace(/\s+(UNSIGNED|ZEROFILL)/gi, "");
-
-  const typeMatch = cleanType.match(/^(\w+)(?:\(([^)]+)\))?/i);
+  const typeMatch = cleanType.match(/^(\w+)(?:\(([^)]*)\))?/i);
   if (!typeMatch) {
     return [typeString.toUpperCase(), undefined, undefined, undefined];
   }
@@ -266,12 +598,17 @@ function parseType(
     return [type, undefined, undefined, undefined];
   }
 
-  // Handle ENUM/SET with quoted values
   if (type === "ENUM" || type === "SET") {
+    // values handled separately
     return [type, undefined, undefined, undefined];
   }
 
-  // Parse numeric parameters
+  // For fractional time types: DATETIME(p), TIME(p)
+  if (["DATETIME", "TIME", "TIMESTAMP"].includes(type)) {
+    const p = parseInt(paramsStr.trim(), 10);
+    return [type, isNaN(p) ? undefined : p, undefined, undefined];
+  }
+
   const params = paramsStr
     .split(",")
     .map((p) => {
@@ -281,11 +618,9 @@ function parseType(
     .filter((p): p is number => p !== undefined);
 
   if (params.length === 2) {
-    // DECIMAL(p, s) or DOUBLE(p, s)
     return [type, undefined, params[0], params[1]];
   }
   if (params.length === 1) {
-    // VARCHAR(l) or INT(l)
     return [type, params[0], undefined, undefined];
   }
 

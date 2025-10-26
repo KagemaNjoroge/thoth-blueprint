@@ -27,7 +27,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { importFromJson } from "@/lib/importer";
-import { parseMySqlDdl } from "@/lib/importer/mysql-ddl-parser";
+import { parseMySqlDdlAsync } from "@/lib/importer/mysql-ddl-parser";
 import { type DatabaseType, type Diagram } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { showError } from "@/utils/toast";
@@ -37,6 +37,7 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { Progress } from "@/components/ui/progress";
 
 const formSchema = z.object({
   name: z.string().min(1, "Diagram name is required"),
@@ -53,6 +54,9 @@ interface ImportDialogProps {
 
 export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDialogProps) {
   const [activeTab, setActiveTab] = useState("json");
+  const [isParsing, setIsParsing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -113,7 +117,14 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
           showError("Sorry, only MySQL DDL import is supported at the moment.");
           return;
         }
-        diagramData = parseMySqlDdl(values.content);
+        setIsParsing(true);
+        setProgress(0);
+        setProgressLabel("Starting import...");
+        diagramData = await parseMySqlDdlAsync(values.content, (p, label) => {
+          setProgress(p);
+          if (label) setProgressLabel(label);
+        });
+        setIsParsing(false);
       } else {
         throw new Error("Invalid import type");
       }
@@ -122,10 +133,14 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
       onOpenChange(false);
       form.reset();
       setActiveTab("json");
+      setProgress(0);
+      setProgressLabel("");
+      setIsParsing(false);
     } catch (error) {
       console.error("Import failed:", error);
       const errorMessage = error instanceof Error ? `Import failed: ${error.message}` : "An unknown error occurred during import.";
       showError(errorMessage);
+      setIsParsing(false);
     }
   }
 
@@ -210,6 +225,15 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                     </p>
                   </AlertDescription>
                 </Alert>
+                {isParsing && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Importing SQL…</span>
+                      <span>{progressLabel}</span>
+                    </div>
+                    <Progress value={progress} />
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 
@@ -271,7 +295,9 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
               )}
             />
             <DialogFooter>
-              <Button type="submit">Import Diagram</Button>
+              <Button type="submit" disabled={isParsing || !content}>
+                {isParsing ? "Importing…" : "Import Diagram"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
