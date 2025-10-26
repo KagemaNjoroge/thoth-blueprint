@@ -42,11 +42,94 @@ function uuid(): string {
 }
 
 function stripComments(sql: string): string {
-  return sql
-    // Remove single-line comments
-    .replace(/--.*$/gm, "")
-    // Remove block comments
-    .replace(/\/\*[\s\S]*?\*\//g, "");
+  // Robust comment stripping that respects quotes and MySQL variants.
+  // - Removes '--' and '#' single-line comments (outside quotes)
+  // - Removes standard block comments '/* ... */' (outside quotes)
+  // - Preserves versioned comments '/*! ... */' content by stripping only the wrappers
+  let out = "";
+  let inSingle = false;
+  let inDouble = false;
+  let inBacktick = false;
+  let inLineComment: false | "dash" | "hash" = false;
+  let inBlockComment = false;
+  let inVersionedComment = false;
+
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    const prev = sql[i - 1];
+    const next = sql[i + 1];
+    const next2 = sql[i + 2];
+    const isEscaped = prev === "\\";
+
+    // End line comment on newline
+    if (inLineComment) {
+      if (ch === "\n") {
+        inLineComment = false;
+        out += ch;
+      }
+      continue;
+    }
+
+    // End block or versioned comment
+    if (inBlockComment || inVersionedComment) {
+      if (ch === "*" && next === "/") {
+        if (inVersionedComment) {
+          // Skip the closing '*/' but keep inner content already copied
+        }
+        inBlockComment = false;
+        inVersionedComment = false;
+        i++; // consume '/'
+        continue;
+      }
+      // Copy inner content only for versioned comments
+      if (inVersionedComment) out += ch;
+      continue;
+    }
+
+    // Toggle quotes when not escaped and not in comments
+    if (!isEscaped) {
+      if (ch === "'" && !inDouble && !inBacktick) {
+        inSingle = !inSingle;
+      } else if (ch === '"' && !inSingle && !inBacktick) {
+        inDouble = !inDouble;
+      } else if (ch === "`" && !inSingle && !inDouble) {
+        inBacktick = !inBacktick;
+      }
+    }
+
+    // Start comments only when not inside quotes
+    if (!inSingle && !inDouble && !inBacktick) {
+      // Start line comments '--' or '#'
+      if (ch === "-" && next === "-") {
+        inLineComment = "dash";
+        i++; // consume second '-'
+        continue;
+      }
+      if (ch === "#") {
+        inLineComment = "hash";
+        continue;
+      }
+
+      // Start block comments
+      if (ch === "/" && next === "*") {
+        if (next2 === "!") {
+          // Versioned comment: keep inner content
+          inVersionedComment = true;
+          i += 2; // consume '/*'
+          continue;
+        } else {
+          inBlockComment = true;
+          i++; // consume '*'
+          continue;
+        }
+      }
+    }
+
+    // Normal character
+    out += ch;
+  }
+
+  return out;
 }
 
 function splitStatements(sql: string): string[] {
