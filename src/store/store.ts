@@ -30,6 +30,7 @@ export interface StoreState {
   clipboard: (AppNode | AppNoteNode | AppZoneNode)[] | null;
   lastCursorPosition: { x: number; y: number } | null;
   isRelationshipDialogOpen: boolean;
+  onlyRenderVisibleElements: boolean;
   loadInitialData: () => Promise<void>;
   setSelectedDiagramId: (id: number | null) => void;
   setSelectedNodeId: (id: string | null) => void;
@@ -62,6 +63,7 @@ export interface StoreState {
   copyNodes: (nodes: (AppNode | AppNoteNode | AppZoneNode)[]) => void;
   pasteNodes: (position: { x: number; y: number }) => void;
   setIsRelationshipDialogOpen: (value: boolean) => void;
+  setOnlyRenderVisibleElements: (value: boolean) => void;
 }
 
 export const TABLE_SOFT_DELETE_LIMIT = 10;
@@ -353,6 +355,7 @@ export const useStore = create(
     clipboard: null,
     lastCursorPosition: null,
     isRelationshipDialogOpen: false,
+    onlyRenderVisibleElements: true, // Default to true for performance
     loadInitialData: async () => {
       set({ isLoading: true });
       set({ isRelationshipDialogOpen: false });
@@ -894,6 +897,9 @@ export const useStore = create(
     },
     setIsRelationshipDialogOpen: (value) => {
       set({ isRelationshipDialogOpen: value });
+    },
+    setOnlyRenderVisibleElements: (value) => {
+      set({ onlyRenderVisibleElements: value });
     },
   }))
 );

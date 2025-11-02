@@ -84,7 +84,8 @@ interface DiagramEditorProps {
 const DiagramEditor = forwardRef(
   ({ setRfInstance }: DiagramEditorProps, ref) => {
     const selectedDiagramId = useStore((state) => state.selectedDiagramId);
-    const allDiagrams = useStore((state) => state.diagrams);
+  const allDiagrams = useStore((state) => state.diagrams);
+  const onlyRenderVisibleElements = useStore((state) => state.onlyRenderVisibleElements);
 
     const diagram = useMemo(() =>
       allDiagrams.find(d => d.id === selectedDiagramId),
@@ -432,6 +433,7 @@ const DiagramEditor = forwardRef(
               deleteKeyCode={isLocked ? null : ["Delete"]}
               fitView
               colorMode={theme as ColorMode}
+              onlyRenderVisibleElements={onlyRenderVisibleElements}
             >
               <Controls showInteractive={false}>
                 <ControlButton onClick={handleLockChange} title={isLocked ? "Unlock" : "Lock"}>

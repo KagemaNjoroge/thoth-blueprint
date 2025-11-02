@@ -291,17 +291,32 @@ export async function parseMySqlDdlAsync(
   const nodes: AppNode[] = [];
   const foreignKeys: ParsedForeignKey[] = [];
 
-  // adaptive layout parameters to avoid overlapping (same as sync)
-  const NUM_COLUMNS = 4;
-  const CARD_WIDTH = 288;
-  const X_GAP = 64;
-  const Y_GAP = 64;
-  const columnYOffset: number[] = Array(NUM_COLUMNS).fill(20);
-  const estimateHeight = (columnCount: number) => 60 + columnCount * 28;
-
   const cleaned = stripComments(ddl);
   const statements = splitStatements(cleaned);
   const total = statements.length || 1;
+
+  // adaptive layout parameters for optimized space utilization
+  const totalTables = statements.length;
+  const NUM_COLUMNS = Math.min(Math.max(Math.ceil(Math.sqrt(totalTables * 1.5)), 4), 8); // Dynamic columns: 4-8 based on table count
+  const CARD_WIDTH = 288;
+  const X_GAP = 32; // Reduced gap for better space utilization
+  const Y_GAP = 32; // Reduced gap for more compact layout
+  const columnYOffset: number[] = Array(NUM_COLUMNS).fill(20);
+  const estimateHeight = (columnCount: number) => 60 + columnCount * 28;
+  
+  // Helper function to find the column with minimum height for balanced layout
+  const findMinHeightColumn = () => {
+    let minHeight = columnYOffset[0] ?? 0;
+    let minIndex = 0;
+    for (let i = 1; i < NUM_COLUMNS; i++) {
+      const height = columnYOffset[i] ?? 0;
+      if (height < minHeight) {
+        minHeight = height;
+        minIndex = i;
+      }
+    }
+    return minIndex;
+  };
 
   for (let statementIndex = 0; statementIndex < statements.length; statementIndex++) {
     const statement = statements[statementIndex];
@@ -536,7 +551,7 @@ export async function parseMySqlDdlAsync(
       tableComment = tableComment ? `${tableComment} | ${opts.join("; ")}` : opts.join("; ");
     }
 
-    const colIndex = statementIndex % NUM_COLUMNS;
+    const colIndex = findMinHeightColumn();
     const x = colIndex * (CARD_WIDTH + X_GAP);
     const y = columnYOffset[colIndex] ?? 0;
 
