@@ -448,10 +448,14 @@ export const useStore = create(
         updatedAt: new Date(),
       };
       const id = await db.diagrams.add(newDiagram);
-      set((state) => ({
-        diagrams: [...state.diagrams, { ...newDiagram, id }],
-        selectedDiagramId: id,
-      }));
+      set((state) => {
+        const updatedDiagrams = [...state.diagrams, { ...newDiagram, id }];
+        return {
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
+          selectedDiagramId: id,
+        };
+      });
     },
     importDiagram: async (diagramData) => {
       const newDiagram: Diagram = {
@@ -460,10 +464,14 @@ export const useStore = create(
         updatedAt: new Date(),
       };
       const id = await db.diagrams.add(newDiagram);
-      set((state) => ({
-        diagrams: [...state.diagrams, { ...newDiagram, id }],
-        selectedDiagramId: id,
-      }));
+      set((state) => {
+        const updatedDiagrams = [...state.diagrams, { ...newDiagram, id }];
+        return {
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
+          selectedDiagramId: id,
+        };
+      });
     },
     renameDiagram: (id, name) => {
       set((state) => ({
