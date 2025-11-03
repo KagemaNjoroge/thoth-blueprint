@@ -13,7 +13,7 @@ import { DbRelationship, relationshipTypes } from "@/lib/constants";
 import { type AppEdge, type AppNode } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -26,18 +26,21 @@ interface EdgeInspectorPanelProps {
 }
 
 export default function EdgeInspectorPanel({ edge, nodes }: EdgeInspectorPanelProps) {
-    const { updateEdge, deleteEdge } = useStore(
+    const { updateEdge, deleteEdge, diagramsMap } = useStore(
         useShallow((state: StoreState) => ({
             updateEdge: state.updateEdge,
             deleteEdge: state.deleteEdge,
+            diagramsMap: state.diagramsMap,
         }))
     );
 
-    const diagram = useStore(useShallow((state: StoreState) =>
-        state.diagrams.find(d => d.id === state.selectedDiagramId)
-    ));
+    const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+    const diagram = diagramsMap.get(selectedDiagramId || 0);
 
     const isLocked = diagram?.data.isLocked ?? false;
+
+    // Create Maps for O(1) lookups
+    const nodesMap = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
 
     const [relationshipType, setRelationshipType] = useState(edge.data?.relationship || DbRelationship.ONE_TO_MANY);
 
@@ -49,8 +52,8 @@ export default function EdgeInspectorPanel({ edge, nodes }: EdgeInspectorPanelPr
 
     if (!edge) return null;
 
-    const sourceNode = nodes.find(n => n.id === edge.source);
-    const targetNode = nodes.find(n => n.id === edge.target);
+    const sourceNode = nodesMap.get(edge.source);
+    const targetNode = nodesMap.get(edge.target);
 
     const getColumnIdFromHandle = (handleId: string | null | undefined): string | null => {
         if (!handleId) return null;
@@ -61,8 +64,17 @@ export default function EdgeInspectorPanel({ edge, nodes }: EdgeInspectorPanelPr
     const sourceColumnId = getColumnIdFromHandle(edge.sourceHandle);
     const targetColumnId = getColumnIdFromHandle(edge.targetHandle);
 
-    const sourceColumn = sourceNode?.data.columns.find((c) => c.id === sourceColumnId);
-    const targetColumn = targetNode?.data.columns.find((c) => c.id === targetColumnId);
+    // Create column maps for efficient lookups
+    const sourceColumnsMap = sourceNode
+        ? new Map(sourceNode.data.columns.map(col => [col.id, col]))
+        : new Map();
+
+    const targetColumnsMap = targetNode
+        ? new Map(targetNode.data.columns.map(col => [col.id, col]))
+        : new Map();
+
+    const sourceColumn = sourceColumnId ? sourceColumnsMap.get(sourceColumnId) : undefined;
+    const targetColumn = targetColumnId ? targetColumnsMap.get(targetColumnId) : undefined;
 
     const handleTypeChange = (value: string) => {
         setRelationshipType(value);

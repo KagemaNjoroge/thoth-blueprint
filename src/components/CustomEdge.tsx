@@ -7,6 +7,7 @@ import {
   getSmoothStepPath,
 } from "@xyflow/react";
 import { useMemo } from "react";
+import React from "react";
 
 const EdgeIndicator = ({
   x,
@@ -64,7 +65,7 @@ const getTotalPathLength = (pathData: string) => {
   return pathNode.getTotalLength();
 };
 
-export default function CustomEdge(props: EdgeProps) {
+function CustomEdge(props: EdgeProps) {
   const {
     sourceX,
     sourceY,
@@ -164,3 +165,27 @@ export default function CustomEdge(props: EdgeProps) {
     </>
   );
 }
+
+// Memoized CustomEdge component with comparison function
+const MemoizedCustomEdge = React.memo(CustomEdge, (prevProps, nextProps) => {
+  // Compare essential props that affect rendering
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.source === nextProps.source &&
+    prevProps.target === nextProps.target &&
+    prevProps.sourceX === nextProps.sourceX &&
+    prevProps.sourceY === nextProps.sourceY &&
+    prevProps.targetX === nextProps.targetX &&
+    prevProps.targetY === nextProps.targetY &&
+    prevProps.sourcePosition === nextProps.sourcePosition &&
+    prevProps.targetPosition === nextProps.targetPosition &&
+    // Compare edge data
+    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data) &&
+    // Compare style
+    JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
+  );
+});
+
+MemoizedCustomEdge.displayName = 'CustomEdge';
+
+export default MemoizedCustomEdge;

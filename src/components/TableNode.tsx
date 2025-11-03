@@ -23,7 +23,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { Key, MoreHorizontal, Trash2 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Button } from "./ui/button";
 import {
   PopoverWithArrow,
@@ -47,6 +47,13 @@ function TableNode({
   const selectedNodeId = useStore((state) => state.selectedNodeId);
   const isSelected = selected || selectedNodeId === id;
 
+  // Create a Map for O(1) column lookups
+  const columnsMap = useMemo(() => {
+    const map = new Map<string, { name: string }>();
+    data.columns.forEach(col => map.set(col.id, { name: col.name }));
+    return map;
+  }, [data.columns]);
+
   useEffect(() => {
     if (prevColumnsRef.current !== data.columns) {
       updateNodeInternals(id);
@@ -69,7 +76,7 @@ function TableNode({
   };
 
   const getColumnNameById = (id: string) => {
-    return data.columns.find((c) => c.id === id)?.name || "unknown";
+    return columnsMap.get(id)?.name || "unknown";
   };
 
   return (
@@ -290,4 +297,25 @@ function TableNode({
   );
 }
 
-export default TableNode;
+// Memoized TableNode component with custom comparison function
+const MemoizedTableNode = React.memo(TableNode, (prevProps, nextProps) => {
+  // Compare essential props that affect rendering
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.data.label === nextProps.data.label &&
+    prevProps.data.color === nextProps.data.color &&
+    prevProps.data.isLocked === nextProps.data.isLocked &&
+    prevProps.data.isDeleted === nextProps.data.isDeleted &&
+    // Deep compare columns array
+    JSON.stringify(prevProps.data.columns) === JSON.stringify(nextProps.data.columns) &&
+    // Deep compare indices array
+    JSON.stringify(prevProps.data.indices) === JSON.stringify(nextProps.data.indices) &&
+    // Compare position if it exists
+    JSON.stringify(prevProps.data.position) === JSON.stringify(nextProps.data.position)
+  );
+});
+
+MemoizedTableNode.displayName = 'TableNode';
+
+export default MemoizedTableNode;

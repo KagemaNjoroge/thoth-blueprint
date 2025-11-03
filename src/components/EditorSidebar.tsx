@@ -33,13 +33,13 @@ export default function EditorSidebar({
   onViewAbout,
 }: EditorSidebarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
-  const allDiagrams = useStore((state) => state.diagrams);
+  const diagramsMap = useStore((state) => state.diagramsMap);
   const selectedNodeId = useStore((state) => state.selectedNodeId);
   const selectedEdgeId = useStore((state) => state.selectedEdgeId);
 
   const diagram = useMemo(() =>
-    allDiagrams.find((d) => d.id === selectedDiagramId),
-    [allDiagrams, selectedDiagramId]
+    diagramsMap.get(selectedDiagramId || 0),
+    [diagramsMap, selectedDiagramId]
   );
 
   const [currentTab, setCurrentTab] = useState<string>(() => {

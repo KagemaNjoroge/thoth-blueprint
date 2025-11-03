@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { NodeResizer, useReactFlow, type NodeProps } from "@xyflow/react";
 import { GitCommitHorizontal, Lock, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useShallow } from "zustand/react/shallow";
 import { Input } from "./ui/input";
@@ -16,7 +16,7 @@ interface ZoneNodeProps extends NodeProps<AppZoneNode> {
   onCreateNoteAtPosition?: (position: { x: number; y: number }) => void;
 }
 
-export default function ZoneNode({
+function ZoneNode({
   id,
   data,
   selected,
@@ -150,3 +150,22 @@ export default function ZoneNode({
     </ContextMenu>
   );
 }
+
+// Memoized ZoneNode component with comparison function
+const MemoizedZoneNode = React.memo(ZoneNode, (prevProps, nextProps) => {
+  // Compare essential props that affect rendering
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.data.name === nextProps.data.name &&
+    prevProps.data.isLocked === nextProps.data.isLocked &&
+    // Compare position and dimensions if they exist
+    JSON.stringify(prevProps.data.position) === JSON.stringify(nextProps.data.position) &&
+    JSON.stringify(prevProps.data.width) === JSON.stringify(nextProps.data.width) &&
+    JSON.stringify(prevProps.data.height) === JSON.stringify(nextProps.data.height)
+  );
+});
+
+MemoizedZoneNode.displayName = 'ZoneNode';
+
+export default MemoizedZoneNode;

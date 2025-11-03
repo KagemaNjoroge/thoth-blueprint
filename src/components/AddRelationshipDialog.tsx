@@ -48,6 +48,12 @@ const formSchema = z.object({
 });
 
 export function AddRelationshipDialog({ isOpen, onOpenChange, nodes, onCreateRelationship }: AddRelationshipDialogProps) {
+  // Create a Map for O(1) node lookups
+  const nodesMap = useMemo(() => {
+    const map = new Map<string, AppNode>();
+    nodes.forEach(node => map.set(node.id, node));
+    return map;
+  }, [nodes]);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -63,12 +69,12 @@ export function AddRelationshipDialog({ isOpen, onOpenChange, nodes, onCreateRel
   const targetNodeId = form.watch("targetNodeId");
 
   const sourceColumns = useMemo(() => {
-    return nodes.find(n => n.id === sourceNodeId)?.data.columns || [];
-  }, [nodes, sourceNodeId]);
+    return nodesMap.get(sourceNodeId)?.data.columns || [];
+  }, [nodesMap, sourceNodeId]);
 
   const targetColumns = useMemo(() => {
-    return nodes.find(n => n.id === targetNodeId)?.data.columns || [];
-  }, [nodes, targetNodeId]);
+    return nodesMap.get(targetNodeId)?.data.columns || [];
+  }, [nodesMap, targetNodeId]);
 
   // Reset column selections when table changes
   useEffect(() => {

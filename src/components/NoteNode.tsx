@@ -3,7 +3,7 @@ import { type AppNoteNode, type NoteNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { type NodeProps, NodeResizer } from "@xyflow/react";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 
 interface NoteNodeProps extends NodeProps<AppNoteNode> {
@@ -11,7 +11,7 @@ interface NoteNodeProps extends NodeProps<AppNoteNode> {
   onDelete?: (ids: string[]) => void;
 }
 
-export default function NoteNode({ id, data, selected, onUpdate, onDelete }: NoteNodeProps) {
+function NoteNode({ id, data, selected, onUpdate, onDelete }: NoteNodeProps) {
   const [text, setText] = useState(data.text);
   const isLocked = data.isPositionLocked || false
 
@@ -72,3 +72,20 @@ export default function NoteNode({ id, data, selected, onUpdate, onDelete }: Not
     </ContextMenu>
   );
 }
+
+// Memoized NoteNode component with comparison function
+const MemoizedNoteNode = React.memo(NoteNode, (prevProps, nextProps) => {
+  // Compare essential props that affect rendering
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.data.text === nextProps.data.text &&
+    prevProps.data.isPositionLocked === nextProps.data.isPositionLocked &&
+    // Compare position if it exists
+    JSON.stringify(prevProps.data.position) === JSON.stringify(nextProps.data.position)
+  );
+});
+
+MemoizedNoteNode.displayName = 'NoteNode';
+
+export default MemoizedNoteNode;

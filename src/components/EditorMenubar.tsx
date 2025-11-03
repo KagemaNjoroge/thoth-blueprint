@@ -54,11 +54,11 @@ export default function EditorMenubar({
   onViewAbout,
 }: EditorMenubarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
-  const allDiagrams = useStore((state) => state.diagrams);
+  const diagramsMap = useStore((state) => state.diagramsMap);
 
   const diagram = useMemo(() =>
-    allDiagrams.find(d => d.id === selectedDiagramId),
-    [allDiagrams, selectedDiagramId]
+    diagramsMap.get(selectedDiagramId || 0),
+    [diagramsMap, selectedDiagramId]
   );
 
   const {

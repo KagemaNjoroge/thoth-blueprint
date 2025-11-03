@@ -30,14 +30,11 @@ interface LayoutProps {
 export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const isRelationshipDialogOpen = useStore((state) => state.isRelationshipDialogOpen);
-  const allDiagrams = useStore((state) => state.diagrams);
+  const diagramsMap = useStore((state) => state.diagramsMap);
   const isLoading = useStore((state) => state.isLoading);
   const isMobile = useIsMobile();
 
-  const diagram = useMemo(() =>
-    allDiagrams.find((d) => d.id === selectedDiagramId),
-    [allDiagrams, selectedDiagramId]
-  );
+  const diagram = diagramsMap.get(selectedDiagramId || 0);
 
   const existingTableNames = useMemo(() =>
     diagram?.data.nodes.map(n => n.data.label) ?? [],
@@ -266,16 +263,23 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     if (!diagram) return;
     const { sourceNodeId, sourceColumnId, targetNodeId, targetColumnId, relationshipType } = values;
 
-    const sourceNode = diagram.data.nodes.find(n => n.id === sourceNodeId);
-    const targetNode = diagram.data.nodes.find(n => n.id === targetNodeId);
+    // Create nodes map for O(1) lookups
+    const nodesMap = new Map(diagram.data.nodes.map(node => [node.id, node]));
+    
+    const sourceNode = nodesMap.get(sourceNodeId);
+    const targetNode = nodesMap.get(targetNodeId);
 
     if (!sourceNode || !targetNode) {
       showError("Source or target table not found.");
       return;
     }
 
-    const sourceColumn = sourceNode.data.columns.find(c => c.id === sourceColumnId);
-    const targetColumn = targetNode.data.columns.find(c => c.id === targetColumnId);
+    // Create column maps for O(1) lookups
+    const sourceColumnsMap = new Map(sourceNode.data.columns.map(col => [col.id, col]));
+    const targetColumnsMap = new Map(targetNode.data.columns.map(col => [col.id, col]));
+
+    const sourceColumn = sourceColumnsMap.get(sourceColumnId);
+    const targetColumn = targetColumnsMap.get(targetColumnId);
 
     if (!sourceColumn || !targetColumn) {
       showError("Source or target column not found.");

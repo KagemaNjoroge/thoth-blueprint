@@ -30,7 +30,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { ColorPicker } from "./ColorPicker";
 import {
@@ -357,18 +357,28 @@ export default function TableAccordionContent({
   node,
   onStartEdit,
 }: TableAccordionContentProps) {
-  const { diagram, updateNode, deleteNodes } = useStore(
+  const { diagramsMap, updateNode, deleteNodes, selectedDiagramId } = useStore(
     useShallow((state: StoreState) => ({
-      diagram: state.diagrams.find(d => d.id === state.selectedDiagramId),
+      diagramsMap: state.diagramsMap,
       updateNode: state.updateNode,
       deleteNodes: state.deleteNodes,
+      selectedDiagramId: state.selectedDiagramId,
     }))
   );
+
+  const diagram = diagramsMap.get(selectedDiagramId || 0);
 
   const [columns, setColumns] = useState<Column[]>([]);
   const [indices, setIndices] = useState<Index[]>([]);
   const [tableComment, setTableComment] = useState("");
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([]);
+
+  // Create a Map for O(1) column lookups
+  const columnsMap = useMemo(() => {
+    const map = new Map<string, Column>();
+    columns.forEach(col => map.set(col.id, col));
+    return map;
+  }, [columns]);
 
   const dbType = diagram?.dbType ?? 'mysql';
   const isLocked = diagram?.data.isLocked ?? false;
@@ -570,7 +580,7 @@ export default function TableAccordionContent({
                       {idx.columns.length > 0 ? (
                         <div className="flex gap-1 flex-wrap">
                           {idx.columns.map((colId) => {
-                            const col = columns.find((c) => c.id === colId);
+                            const col = columnsMap.get(colId);
                             return (
                               <Badge
                                 key={colId}
