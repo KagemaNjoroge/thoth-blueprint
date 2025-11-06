@@ -7,7 +7,7 @@ import {
 import { tableColors } from "@/lib/colors";
 import { colors, DbRelationship, relationshipTypes } from "@/lib/constants";
 import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
-import { isNodeInLockedZone } from "@/lib/utils";
+import { findNonOverlappingPosition, isNodeInLockedZone, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, getCanvasDimensions } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { showError } from "@/utils/toast";
 import {
@@ -152,24 +152,6 @@ const DiagramEditor = forwardRef(
       deleteNodes(ids);
     }, [deleteNodes]);
 
-    const onCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
-      if (!diagram) return;
-      const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
-      const tableName = `new_table_${visibleNodes.length + 1}`;
-      const newNode: AppNode = {
-        id: `${tableName}-${+new Date()}`,
-        type: "table",
-        position: { x: position.x - 144, y: position.y - 50 },
-        data: {
-          label: tableName,
-          color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
-          columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
-          order: visibleNodes.length,
-        },
-      };
-      addNode(newNode);
-    }, [diagram, addNode]);
-
     const onCreateNoteAtPosition = useCallback((position: { x: number; y: number }) => {
       const newNote: AppNoteNode = {
         id: `note-${+new Date()}`, type: 'note', position, width: 192, height: 192, data: { text: 'New Note' },
@@ -186,6 +168,35 @@ const DiagramEditor = forwardRef(
       };
       addNode(newZone);
     }, [addNode, diagram]);
+
+    const onCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
+      if (!diagram) return;
+      const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
+      const tableName = `new_table_${visibleNodes.length + 1}`;
+      const defaultPosition = { x: position.x - 144, y: position.y - 50 };
+      const canvasDimensions = getCanvasDimensions();
+      const viewportBounds = rfInstanceRef.current ? {
+        x: rfInstanceRef.current.getViewport().x,
+        y: rfInstanceRef.current.getViewport().y,
+        width: canvasDimensions.width,
+        height: canvasDimensions.height,
+        zoom: rfInstanceRef.current.getViewport().zoom
+      } : undefined;
+      const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
+
+      const newNode: AppNode = {
+        id: `${tableName}-${+new Date()}`,
+        type: "table",
+        position: nonOverlappingPosition,
+        data: {
+          label: tableName,
+          color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
+          columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
+          order: visibleNodes.length,
+        },
+      };
+      addNode(newNode);
+    }, [diagram, addNode]);
 
     // Memoize nodeTypes with callbacks to prevent recreation
     const memoizedNodeTypes = useMemo((): NodeTypes => ({
@@ -328,6 +339,8 @@ const DiagramEditor = forwardRef(
         instance.fitView({ duration: 200 });
       }
     }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
+
+
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
