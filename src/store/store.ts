@@ -48,6 +48,7 @@ export interface StoreState {
     data: Diagram["data"];
   }) => Promise<void>;
   renameDiagram: (id: number, name: string) => void;
+  duplicateDiagram: (id: number) => Promise<void>;
   moveDiagramToTrash: (id: number) => void;
   restoreDiagram: (id: number) => void;
   permanentlyDeleteDiagram: (id: number) => void;
@@ -482,6 +483,89 @@ export const useStore = create(
           d.id === id ? { ...d, name, updatedAt: new Date() } : d
         ),
       }));
+    },
+    duplicateDiagram: async (id) => {
+      // Use set to get the current state and perform the duplication
+      set((state) => {
+        const currentDiagram = getDiagramById(state.diagramsMap, id);
+        if (!currentDiagram) {
+          return state;
+        }
+
+        // Generate a unique name for the duplicate
+        const existingNames = new Set(state.diagrams.map(d => d.name));
+        let duplicateName = `${currentDiagram.name} (Copy)`;
+        let counter = 1;
+        while (existingNames.has(duplicateName)) {
+          duplicateName = `${currentDiagram.name} (Copy ${counter})`;
+          counter++;
+        }
+
+        // Create new IDs for nodes, edges, notes, and zones
+        const nodeIdMap = new Map();
+        const newNodes = currentDiagram.data.nodes?.map(node => {
+          const newId = `${node.type}-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`;
+          nodeIdMap.set(node.id, newId);
+          return {
+            ...node,
+            id: newId,
+            selected: false,
+          };
+        }) || [];
+
+        const newEdges = currentDiagram.data.edges?.map(edge => ({
+          ...edge,
+          id: `edge-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: nodeIdMap.get(edge.source) || edge.source,
+          target: nodeIdMap.get(edge.target) || edge.target,
+        })) || [];
+
+        const newNotes = currentDiagram.data.notes?.map(note => ({
+          ...note,
+          id: `${note.type}-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`,
+          selected: false,
+        })) || [];
+
+        const newZones = currentDiagram.data.zones?.map(zone => ({
+          ...zone,
+          id: `${zone.type}-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`,
+          selected: false,
+        })) || [];
+
+        const duplicatedDiagram: Omit<Diagram, "id" | "createdAt" | "updatedAt"> = {
+          name: duplicateName,
+          dbType: currentDiagram.dbType,
+          data: {
+            ...currentDiagram.data,
+            nodes: newNodes,
+            edges: newEdges,
+            notes: newNotes,
+            zones: newZones,
+          },
+        };
+
+        const newDiagram: Diagram = {
+          ...duplicatedDiagram,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        // Add to database and update state
+        db.diagrams.add(newDiagram).then((newId) => {
+          set((state) => {
+            const updatedDiagrams = [...state.diagrams, { ...newDiagram, id: newId }];
+            return {
+              diagrams: updatedDiagrams,
+              diagramsMap: createDiagramsMap(updatedDiagrams),
+              selectedDiagramId: newId,
+            };
+          });
+        }).catch((error) => {
+          console.error('Failed to duplicate diagram:', error);
+        });
+        
+        return state;
+      });
     },
     moveDiagramToTrash: (id) => {
       set((state) => ({

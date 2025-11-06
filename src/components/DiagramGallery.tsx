@@ -38,7 +38,7 @@ import { colors } from "@/lib/constants";
 import { type DatabaseType, type Diagram } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
-import { Database, GitCommitHorizontal, Grid, Import, List, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
+import { Copy, Database, GitCommitHorizontal, Grid, Import, List, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useMemo, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -79,6 +79,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
     createDiagram,
     importDiagram,
     renameDiagram,
+    duplicateDiagram,
     moveDiagramToTrash,
     restoreDiagram,
     permanentlyDeleteDiagram,
@@ -88,6 +89,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
       createDiagram: state.createDiagram,
       importDiagram: state.importDiagram,
       renameDiagram: state.renameDiagram,
+      duplicateDiagram: state.duplicateDiagram,
       moveDiagramToTrash: state.moveDiagramToTrash,
       restoreDiagram: state.restoreDiagram,
       permanentlyDeleteDiagram: state.permanentlyDeleteDiagram,
@@ -280,6 +282,12 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                         </CardFooter>
                       </Card>
                       <div className="absolute top-4 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateDiagram(diagram.id!);
+                        }}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(diagram)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -336,13 +344,19 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                           <TableCell>{diagram.data.edges?.length || 0}</TableCell>
                           <TableCell>{formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}</TableCell>
                           <TableCell className="text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" onClick={() => openRenameDialog(diagram)}>
-                              <Pencil className="h-4 w-4 mr-2" /> Rename
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateDiagram(diagram.id!);
+                            }}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(diagram)}>
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                  <Trash2 className="h-4 w-4 mr-2" /> Trash
+                                <Button variant="destructive" size="icon" className="h-8 w-8">
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
