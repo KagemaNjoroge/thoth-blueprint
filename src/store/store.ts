@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { organizeTablesByRelationships } from "@/lib/layout-algorithms";
 import {
   Settings,
   type AppEdge,
@@ -65,6 +66,7 @@ export interface StoreState {
   pasteNodes: (position: { x: number; y: number }) => void;
   setIsRelationshipDialogOpen: (value: boolean) => void;
   setOnlyRenderVisibleElements: (value: boolean) => void;
+  reorganizeTables: () => void;
 }
 
 export const TABLE_SOFT_DELETE_LIMIT = 10;
@@ -930,6 +932,30 @@ export const useStore = create(
     },
     setOnlyRenderVisibleElements: (value) => {
       set({ onlyRenderVisibleElements: value });
+    },
+    reorganizeTables: () => {
+      set((state) => {
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
+        if (!diagram) return state;
+
+        const tables = diagram.data.nodes || [];
+        const relationships = diagram.data.edges || [];
+
+        // Use the relationship-based layout algorithm
+        const organizedTables = organizeTablesByRelationships(tables, relationships);
+
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
+            d.id === state.selectedDiagramId
+              ? {
+                  ...d,
+                  data: { ...d.data, nodes: organizedTables },
+                  updatedAt: new Date(),
+                }
+              : d
+          )
+        );
+      });
     },
   }))
 );

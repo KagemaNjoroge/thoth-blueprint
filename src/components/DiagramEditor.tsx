@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote, LayoutGrid } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -83,6 +83,7 @@ const DiagramEditor = forwardRef(
       settings,
       updateSettings,
       setIsAddRelationshipDialogOpen,
+      reorganizeTables,
     } = useStore(
       useShallow((state: StoreState) => ({
         onNodesChange: state.onNodesChange,
@@ -103,7 +104,8 @@ const DiagramEditor = forwardRef(
         clipboard: state.clipboard,
         settings: state.settings,
         updateSettings: state.updateSettings,
-        setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen
+        setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen,
+        reorganizeTables: state.reorganizeTables
       }))
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -454,6 +456,9 @@ const DiagramEditor = forwardRef(
                 </ControlButton>
                 <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
                   {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
+                </ControlButton>
+                <ControlButton onClick={reorganizeTables} title={"Reorganize Tables"} disabled={isLocked}>
+                  <LayoutGrid size={18} />
                 </ControlButton>
               </Controls>
               <Background />

@@ -1,5 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ const formSchema = z.object({
   dbType: z.enum(["mysql", "postgres"]),
   importType: z.enum(["json", "sql"]),
   content: z.string().min(1, "Content to import is required"),
+  reorganizeAfterImport: z.boolean().optional(),
 });
 
 interface ImportDialogProps {
@@ -65,6 +67,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
       dbType: "mysql",
       importType: "json",
       content: "",
+      reorganizeAfterImport: true,
     },
   });
 
@@ -123,7 +126,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
         diagramData = await parseMySqlDdlAsync(values.content, (p, label) => {
           setProgress(p);
           if (label) setProgressLabel(label);
-        });
+        }, values.reorganizeAfterImport);
         setIsParsing(false);
       } else {
         throw new Error("Invalid import type");
@@ -225,6 +228,28 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                     </p>
                   </AlertDescription>
                 </Alert>
+                <FormField
+                  control={form.control}
+                  name="reorganizeAfterImport"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Auto-organize tables by relationships
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically arrange tables based on their foreign key relationships for better visualization
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
                 {isParsing && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">

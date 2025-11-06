@@ -1,5 +1,6 @@
 import { tableColors } from "@/lib/colors";
 import { DbRelationship } from "@/lib/constants";
+import { organizeTablesByRelationships } from "@/lib/layout-algorithms";
 import {
   type AppEdge,
   type AppNode,
@@ -285,7 +286,8 @@ function extractTableOptionsTail(statement: string) {
 
 export async function parseMySqlDdlAsync(
   ddl: string,
-  onProgress?: (progress: number, label?: string) => void
+  onProgress?: (progress: number, label?: string) => void,
+  reorganizeAfterImport: boolean = false
 ): Promise<Diagram["data"]> {
   const diagnostics: Diagnostic[] = [];
   const nodes: AppNode[] = [];
@@ -640,7 +642,15 @@ export async function parseMySqlDdlAsync(
     notes.push({ id: uuid(), type: "note", position: { x: 20, y: 20 }, data: { text, color: "#fde68a" } });
   }
 
-  return { nodes, edges, notes, zones: [], viewport: { x: 0, y: 0, zoom: 1 }, isLocked: false };
+  let finalResult = { nodes, edges, notes, zones: [], viewport: { x: 0, y: 0, zoom: 1 }, isLocked: false };
+
+  // Apply relationship-based reorganization if requested
+  if (reorganizeAfterImport && nodes.length > 0) {
+    const organizedNodes = organizeTablesByRelationships(nodes, edges);
+    finalResult = { ...finalResult, nodes: organizedNodes };
+  }
+
+  return finalResult;
 }
 
 function determineRelationshipComposite(
