@@ -187,6 +187,12 @@ export default function EditorMenubar({
             Remember Last Editor Position
           </MenubarCheckboxItem>
           <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.allowTableOverlapDuringCreation}
+            onCheckedChange={(checked) => updateSettings({ allowTableOverlapDuringCreation: checked })}
+          >
+            Allow Table Overlap During Creation
+          </MenubarCheckboxItem>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>

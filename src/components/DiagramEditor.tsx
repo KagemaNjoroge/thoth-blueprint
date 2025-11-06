@@ -188,12 +188,16 @@ const DiagramEditor = forwardRef(
         height: canvasDimensions.height,
         zoom: rfInstanceRef.current.getViewport().zoom
       } : undefined;
-      const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
+      
+      let finalPosition = defaultPosition;
+      if (!settings.allowTableOverlapDuringCreation) {
+        finalPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
+      }
 
       const newNode: AppNode = {
         id: `${tableName}-${+new Date()}`,
         type: "table",
-        position: nonOverlappingPosition,
+        position: finalPosition,
         data: {
           label: tableName,
           color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
@@ -202,7 +206,7 @@ const DiagramEditor = forwardRef(
         },
       };
       addNode(newNode);
-    }, [diagram, addNode]);
+    }, [diagram, addNode, settings.allowTableOverlapDuringCreation]);
 
     // Memoize nodeTypes with callbacks to prevent recreation
     const memoizedNodeTypes = useMemo((): NodeTypes => ({

@@ -212,10 +212,68 @@ export function findNonOverlappingPosition(
     return !hasOverlap && isPositionInViewport(position, nodeWidth, nodeHeight, viewportBounds);
   };
 
+  // First, try the preferred position
   if (isValidPosition(preferredPosition)) {
     return preferredPosition;
   }
 
+  // If viewport bounds are provided, prioritize finding a position within viewport
+  if (viewportBounds) {
+    const viewportX = -viewportBounds.x / viewportBounds.zoom;
+    const viewportY = -viewportBounds.y / viewportBounds.zoom;
+    const viewportWidth = viewportBounds.width / viewportBounds.zoom;
+    const viewportHeight = viewportBounds.height / viewportBounds.zoom;
+    
+    // Try systematic grid search across the entire viewport first
+    const gridSpacing = nodeWidth + spacing;
+    const maxX = Math.floor(viewportWidth / gridSpacing);
+    const maxY = Math.floor(viewportHeight / gridSpacing);
+    
+    for (let x = 0; x < maxX; x++) {
+      for (let y = 0; y < maxY; y++) {
+        const candidate = {
+          x: viewportX + x * gridSpacing + spacing,
+          y: viewportY + y * gridSpacing + spacing
+        };
+        
+        if (isValidPosition(candidate)) {
+          return candidate;
+        }
+      }
+    }
+    
+    // Try center of viewport
+    const centerPosition = {
+      x: viewportX + viewportWidth / 2 - nodeWidth / 2,
+      y: viewportY + viewportHeight / 2 - nodeHeight / 2
+    };
+    
+    if (isValidPosition(centerPosition)) {
+      return centerPosition;
+    }
+    
+    // Try positions around the center in a spiral pattern
+     for (let distance = 1; distance <= Math.max(maxX, maxY); distance++) {
+       const positions = [
+         { x: centerPosition.x + distance * gridSpacing, y: centerPosition.y },
+         { x: centerPosition.x - distance * gridSpacing, y: centerPosition.y },
+         { x: centerPosition.x, y: centerPosition.y + distance * gridSpacing },
+         { x: centerPosition.x, y: centerPosition.y - distance * gridSpacing },
+         { x: centerPosition.x + distance * gridSpacing, y: centerPosition.y + distance * gridSpacing },
+         { x: centerPosition.x - distance * gridSpacing, y: centerPosition.y - distance * gridSpacing },
+         { x: centerPosition.x + distance * gridSpacing, y: centerPosition.y - distance * gridSpacing },
+         { x: centerPosition.x - distance * gridSpacing, y: centerPosition.y + distance * gridSpacing },
+       ];
+
+      for (const candidate of positions) {
+        if (isValidPosition(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  // Fallback to traditional spiral search around preferred position
   const gridSize = nodeWidth + spacing;
   for (let distance = 1; distance <= MAX_SEARCH_DISTANCE; distance++) {
     const positions = [
@@ -236,58 +294,7 @@ export function findNonOverlappingPosition(
     }
   }
   
-  // If viewport is full, try systematic search across entire viewport
-  if (viewportBounds) {
-    const viewportX = -viewportBounds.x / viewportBounds.zoom;
-    const viewportY = -viewportBounds.y / viewportBounds.zoom;
-    const viewportWidth = viewportBounds.width / viewportBounds.zoom;
-    const viewportHeight = viewportBounds.height / viewportBounds.zoom;
-    
-    // Try systematic grid search across the entire viewport
-    const gridSpacing = nodeWidth + spacing;
-    const maxX = Math.floor(viewportWidth / gridSpacing);
-    const maxY = Math.floor(viewportHeight / gridSpacing);
-    
-    for (let x = 0; x < maxX; x++) {
-      for (let y = 0; y < maxY; y++) {
-        const candidate = {
-          x: viewportX + x * gridSpacing + spacing,
-          y: viewportY + y * gridSpacing + spacing
-        };
-        
-        // Check if position has no overlap (allow overlap with viewport bounds)
-        const hasOverlap = existingNodes.some((node) => {
-          if (!node.position) return false;
-          
-          const existingRect = {
-            x: node.position.x,
-            y: node.position.y,
-            width: node.width || (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH),
-            height: node.height || (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT),
-          };
-
-          const newRect = { x: candidate.x, y: candidate.y, width: nodeWidth, height: nodeHeight };
-          return doRectanglesOverlap(newRect, existingRect);
-        });
-        
-        if (!hasOverlap && isPositionInViewport(candidate, nodeWidth, nodeHeight, viewportBounds)) {
-          return candidate;
-        }
-      }
-    }
-    
-    // Try center of viewport as last resort before overlap
-    const centerPosition = {
-      x: viewportX + viewportWidth / 2 - nodeWidth / 2,
-      y: viewportY + viewportHeight / 2 - nodeHeight / 2
-    };
-    
-    if (isPositionInViewport(centerPosition, nodeWidth, nodeHeight, viewportBounds)) {
-      return centerPosition;
-    }
-  }
-  
-  // Final fallback: overlap on last added table
+  // Final fallback: overlap on last added table (only if no valid non-overlapping position found)
   const lastAddedNode = existingNodes
     .filter(node => node.position)
     .sort((a, b) => {

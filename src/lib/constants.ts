@@ -50,4 +50,5 @@ export const DEFAULT_SETTINGS: Settings = {
   snapToGrid: false,
   focusTableDuringSelection: false,
   focusRelDuringSelection: false,
+  allowTableOverlapDuringCreation: true,
 };

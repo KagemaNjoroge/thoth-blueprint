@@ -130,6 +130,7 @@ export interface Settings {
   snapToGrid: boolean;
   focusTableDuringSelection: boolean;
   focusRelDuringSelection: boolean;
+  allowTableOverlapDuringCreation: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;
