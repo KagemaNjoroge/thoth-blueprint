@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS } from "@/lib/constants";
 import { db } from "@/lib/db";
-import { organizeTablesByRelationships } from "@/lib/layout-algorithms";
+import { organizeTablesByRelationshipsWithZones } from "@/lib/layout-algorithms";
 import {
   Settings,
   type AppEdge,
@@ -67,6 +67,7 @@ export interface StoreState {
   setIsRelationshipDialogOpen: (value: boolean) => void;
   setOnlyRenderVisibleElements: (value: boolean) => void;
   reorganizeTables: () => void;
+  toggleLock: () => void;
 }
 
 export const TABLE_SOFT_DELETE_LIMIT = 10;
@@ -504,13 +505,17 @@ export const useStore = create(
       }));
     },
     updateCurrentDiagramData: (data) => {
-      set((state) => ({
-        diagrams: state.diagrams.map((d) =>
+      set((state) => {
+        const updatedDiagrams = state.diagrams.map((d) =>
           d.id === state.selectedDiagramId
             ? { ...d, data: { ...d.data, ...data }, updatedAt: new Date() }
             : d
-        ),
-      }));
+        );
+        return {
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
+        };
+      });
     },
     onNodesChange: (changes) => {
       set((state) => {
@@ -940,9 +945,14 @@ export const useStore = create(
 
         const tables = diagram.data.nodes || [];
         const relationships = diagram.data.edges || [];
+        const zones = diagram.data.zones || [];
 
-        // Use the relationship-based layout algorithm
-        const organizedTables = organizeTablesByRelationships(tables, relationships);
+        // Use the zone-aware layout algorithm
+        const organizedTables = organizeTablesByRelationshipsWithZones(
+          tables,
+          relationships,
+          zones
+        );
 
         return updateDiagramsWithMap(state.diagrams, (diagrams) =>
           diagrams.map((d) =>
@@ -950,6 +960,27 @@ export const useStore = create(
               ? {
                   ...d,
                   data: { ...d.data, nodes: organizedTables },
+                  updatedAt: new Date(),
+                }
+              : d
+          )
+        );
+      });
+    },
+    toggleLock: () => {
+      set((state) => {
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
+        if (!diagram) return state;
+
+        const currentLockState = diagram.data.isLocked ?? false;
+        const newLockState = !currentLockState;
+
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
+            d.id === state.selectedDiagramId
+              ? {
+                  ...d,
+                  data: { ...d.data, isLocked: newLockState },
                   updatedAt: new Date(),
                 }
               : d

@@ -44,6 +44,7 @@ import CustomEdge from "./CustomEdge";
 import NoteNode from "./NoteNode";
 import TableNode from "./TableNode";
 import ZoneNode from "./ZoneNode";
+import { ReorganizeWarningDialog } from "./ReorganizeWarningDialog";
 
 interface DiagramEditorProps {
   setRfInstance: (instance: ReactFlowInstance<ProcessedNode, ProcessedEdge> | null) => void;
@@ -84,6 +85,7 @@ const DiagramEditor = forwardRef(
       updateSettings,
       setIsAddRelationshipDialogOpen,
       reorganizeTables,
+      toggleLock,
     } = useStore(
       useShallow((state: StoreState) => ({
         onNodesChange: state.onNodesChange,
@@ -105,10 +107,12 @@ const DiagramEditor = forwardRef(
         settings: state.settings,
         updateSettings: state.updateSettings,
         setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen,
-        reorganizeTables: state.reorganizeTables
+        reorganizeTables: state.reorganizeTables,
+        toggleLock: state.toggleLock,
       }))
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+    const [isReorganizeDialogOpen, setIsReorganizeDialogOpen] = useState(false);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
     const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
@@ -293,9 +297,9 @@ const DiagramEditor = forwardRef(
       }));
     }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId, isLocked]);
 
-    const handleLockChange = useCallback(() => {
-      updateCurrentDiagramData({ isLocked: !isLocked });
-    }, [isLocked, updateCurrentDiagramData]);
+    const handleLockChange = () => {
+      toggleLock();
+    };
 
     const handleSnapToGridChange = useCallback(() => {
       const snapToGrid = settings.snapToGrid;
@@ -354,6 +358,19 @@ const DiagramEditor = forwardRef(
     const onPaneMouseMove = useCallback((event: React.MouseEvent | MouseEvent) => {
       setLastCursorPosition({ x: event.clientX, y: event.clientY });
     }, [setLastCursorPosition]);
+
+    const handleReorganizeClick = useCallback(() => {
+      setIsReorganizeDialogOpen(true);
+    }, []);
+
+    const handleReorganizeConfirm = useCallback(() => {
+      reorganizeTables();
+      setIsReorganizeDialogOpen(false);
+    }, [reorganizeTables]);
+
+    const handleReorganizeCancel = useCallback(() => {
+      setIsReorganizeDialogOpen(false);
+    }, []);
 
     useImperativeHandle(ref, () => ({
       undoDelete,
@@ -457,7 +474,7 @@ const DiagramEditor = forwardRef(
                 <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
                   {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
                 </ControlButton>
-                <ControlButton onClick={reorganizeTables} title={"Reorganize Tables"} disabled={isLocked}>
+                <ControlButton onClick={handleReorganizeClick} title={"Reorganize Tables"} disabled={isLocked}>
                   <LayoutGrid size={18} />
                 </ControlButton>
               </Controls>
@@ -520,6 +537,14 @@ const DiagramEditor = forwardRef(
 
           </ContextMenuContent>
         </ContextMenu>
+        <ReorganizeWarningDialog
+          open={isReorganizeDialogOpen}
+          onOpenChange={setIsReorganizeDialogOpen}
+          onConfirm={handleReorganizeConfirm}
+          onCancel={handleReorganizeCancel}
+          zones={zones}
+          nodes={visibleNodes}
+        />
       </div>
     );
   }

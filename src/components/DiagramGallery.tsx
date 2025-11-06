@@ -127,12 +127,15 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
     await createDiagram({
       name,
       dbType,
-      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }, isLocked: false },
     });
   };
 
   const handleImportDiagram = async (diagramData: { name: string; dbType: DatabaseType; data: Diagram['data'] }) => {
-    await importDiagram(diagramData);
+    await importDiagram({
+      ...diagramData,
+      data: { ...diagramData.data, isLocked: diagramData.data.isLocked ?? false }
+    });
   };
 
   const openRenameDialog = (diagram: Diagram) => {

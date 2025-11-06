@@ -81,15 +81,19 @@ function isPointInRect(
  */
 export function isNodeInsideZone(
   node: CombinedNode,
-  zone: AppZoneNode
+  zone: AppZoneNode,
+  nodeWidth?: number,
+  nodeHeight?: number
 ): boolean {
   if (!node.position || !zone.position) return false;
 
-  // Get node dimensions (use defaults if not specified)
-  const nodeWidth =
+  // Get node dimensions (use provided dimensions or defaults)
+  const actualNodeWidth =
+    nodeWidth ||
     node.width ||
     (node.type === "table" ? DEFAULT_TABLE_WIDTH : node.type === "note" ? DEFAULT_NOTE_WIDTH : DEFAULT_ZONE_WIDTH);
-  const nodeHeight =
+  const actualNodeHeight =
+    nodeHeight ||
     node.height ||
     (node.type === "table" ? DEFAULT_TABLE_HEIGHT : node.type === "note" ? DEFAULT_NOTE_HEIGHT : DEFAULT_ZONE_HEIGHT);
 
@@ -98,11 +102,11 @@ export function isNodeInsideZone(
 
   // Check if all four corners of the node are inside the zone
   const topLeft = { x: node.position.x, y: node.position.y };
-  const topRight = { x: node.position.x + nodeWidth, y: node.position.y };
-  const bottomLeft = { x: node.position.x, y: node.position.y + nodeHeight };
+  const topRight = { x: node.position.x + actualNodeWidth, y: node.position.y };
+  const bottomLeft = { x: node.position.x, y: node.position.y + actualNodeHeight };
   const bottomRight = {
-    x: node.position.x + nodeWidth,
-    y: node.position.y + nodeHeight,
+    x: node.position.x + actualNodeWidth,
+    y: node.position.y + actualNodeHeight,
   };
 
   const zoneRect = {
