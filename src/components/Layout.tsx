@@ -23,6 +23,7 @@ import { ExportDialog } from "./ExportDialog";
 import { PWAUpdateNotification } from "./PWAUpdateNotification";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { UpdateDialog } from "./UpdateDialog";
+import { WhatsNewDialog } from "./WhatsNewDialog";
 
 interface LayoutProps {
   onInstallAppRequest: () => void;
@@ -78,8 +79,44 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isAddElementDialogOpen, setIsAddElementDialogOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  const [whatsNewMarkdown, setWhatsNewMarkdown] = useState<string>("");
 
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
+
+  // Auto-show What's New when app version changes and fetch local markdown
+  useEffect(() => {
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+    const lastSeenVersion = localStorage.getItem('whatsNewSeenVersion');
+    if (currentVersion && currentVersion !== lastSeenVersion) {
+      fetch('/whats-new.md')
+        .then((res) => res.ok ? res.text() : Promise.reject(new Error('Failed to load whats-new.md')))
+        .then((text) => {
+          setWhatsNewMarkdown(text);
+          setIsWhatsNewOpen(true);
+        })
+        .catch((err) => {
+          console.error('Error loading whats-new.md', err);
+          setWhatsNewMarkdown('# What\'s New\n\nUpdate available.');
+          setIsWhatsNewOpen(true);
+        });
+    }
+  }, []);
+
+  // Manual open handler to view What's New on demand
+  const openWhatsNew = () => {
+    fetch('/whats-new.md')
+      .then((res) => res.ok ? res.text() : Promise.reject(new Error('Failed to load whats-new.md')))
+      .then((text) => {
+        setWhatsNewMarkdown(text);
+        setIsWhatsNewOpen(true);
+      })
+      .catch((err) => {
+        console.error('Error loading whats-new.md', err);
+        setWhatsNewMarkdown('# What\'s New\n\nUpdate available.');
+        setIsWhatsNewOpen(true);
+      });
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -335,6 +372,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       onInstallAppRequest={onInstallAppRequest}
       onViewShortcuts={() => setIsShortcutsDialogOpen(true)}
       onViewAbout={() => setIsAboutDialogOpen(true)}
+      onViewWhatsNew={openWhatsNew}
     />
   ) : null;
 
@@ -359,6 +397,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
             onInstallAppRequest={onInstallAppRequest}
             onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
             onViewAbout={() => setIsAboutDialogOpen(true)}
+            onViewWhatsNew={openWhatsNew}
           />
         </div>
       )}
@@ -381,6 +420,17 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
       <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
       <AboutDialog isOpen={isAboutDialogOpen} onOpenChange={setIsAboutDialogOpen} />
+      <WhatsNewDialog
+        isOpen={isWhatsNewOpen}
+        onOpenChange={(open) => {
+          setIsWhatsNewOpen(open);
+          if (!open) {
+            const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+            localStorage.setItem('whatsNewSeenVersion', currentVersion);
+          }
+        }}
+        markdown={whatsNewMarkdown}
+      />
     </>
   );
 }

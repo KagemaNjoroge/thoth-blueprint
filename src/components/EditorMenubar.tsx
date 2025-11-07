@@ -40,6 +40,7 @@ interface EditorMenubarProps {
   onInstallAppRequest: () => void;
   onViewShortcuts: () => void;
   onViewAbout: () => void;
+  onViewWhatsNew: () => void;
 }
 
 export default function EditorMenubar({
@@ -52,6 +53,7 @@ export default function EditorMenubar({
   onInstallAppRequest,
   onViewShortcuts,
   onViewAbout,
+  onViewWhatsNew,
 }: EditorMenubarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const diagramsMap = useStore((state) => state.diagramsMap);
@@ -226,6 +228,7 @@ export default function EditorMenubar({
         <MenubarTrigger className="px-2">Help</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={onViewAbout}>About</MenubarItem>
+          <MenubarItem onClick={onViewWhatsNew}>What's New</MenubarItem>
           <MenubarItem onClick={onViewShortcuts}>
             View Shortcuts
           </MenubarItem>

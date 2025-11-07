@@ -18,6 +18,7 @@ interface EditorSidebarProps {
   onInstallAppRequest: () => void;
   onViewShortcuts: () => void;
   onViewAbout: () => void;
+  onViewWhatsNew: () => void;
 }
 
 export default function EditorSidebar({
@@ -31,6 +32,7 @@ export default function EditorSidebar({
   onInstallAppRequest,
   onViewShortcuts,
   onViewAbout,
+  onViewWhatsNew,
 }: EditorSidebarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const diagramsMap = useStore((state) => state.diagramsMap);
@@ -97,6 +99,7 @@ export default function EditorSidebar({
           onInstallAppRequest={onInstallAppRequest}
           onViewShortcuts={onViewShortcuts}
           onViewAbout={onViewAbout}
+          onViewWhatsNew={onViewWhatsNew}
         />
       </div>
 

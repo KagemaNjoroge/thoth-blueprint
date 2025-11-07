@@ -54,9 +54,10 @@ interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
   onCheckForUpdate: () => void;
   onViewAbout: () => void;
+  onViewWhatsNew: () => void;
 }
 
-export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, onViewAbout }: DiagramGalleryProps) {
+export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, onViewAbout, onViewWhatsNew }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -184,6 +185,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onViewAbout}>About</DropdownMenuItem>
+                <DropdownMenuItem onClick={onViewWhatsNew}>What's New</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>
