@@ -183,7 +183,8 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
             {/* Scrollable content area to keep dialog height-aware */}
             <div className="overflow-y-auto no-scrollbar max-h-[calc(100vh-12rem)] px-3 sm:px-0 space-y-4">
             {uiStep === 1 && (
-              <div className="space-y-3">
+              // Add horizontal padding only for Step 1 to bring content slightly inward
+              <div className="space-y-3 px-3 sm:px-4 md:px-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-medium">Step 1 — Diagram details</h3>
                   <span className="text-xs text-muted-foreground">Name and database</span>
