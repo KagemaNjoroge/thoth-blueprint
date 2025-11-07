@@ -2,7 +2,7 @@
   "name": "thothblueprint",
   "description": "Free visual database design tool with drag-and-move editing, multi-format export, and migration generation for popular frameworks.",
   "private": true,
-  "version": "0.0.5",
+  "version": "0.0.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -76,6 +76,8 @@
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.53.0",
     "react-icons": "^5.5.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
     "react-pick-color": "^2.0.0",
     "react-resizable-panels": "^2.1.3",
     "react-router-dom": "^6.26.2",
