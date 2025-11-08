@@ -132,17 +132,27 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
       if (values.importType === "json") {
         diagramData = importFromJson(values.content);
       } else if (values.importType === "sql") {
-        if (dbType !== 'mysql') {
-          showError("Sorry, only MySQL DDL import is supported at the moment.");
-          return;
-        }
         setIsParsing(true);
         setProgress(0);
         setProgressLabel("Starting import...");
-        diagramData = await parseMySqlDdlAsync(values.content, (p, label) => {
-          setProgress(p);
-          if (label) setProgressLabel(label);
-        }, values.reorganizeAfterImport);
+        
+        if (dbType === 'mysql') {
+          diagramData = await parseMySqlDdlAsync(values.content, (p, label) => {
+            setProgress(p);
+            if (label) setProgressLabel(label);
+          }, values.reorganizeAfterImport);
+        } else if (dbType === 'postgres') {
+          // Import PostgreSQL DDL
+          const { parsePostgreSqlDdlAsync } = await import('../lib/importer/postgres-ddl-parser');
+          diagramData = await parsePostgreSqlDdlAsync(values.content, (p, label) => {
+            setProgress(p);
+            if (label) setProgressLabel(label);
+          }, values.reorganizeAfterImport);
+        } else {
+          showError(`Sorry, ${dbType} DDL import is not supported at the moment.`);
+          setIsParsing(false);
+          return;
+        }
         setIsParsing(false);
       } else {
         throw new Error("Invalid import type");
@@ -308,7 +318,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                       <FileText className="h-5 w-5" />
                       <div>
                         <CardTitle className="text-base">From SQL (DDL)</CardTitle>
-                        <CardDescription className="text-xs">{form.getValues("dbType") === "mysql" ? "MySQL CREATE TABLE" : "SQL DDL (MySQL supported)"}</CardDescription>
+                        <CardDescription className="text-xs">{form.getValues("dbType") === "mysql" ? "MySQL CREATE TABLE" : "PostgreSQL CREATE TABLE"}</CardDescription>
                       </div>
                     </CardHeader>
                   </Card>
@@ -334,25 +344,45 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
               </TabsContent>
               <TabsContent value="sql" className="mt-4 space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Import a diagram from a MySQL `CREATE TABLE` script.
+                  Import a diagram from a {form.getValues("dbType") === "mysql" ? "MySQL" : "PostgreSQL"} `CREATE TABLE` script.
                 </p>
                 <Alert className="p-3 sm:p-4">
                   <Terminal className="h-4 w-4" />
-                  <AlertTitle className="text-sm sm:text-base">How to get your MySQL schema</AlertTitle>
+                  <AlertTitle className="text-sm sm:text-base">How to get your {form.getValues("dbType") === "mysql" ? "MySQL" : "PostgreSQL"} schema</AlertTitle>
                   <AlertDescription className="space-y-2 text-xs sm:text-sm">
-                    <p className="text-xs sm:text-sm">
-                      You can generate a schema file from your database using the `mysqldump` command.
-                      Run the following command in your terminal:
-                    </p>
-                    <pre className="mt-2 p-2 bg-muted rounded-md text-[11px] sm:text-xs font-mono w-full max-w-full whitespace-pre-wrap break-words">
-                      <code>
-                        mysqldump --no-data -u [username] -p [database_name] &gt; schema.sql
-                      </code>
-                    </pre>
-                    <p className="text-xs sm:text-sm">
-                      Replace `[username]` and `[database_name]` with your database credentials.
-                      The `--no-data` flag ensures only the table structure is exported.
-                    </p>
+                    {form.getValues("dbType") === "mysql" ? (
+                      <>
+                        <p className="text-xs sm:text-sm">
+                          You can generate a schema file from your database using the `mysqldump` command.
+                          Run the following command in your terminal:
+                        </p>
+                        <pre className="mt-2 p-2 bg-muted rounded-md text-[11px] sm:text-xs font-mono w-full max-w-full whitespace-pre-wrap break-words">
+                          <code>
+                            mysqldump --no-data -u [username] -p [database_name] &gt; schema.sql
+                          </code>
+                        </pre>
+                        <p className="text-xs sm:text-sm">
+                          Replace `[username]` and `[database_name]` with your database credentials.
+                          The `--no-data` flag ensures only the table structure is exported.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs sm:text-sm">
+                          You can generate a schema file from your PostgreSQL database using the `pg_dump` command.
+                          Run the following command in your terminal:
+                        </p>
+                        <pre className="mt-2 p-2 bg-muted rounded-md text-[11px] sm:text-xs font-mono w-full max-w-full whitespace-pre-wrap break-words">
+                          <code>
+                            pg_dump -U [username] -s [database_name] &gt; schema.sql
+                          </code>
+                        </pre>
+                        <p className="text-xs sm:text-sm">
+                          Replace `[username]` and `[database_name]` with your database credentials.
+                          The `-s` flag ensures only the schema (table structure) is exported.
+                        </p>
+                      </>
+                    )}
                   </AlertDescription>
                 </Alert>
                 <FormField
