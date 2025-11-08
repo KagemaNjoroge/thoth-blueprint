@@ -38,7 +38,7 @@ import { colors } from "@/lib/constants";
 import { type DatabaseType, type Diagram } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Database, GitCommitHorizontal, Grid, Import, List, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
+import { Copy, GitCommitHorizontal, Grid, Import, List, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useMemo, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -49,6 +49,7 @@ import { Features } from "./Features";
 import { ImportDialog } from "./ImportDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
+import { DatabaseTypeIcon, dbTypeDisplay } from "./icons/DatabaseTypeIcon";
 
 interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
@@ -146,10 +147,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
     setIsRenameDialogOpen(true);
   };
 
-  const dbTypeDisplay: Record<DatabaseType, string> = {
-    postgres: "PostgreSQL",
-    mysql: "MySQL",
-  };
+  // dbTypeDisplay moved to shared icon component
 
   return (
     <div className="p-4 md:p-8 h-full w-full bg-background overflow-y-auto">
@@ -263,7 +261,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                         <CardHeader>
                           <CardTitle className="truncate">{diagram.name}</CardTitle>
                           <CardDescription className="flex items-center gap-2 pt-1">
-                            <Database className="h-4 w-4" />
+                            <DatabaseTypeIcon dbType={diagram.dbType} className="h-4 w-auto" />
                             {dbTypeDisplay[diagram.dbType]}
                           </CardDescription>
                         </CardHeader>
@@ -341,7 +339,12 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                               {diagram.name}
                             </div>
                           </TableCell>
-                          <TableCell>{dbTypeDisplay[diagram.dbType]}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <DatabaseTypeIcon dbType={diagram.dbType} className="h-4 w-auto" />
+                              {dbTypeDisplay[diagram.dbType]}
+                            </div>
+                          </TableCell>
                           <TableCell>{diagram.data.nodes?.filter(n => !n.data.isDeleted).length || 0}</TableCell>
                           <TableCell>{diagram.data.edges?.length || 0}</TableCell>
                           <TableCell>{formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}</TableCell>

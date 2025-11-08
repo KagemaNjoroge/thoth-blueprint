@@ -48,3 +48,9 @@ export const dataTypes: Record<DatabaseType, string[]> = {
   postgres: postgresDataTypes,
   mysql: mysqlDataTypes,
 };
+
+// Display names for supported database types
+export const dbTypeDisplay: Record<DatabaseType, string> = {
+  postgres: "PostgreSQL",
+  mysql: "MySQL",
+};

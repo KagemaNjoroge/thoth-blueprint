@@ -2,10 +2,12 @@ import { cn } from "@/lib/utils";
 import { useStore } from "@/store/store";
 import { GitCommitHorizontal, Plus, Table } from "lucide-react";
 import React, { useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import EditorMenubar from "./EditorMenubar";
 import RelationshipsTab from "./RelationshipsTab";
 import TablesTab from "./TablesTab";
 import { Button } from "./ui/button";
+import { DatabaseTypeIcon, dbTypeDisplay } from "./icons/DatabaseTypeIcon";
 
 interface EditorSidebarProps {
   onAddElement: () => void;
@@ -105,10 +107,25 @@ export default function EditorSidebar({
 
       {/* Diagram Info */}
       <div className="p-2 flex-shrink-0 border-b">
-        <h3 className="text-lg font-semibold tracking-tight px-2">
-          {diagram.name}
-        </h3>
-        <p className="text-sm text-muted-foreground px-2">{diagram.dbType}</p>
+        <div className="px-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
+            <DatabaseTypeIcon dbType={diagram.dbType} className="h-4 sm:h-5 w-auto" />
+            <div className="leading-tight">
+              <h3 className="text-base sm:text-lg font-semibold tracking-tight truncate max-w-[16rem]">
+                {diagram.name}
+              </h3>
+              <p className="text-[11px] sm:text-xs text-muted-foreground">{dbTypeDisplay[diagram.dbType]}</p>
+            </div>
+          </div>
+          <div className="sm:hidden px-2 text-[11px] text-muted-foreground">
+            Updated {formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}
+          </div>
+        </div>
+        <div className="mt-2 px-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] sm:text-xs text-muted-foreground">
+          <span className="flex items-center whitespace-nowrap"><Table className="h-3 w-3 mr-1" /> {nodes.length} tables</span>
+          <span className="flex items-center whitespace-nowrap"><GitCommitHorizontal className="h-3 w-3 mr-1" /> {edges.length} relationships</span>
+          <span className="hidden sm:inline whitespace-nowrap">Updated {formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}</span>
+        </div>
       </div>
 
       {/* Tab Navigation */}
