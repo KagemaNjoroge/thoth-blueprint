@@ -7,7 +7,8 @@ import EditorMenubar from "./EditorMenubar";
 import RelationshipsTab from "./RelationshipsTab";
 import TablesTab from "./TablesTab";
 import { Button } from "./ui/button";
-import { DatabaseTypeIcon, dbTypeDisplay } from "./icons/DatabaseTypeIcon";
+import { DatabaseTypeIcon } from "./icons/DatabaseTypeIcon";
+import { dbTypeDisplay } from "@/lib/db-types";
 
 interface EditorSidebarProps {
   onAddElement: () => void;

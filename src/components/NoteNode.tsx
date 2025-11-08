@@ -2,9 +2,9 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { type AppNoteNode, type NoteNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { type NodeProps, NodeResizer } from "@xyflow/react";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import React, { useState } from "react";
-import { useDebouncedCallback } from "use-debounce";
+import { EditNoteDialog } from "./EditNoteDialog";
 
 interface NoteNodeProps extends NodeProps<AppNoteNode> {
   onUpdate?: (id: string, data: Partial<NoteNodeData>) => void;
@@ -12,27 +12,15 @@ interface NoteNodeProps extends NodeProps<AppNoteNode> {
 }
 
 function NoteNode({ id, data, selected, onUpdate, onDelete }: NoteNodeProps) {
-  const [text, setText] = useState(data.text);
-  const isLocked = data.isPositionLocked || false
-
-  const debouncedUpdate = useDebouncedCallback((newText: string) => {
-    if (onUpdate && !isLocked) {
-      onUpdate(id, { text: newText });
-    }
-  }, 300);
-
-  const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (isLocked) return;
-    setText(event.target.value);
-    debouncedUpdate(event.target.value);
-  };
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const isLocked = data.isPositionLocked || false;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger disabled={isLocked}>
         <div
           className={cn(
-            "w-full h-full p-3 shadow-md rounded-md font-sans text-sm bg-yellow-200 text-yellow-900 border-2 border-transparent transition-colors",
+            "w-full h-full p-3 shadow-md rounded-md font-sans text-sm bg-yellow-200 text-yellow-900 border-2 border-transparent transition-colors group relative",
             selected && "border-blue-500"
           )}
           style={{
@@ -46,13 +34,21 @@ function NoteNode({ id, data, selected, onUpdate, onDelete }: NoteNodeProps) {
             lineClassName="border-blue-400"
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
-          <textarea
-            value={text}
-            onChange={handleChange}
-            disabled={isLocked}
-            className="w-full h-full bg-transparent border-none outline-none p-0 m-0 resize-none no-scrollbar break-words"
-            placeholder="Type your note..."
-          />
+          {/* Static text display */}
+          <div className="w-full h-full bg-transparent p-0 m-0 whitespace-pre-wrap break-words">
+            {data.text || ""}
+          </div>
+          {/* Hover edit icon */}
+          {!isLocked && (
+            <button
+              type="button"
+              aria-label="Edit note"
+              onClick={(e) => { e.stopPropagation(); setIsEditOpen(true); }}
+              className="absolute top-2 right-2 p-1 rounded hover:bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -69,6 +65,17 @@ function NoteNode({ id, data, selected, onUpdate, onDelete }: NoteNodeProps) {
           Delete Note
         </ContextMenuItem>
       </ContextMenuContent>
+      {/* Edit dialog */}
+      {!isLocked && (
+        <EditNoteDialog
+          isOpen={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          initialText={data.text || ""}
+          onUpdateNote={(text) => {
+            if (onUpdate) onUpdate(id, { text });
+          }}
+        />
+      )}
     </ContextMenu>
   );
 }

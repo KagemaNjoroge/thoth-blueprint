@@ -49,7 +49,8 @@ import { Features } from "./Features";
 import { ImportDialog } from "./ImportDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
-import { DatabaseTypeIcon, dbTypeDisplay } from "./icons/DatabaseTypeIcon";
+import { DatabaseTypeIcon } from "./icons/DatabaseTypeIcon";
+import { dbTypeDisplay } from "@/lib/db-types";
 
 interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
