@@ -27,6 +27,10 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
         }))
     );
 
+    // Create Maps for O(1) lookups
+    const nodesMap = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
+    const edgesMap = useMemo(() => new Map(edges.map(edge => [edge.id, edge])), [edges]);
+
     useEffect(() => {
         if (selectedEdgeId && edges.some((edge) => edge.id === selectedEdgeId)) {
             setInspectingEdgeId(selectedEdgeId)
@@ -37,8 +41,8 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
         if (!relationshipFilter) return edges;
         const filter = relationshipFilter.toLowerCase();
         return edges.filter((edge) => {
-            const sourceNode = nodes.find((n) => n.id === edge.source);
-            const targetNode = nodes.find((n) => n.id === edge.target);
+            const sourceNode = nodesMap.get(edge.source);
+            const targetNode = nodesMap.get(edge.target);
             if (!sourceNode || !targetNode) return false;
 
             const sourceName = sourceNode.data.label.toLowerCase();
@@ -50,9 +54,9 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
                 relationshipLabel.includes(filter) || relationshipType.includes(filter)
             );
         });
-    }, [edges, nodes, relationshipFilter]);
+    }, [edges, nodesMap, relationshipFilter]);
 
-    const inspectingEdge = edges.find((e) => e.id === inspectingEdgeId);
+    const inspectingEdge = edgesMap.get(inspectingEdgeId || "");
 
     const handleRelSelect = (id:string) => {
         setInspectingEdgeId(id);
@@ -112,8 +116,8 @@ export default function RelationshipsTab({ nodes, edges }: RelationshipsTabProps
                     <div className="space-y-2">
                         {filteredRels.length > 0 ? (
                             filteredRels.map((edge) => {
-                                const sourceNode = nodes.find((n) => n.id === edge.source);
-                                const targetNode = nodes.find((n) => n.id === edge.target);
+                                const sourceNode = nodesMap.get(edge.source);
+                                const targetNode = nodesMap.get(edge.target);
                                 return (
                                     <Button
                                         key={edge.id}

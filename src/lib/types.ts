@@ -6,6 +6,8 @@ export type ElementType = "table" | "note" | "zone" | "relationship";
 export type ProcessedNode = (AppNode | AppNoteNode | AppZoneNode) & {
   draggable: boolean;
 };
+export type ColumnGeneratedType = "VIRTUAL" | "STORED";
+export type IndexType = "INDEX" | "UNIQUE" | "FULLTEXT" | "SPATIAL";
 export type ProcessedEdge = Omit<AppEdge, "type"> & {
   type: string;
   selectable: boolean;
@@ -41,17 +43,22 @@ export interface Column {
   id: string;
   name: string;
   type: string;
-  pk?: boolean | undefined;
-  nullable?: boolean | undefined;
+  pk?: boolean;
+  nullable?: boolean;
   defaultValue?: string | number | boolean | null | undefined;
-  isUnique?: boolean | undefined;
-  isAutoIncrement?: boolean | undefined;
-  comment?: string | undefined;
-  enumValues?: string | undefined;
-  length?: number | undefined;
-  precision?: number | undefined;
-  scale?: number | undefined;
-  isUnsigned?: boolean | undefined;
+  isUnique?: boolean;
+  isAutoIncrement?: boolean;
+  comment?: string;
+  enumValues?: string;
+  length?: number;
+  precision?: number;
+  scale?: number;
+  isUnsigned?: boolean;
+  charset?: string;
+  collation?: string;
+  isGenerated?: boolean;
+  generatedExpression?: string;
+  generatedType?: ColumnGeneratedType;
 }
 
 export interface Index {
@@ -59,6 +66,18 @@ export interface Index {
   name: string;
   columns: string[];
   isUnique?: boolean;
+  type?: IndexType
+}
+
+export interface CheckConstraint {
+  name: string;
+  expression: string;
+}
+
+export interface PartitionInfo {
+  type: string;
+  expression: string;
+  partitions?: number;
 }
 
 export interface TableNodeData extends Record<string, unknown> {
@@ -72,6 +91,8 @@ export interface TableNodeData extends Record<string, unknown> {
   order?: number;
   isPositionLocked?: boolean;
   onDelete?: (ids: string[]) => void;
+  checkConstraints?: CheckConstraint[];
+  partitionInfo?: PartitionInfo;
 }
 
 export interface NoteNodeData extends Record<string, unknown> {
@@ -96,6 +117,12 @@ export interface EdgeData extends Record<string, unknown> {
   relationship: string;
   isHighlighted?: boolean;
   isPositionLocked?: boolean;
+  constraintName?: string;
+  sourceColumns?: string[];
+  targetColumns?: string[];
+  onDelete?: string;
+  onUpdate?: string;
+  isComposite?: boolean;
 }
 
 export interface Settings {
@@ -103,6 +130,7 @@ export interface Settings {
   snapToGrid: boolean;
   focusTableDuringSelection: boolean;
   focusRelDuringSelection: boolean;
+  allowTableOverlapDuringCreation: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;

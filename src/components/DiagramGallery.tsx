@@ -28,43 +28,63 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table as UiTable } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
 import { colors } from "@/lib/constants";
 import { type DatabaseType, type Diagram } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
-import { Database, GitCommitHorizontal, Import, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
+import { Copy, GitCommitHorizontal, Grid, Import, List, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AppIntro } from "./AppIntro";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
 import { Features } from "./Features";
 import { ImportDialog } from "./ImportDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
+import { DatabaseTypeIcon } from "./icons/DatabaseTypeIcon";
+import { dbTypeDisplay } from "@/lib/db-types";
 
 interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
   onCheckForUpdate: () => void;
   onViewAbout: () => void;
+  onViewWhatsNew: () => void;
 }
 
-export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, onViewAbout }: DiagramGalleryProps) {
+export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, onViewAbout, onViewWhatsNew }: DiagramGalleryProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isLoadProjectDialogOpen, setIsLoadProjectDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+  const isMobile = useIsMobile();
+
+  // Force grid view when on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode("grid");
+    }
+  }, [isMobile]);
 
   const {
     setSelectedDiagramId,
     createDiagram,
     importDiagram,
     renameDiagram,
+    duplicateDiagram,
     moveDiagramToTrash,
     restoreDiagram,
     permanentlyDeleteDiagram,
@@ -74,6 +94,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
       createDiagram: state.createDiagram,
       importDiagram: state.importDiagram,
       renameDiagram: state.renameDiagram,
+      duplicateDiagram: state.duplicateDiagram,
       moveDiagramToTrash: state.moveDiagramToTrash,
       restoreDiagram: state.restoreDiagram,
       permanentlyDeleteDiagram: state.permanentlyDeleteDiagram,
@@ -87,18 +108,60 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
 
   const activeDiagrams = diagrams?.filter(d => !d.deletedAt);
   const trashedDiagrams = diagrams?.filter(d => d.deletedAt);
+
+  // Filter and sort active diagrams
+  const filteredAndSortedDiagrams = useMemo(() => {
+    if (!activeDiagrams) return [];
+    
+    const filtered = activeDiagrams.filter(diagram =>
+      diagram.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    return filtered.sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      
+      if (sortOrder === "asc") {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+  }, [activeDiagrams, searchTerm, sortOrder]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredAndSortedDiagrams.length / PAGE_SIZE));
+  }, [filteredAndSortedDiagrams]);
+
+  const paginatedDiagrams = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredAndSortedDiagrams.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredAndSortedDiagrams, currentPage]);
+
+  useEffect(() => {
+    // Reset to first page when search or sort changes
+    setCurrentPage(1);
+  }, [searchTerm, sortOrder]);
+
+  useEffect(() => {
+    // Clamp current page when totalPages shrinks
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
   const activeDiagramNames = activeDiagrams.map(d => d.name);
 
   const handleCreateDiagram = async ({ name, dbType }: { name: string; dbType: DatabaseType }) => {
     await createDiagram({
       name,
       dbType,
-      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }, isLocked: false },
     });
   };
 
   const handleImportDiagram = async (diagramData: { name: string; dbType: DatabaseType; data: Diagram['data'] }) => {
-    await importDiagram(diagramData);
+    await importDiagram({
+      ...diagramData,
+      data: { ...diagramData.data, isLocked: diagramData.data.isLocked ?? false }
+    });
   };
 
   const openRenameDialog = (diagram: Diagram) => {
@@ -106,10 +169,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
     setIsRenameDialogOpen(true);
   };
 
-  const dbTypeDisplay: Record<DatabaseType, string> = {
-    postgres: "PostgreSQL",
-    mysql: "MySQL",
-  };
+  // dbTypeDisplay moved to shared icon component
 
   return (
     <div className="p-4 md:p-8 h-full w-full bg-background overflow-y-auto">
@@ -145,6 +205,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onViewAbout}>About</DropdownMenuItem>
+                <DropdownMenuItem onClick={onViewWhatsNew}>What's New</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" onClick={() => setIsLoadProjectDialogOpen(true)}>
@@ -172,71 +233,211 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
             <TabsTrigger value="trash">Trash</TabsTrigger>
           </TabsList>
           <TabsContent value="diagrams" className="mt-6">
-            {activeDiagrams && activeDiagrams.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {activeDiagrams.map((diagram) => (
-                  <div key={diagram.id} className="relative group">
-                    <Card
-                      className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full overflow-hidden"
-                      onClick={() => setSelectedDiagramId(diagram.id!)}
-                    >
-                      <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || colors.DEFAULT_DIAGRAM_COLOR }} className="h-2 w-full" />
-                      <CardHeader>
-                        <CardTitle className="truncate">{diagram.name}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 pt-1">
-                          <Database className="h-4 w-4" />
-                          {dbTypeDisplay[diagram.dbType]}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow space-y-3 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Table className="h-4 w-4" />
-                          <span>{diagram.data.nodes?.filter(n => !n.data.isDeleted).length || 0} Tables</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <GitCommitHorizontal className="h-4 w-4" />
-                          <span>{diagram.data.edges?.length || 0} Relationships</span>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <p className="text-xs text-muted-foreground">
-                          Updated {formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}
-                        </p>
-                      </CardFooter>
-                    </Card>
-                    <div className="absolute top-4 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(diagram)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" className="h-8 w-8">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will move the "{diagram.name}" diagram to the trash. You can restore it later.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => moveDiagramToTrash(diagram.id!)}>Move to Trash</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search diagrams..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
               </div>
+              <div className="flex gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      Sort {sortOrder === "asc" ? "A-Z" : "Z-A"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSortOrder("asc")}>
+                      A-Z (Ascending)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortOrder("desc")}>
+                      Z-A (Descending)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <div className="hidden sm:flex gap-2">
+                  <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as "grid" | "list")}>
+                    <ToggleGroupItem value="grid" aria-label="Grid view">
+                      <Grid className="h-4 w-4" />
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="list" aria-label="List view">
+                      <List className="h-4 w-4" />
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+              </div>
+            </div>
+            {filteredAndSortedDiagrams.length > 0 ? (
+              viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {paginatedDiagrams.map((diagram) => (
+                    <div key={diagram.id} className="relative group">
+                      <Card
+                        className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full overflow-hidden"
+                        onClick={() => setSelectedDiagramId(diagram.id!)}
+                      >
+                        <div style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || colors.DEFAULT_DIAGRAM_COLOR }} className="h-2 w-full" />
+                        <CardHeader>
+                          <CardTitle className="truncate">{diagram.name}</CardTitle>
+                          <CardDescription className="flex items-center gap-2 pt-1">
+                            <DatabaseTypeIcon dbType={diagram.dbType} className="h-4 w-auto" />
+                            {dbTypeDisplay[diagram.dbType]}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-grow space-y-3 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Table className="h-4 w-4" />
+                            <span>{diagram.data.nodes?.filter(n => !n.data.isDeleted).length || 0} Tables</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <GitCommitHorizontal className="h-4 w-4" />
+                            <span>{diagram.data.edges?.length || 0} Relationships</span>
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <p className="text-xs text-muted-foreground">
+                            Updated {formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}
+                          </p>
+                        </CardFooter>
+                      </Card>
+                      <div className="absolute top-4 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => {
+                          e.stopPropagation();
+                          duplicateDiagram(diagram.id!);
+                        }}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(diagram)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon" className="h-8 w-8">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will move the "{diagram.name}" diagram to the trash. You can restore it later.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => moveDiagramToTrash(diagram.id!)}>Move to Trash</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <UiTable>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Database Type</TableHead>
+                        <TableHead>Tables</TableHead>
+                        <TableHead>Relationships</TableHead>
+                        <TableHead>Last Updated</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedDiagrams.map((diagram) => (
+                        <TableRow key={diagram.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedDiagramId(diagram.id!)}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || colors.DEFAULT_DIAGRAM_COLOR }}
+                              />
+                              {diagram.name}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <DatabaseTypeIcon dbType={diagram.dbType} className="h-4 w-auto" />
+                              {dbTypeDisplay[diagram.dbType]}
+                            </div>
+                          </TableCell>
+                          <TableCell>{diagram.data.nodes?.filter(n => !n.data.isDeleted).length || 0}</TableCell>
+                          <TableCell>{diagram.data.edges?.length || 0}</TableCell>
+                          <TableCell>{formatDistanceToNow(new Date(diagram.updatedAt), { addSuffix: true })}</TableCell>
+                          <TableCell className="text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateDiagram(diagram.id!);
+                            }}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openRenameDialog(diagram)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon" className="h-8 w-8">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Move to Trash?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will move the "{diagram.name}" diagram to the trash. You can restore it later.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => moveDiagramToTrash(diagram.id!)}>Move to Trash</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </UiTable>
+                </Card>
+              )
             ) : (
-              <div className="text-center py-24 border-2 border-dashed rounded-lg">
-                <h2 className="text-xl font-semibold">No diagrams yet</h2>
-                <p className="text-muted-foreground mt-2 mb-4">
-                  Click "Create New" to get started.
-                </p>
+                <div className="text-center py-24 border-2 border-dashed rounded-lg">
+                  <h2 className="text-xl font-semibold">
+                    {searchTerm ? "No diagrams found" : "No diagrams yet"}
+                  </h2>
+                  <p className="text-muted-foreground mt-2 mb-4">
+                    {searchTerm ? "Try adjusting your search term" : "Click 'Create New' to get started."}
+                  </p>
+                </div>
+              )
+            }
+
+            {filteredAndSortedDiagrams.length > 0 && totalPages > 1 && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-full sm:w-auto"
+                  aria-label="Previous page"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-full sm:w-auto"
+                  aria-label="Next page"
+                >
+                  Next
+                </Button>
               </div>
             )}
           </TabsContent>

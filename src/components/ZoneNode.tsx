@@ -3,11 +3,10 @@ import { type AppZoneNode, type ZoneNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { NodeResizer, useReactFlow, type NodeProps } from "@xyflow/react";
-import { GitCommitHorizontal, Lock, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
-import { useRef, useState } from "react";
-import { useDebouncedCallback } from "use-debounce";
+import { GitCommitHorizontal, Lock, Plus, StickyNote, Trash2, Unlock, Pencil } from "lucide-react";
+import React, { useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Input } from "./ui/input";
+import { EditZoneDialog } from "./EditZoneDialog";
 
 interface ZoneNodeProps extends NodeProps<AppZoneNode> {
   onUpdate?: (id: string, data: Partial<ZoneNodeData>) => void;
@@ -16,7 +15,7 @@ interface ZoneNodeProps extends NodeProps<AppZoneNode> {
   onCreateNoteAtPosition?: (position: { x: number; y: number }) => void;
 }
 
-export default function ZoneNode({
+function ZoneNode({
   id,
   data,
   selected,
@@ -25,7 +24,7 @@ export default function ZoneNode({
   onCreateTableAtPosition,
   onCreateNoteAtPosition
 }: ZoneNodeProps) {
-  const [name, setName] = useState(data.name);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { screenToFlowPosition } = useReactFlow();
   const contextMenuPositionRef = useRef<{ x: number; y: number } | null>(null);
   const { setIsAddRelationshipDialogOpen } = useStore(
@@ -34,16 +33,12 @@ export default function ZoneNode({
     }))
   );
 
-  const debouncedUpdate = useDebouncedCallback((newName: string) => {
-    if (onUpdate) {
-      onUpdate(id, { name: newName });
-    }
-  }, 300);
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setName(event.target.value);
-    debouncedUpdate(event.target.value);
-  };
+  const diagramsMap = useStore((state) => state.diagramsMap);
+  const selectedDiagramId = useStore((state) => state.selectedDiagramId);
+  const existingZoneNames = useMemo(() => {
+    const d = diagramsMap.get(selectedDiagramId || 0);
+    return (d?.data?.zones || []).map((z) => z.data.name).filter((n) => !!n);
+  }, [diagramsMap, selectedDiagramId]);
 
   const handleContextMenu = (event: React.MouseEvent) => {
     const position = screenToFlowPosition({
@@ -78,14 +73,20 @@ export default function ZoneNode({
             lineClassName="border-blue-400"
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
-          <div className="flex items-center p-1 flex-shrink-0">
-            <Input
-              value={name}
-              onChange={handleChange}
-              className="bg-transparent border-none text-foreground/80 font-semibold text-center focus-visible:ring-0 w-full"
-              placeholder="Zone Name"
-              disabled={isLocked || undefined}
-            />
+          <div className="flex items-center p-1 flex-shrink-0 relative">
+            <div className="bg-transparent border-none text-foreground/80 font-semibold text-center w-full select-none">
+              {data.name || "Zone"}
+            </div>
+            {!isLocked && (
+              <button
+                type="button"
+                aria-label="Edit zone"
+                onClick={(e) => { e.stopPropagation(); setIsEditOpen(true); }}
+                className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
             {isLocked && <Lock className="h-3 w-3 text-foreground/50 ml-1 flex-shrink-0 absolute top-2 right-2" />}
           </div>
           <div className="flex-grow" />
@@ -147,6 +148,38 @@ export default function ZoneNode({
           Delete Zone
         </ContextMenuItem>
       </ContextMenuContent>
+      {/* Edit dialog */}
+      {!isLocked && (
+        <EditZoneDialog
+          isOpen={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          initialName={data.name || ""}
+          onUpdateZone={(name) => {
+            if (onUpdate) onUpdate(id, { name });
+          }}
+          existingZoneNames={existingZoneNames}
+          excludeName={data.name || ""}
+        />
+      )}
     </ContextMenu>
   );
 }
+
+// Memoized ZoneNode component with comparison function
+const MemoizedZoneNode = React.memo(ZoneNode, (prevProps, nextProps) => {
+  // Compare essential props that affect rendering
+  return (
+    prevProps.id === nextProps.id &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.data.name === nextProps.data.name &&
+    prevProps.data.isLocked === nextProps.data.isLocked &&
+    // Compare position and dimensions if they exist
+    JSON.stringify(prevProps.data.position) === JSON.stringify(nextProps.data.position) &&
+    JSON.stringify(prevProps.data.width) === JSON.stringify(nextProps.data.width) &&
+    JSON.stringify(prevProps.data.height) === JSON.stringify(nextProps.data.height)
+  );
+});
+
+MemoizedZoneNode.displayName = 'ZoneNode';
+
+export default MemoizedZoneNode;

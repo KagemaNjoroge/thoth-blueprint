@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote, LayoutGrid } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -44,38 +44,7 @@ import CustomEdge from "./CustomEdge";
 import NoteNode from "./NoteNode";
 import TableNode from "./TableNode";
 import ZoneNode from "./ZoneNode";
-
-// Define nodeTypes outside component to prevent recreation
-const nodeTypes: NodeTypes = {
-  table: (props: NodeProps<AppNode>) => {
-    return (
-      <TableNode
-        {...props}
-        onDelete={props.data.onDelete || (() => { })}
-      />
-    );
-  },
-  note: (props: NodeProps<AppNoteNode>) => {
-    return (
-      <NoteNode
-        {...props}
-        onUpdate={props.data.onUpdate || (() => { })}
-        onDelete={props.data.onDelete || (() => { })}
-      />
-    );
-  },
-  zone: (props: NodeProps<AppZoneNode>) => {
-    return (
-      <ZoneNode
-        {...props}
-        onUpdate={props.data.onUpdate || (() => { })}
-        onDelete={props.data.onDelete || (() => { })}
-        onCreateTableAtPosition={props.data.onCreateTableAtPosition || (() => { })}
-        onCreateNoteAtPosition={props.data.onCreateNoteAtPosition || (() => { })}
-      />
-    );
-  },
-};
+import { ReorganizeWarningDialog } from "./ReorganizeWarningDialog";
 
 interface DiagramEditorProps {
   setRfInstance: (instance: ReactFlowInstance<ProcessedNode, ProcessedEdge> | null) => void;
@@ -84,11 +53,12 @@ interface DiagramEditorProps {
 const DiagramEditor = forwardRef(
   ({ setRfInstance }: DiagramEditorProps, ref) => {
     const selectedDiagramId = useStore((state) => state.selectedDiagramId);
-    const allDiagrams = useStore((state) => state.diagrams);
+    const diagramsMap = useStore((state) => state.diagramsMap);
+    const onlyRenderVisibleElements = useStore((state) => state.onlyRenderVisibleElements);
 
     const diagram = useMemo(() =>
-      allDiagrams.find(d => d.id === selectedDiagramId),
-      [allDiagrams, selectedDiagramId]
+      selectedDiagramId !== null ? diagramsMap.get(selectedDiagramId) : undefined,
+      [diagramsMap, selectedDiagramId]
     );
 
     // Ref to store the React Flow instance
@@ -114,6 +84,8 @@ const DiagramEditor = forwardRef(
       settings,
       updateSettings,
       setIsAddRelationshipDialogOpen,
+      reorganizeTables,
+      toggleLock,
     } = useStore(
       useShallow((state: StoreState) => ({
         onNodesChange: state.onNodesChange,
@@ -134,10 +106,13 @@ const DiagramEditor = forwardRef(
         clipboard: state.clipboard,
         settings: state.settings,
         updateSettings: state.updateSettings,
-        setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen
+        setIsAddRelationshipDialogOpen: state.setIsRelationshipDialogOpen,
+        reorganizeTables: state.reorganizeTables,
+        toggleLock: state.toggleLock,
       }))
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+    const [isReorganizeDialogOpen, setIsReorganizeDialogOpen] = useState(false);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
     const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
@@ -148,8 +123,116 @@ const DiagramEditor = forwardRef(
     const zones = useMemo(() => diagram?.data.zones || [], [diagram?.data.zones]);
     const isLocked = useMemo(() => diagram?.data.isLocked ?? false, [diagram?.data.isLocked]);
 
+    // Create Maps for efficient lookups
+    const nodesMap = useMemo(() => new Map(nodes.map(node => [node.id, node])), [nodes]);
+    const notesMap = useMemo(() => new Map(notes.map(note => [note.id, note])), [notes]);
+    const zonesMap = useMemo(() => new Map(zones.map(zone => [zone.id, zone])), [zones]);
+
     const edgeTypes = useMemo(() => ({ custom: CustomEdge }), []);
     const visibleNodes = useMemo(() => nodes.filter((n) => !n.data.isDeleted), [nodes]);
+
+    // Memoize callback functions to prevent unnecessary re-renders
+    const handleTableDelete = useCallback((ids: string[]) => {
+      deleteNodes(ids);
+    }, [deleteNodes]);
+
+    const handleNoteUpdate = useCallback((id: string, data: Partial<import('@/lib/types').NoteNodeData>) => {
+      const note = notesMap.get(id);
+      if (note) {
+        updateNode({ ...note, data: { ...note.data, ...data } });
+      }
+    }, [notesMap, updateNode]);
+
+    const handleNoteDelete = useCallback((ids: string[]) => {
+      deleteNodes(ids);
+    }, [deleteNodes]);
+
+    const handleZoneUpdate = useCallback((id: string, data: Partial<import('@/lib/types').ZoneNodeData>) => {
+      const zone = zonesMap.get(id);
+      if (zone) {
+        updateNode({ ...zone, data: { ...zone.data, ...data } });
+      }
+    }, [zonesMap, updateNode]);
+
+    const handleZoneDelete = useCallback((ids: string[]) => {
+      deleteNodes(ids);
+    }, [deleteNodes]);
+
+    const onCreateNoteAtPosition = useCallback((position: { x: number; y: number }) => {
+      const newNote: AppNoteNode = {
+        id: `note-${+new Date()}`, type: 'note', position, width: 192, height: 192, data: { text: 'New Note' },
+      };
+      addNode(newNote);
+    }, [addNode]);
+
+    const onCreateZoneAtPosition = useCallback((position: { x: number; y: number }) => {
+      if (!diagram) return;
+      const visibleZones = diagram?.data?.zones || [];
+      const zoneName = `New Zone ${visibleZones.length + 1}`;
+      const newZone: AppZoneNode = {
+        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: zoneName },
+      };
+      addNode(newZone);
+    }, [addNode, diagram]);
+
+    const onCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
+      if (!diagram) return;
+      const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
+      const tableName = `new_table_${visibleNodes.length + 1}`;
+      const defaultPosition = { x: position.x - 144, y: position.y - 50 };
+      const canvasDimensions = getCanvasDimensions();
+      const viewportBounds = rfInstanceRef.current ? {
+        x: rfInstanceRef.current.getViewport().x,
+        y: rfInstanceRef.current.getViewport().y,
+        width: canvasDimensions.width,
+        height: canvasDimensions.height,
+        zoom: rfInstanceRef.current.getViewport().zoom
+      } : undefined;
+      
+      let finalPosition = defaultPosition;
+      if (!settings.allowTableOverlapDuringCreation) {
+        finalPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
+      }
+
+      const newNode: AppNode = {
+        id: `${tableName}-${+new Date()}`,
+        type: "table",
+        position: finalPosition,
+        data: {
+          label: tableName,
+          color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
+          columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
+          order: visibleNodes.length,
+        },
+      };
+      addNode(newNode);
+    }, [diagram, addNode, settings.allowTableOverlapDuringCreation]);
+
+    // Memoize nodeTypes with callbacks to prevent recreation
+    const memoizedNodeTypes = useMemo((): NodeTypes => ({
+      table: (props: NodeProps<AppNode>) => (
+        <TableNode
+          {...props}
+          onDelete={handleTableDelete}
+        />
+      ),
+      note: (props: NodeProps<AppNoteNode>) => (
+        <NoteNode
+          {...props}
+          onUpdate={handleNoteUpdate}
+          onDelete={handleNoteDelete}
+        />
+      ),
+      zone: (props: NodeProps<AppZoneNode>) => (
+        <ZoneNode
+          {...props}
+          onUpdate={handleZoneUpdate}
+          onDelete={handleZoneDelete}
+          onCreateTableAtPosition={onCreateTableAtPosition}
+          onCreateNoteAtPosition={onCreateNoteAtPosition}
+        />
+      ),
+    }), [handleTableDelete, handleNoteUpdate, handleNoteDelete, handleZoneUpdate, handleZoneDelete, onCreateTableAtPosition, onCreateNoteAtPosition]);
 
     useEffect(() => {
       if (selectedNodeId && rfInstanceRef.current && settings.focusTableDuringSelection) {
@@ -171,7 +254,7 @@ const DiagramEditor = forwardRef(
           const sourceNodeId = edge?.source || '';
           const targetNodeId = edge?.target || '';
           rfInstanceRef.current.fitView({
-            nodes: [{ id: sourceNodeId }, {id: targetNodeId}],
+            nodes: [{ id: sourceNodeId }, { id: targetNodeId }],
             duration: 300, // smooth transition
             maxZoom: 1.2,   // prevent zooming in too close
           });
@@ -218,9 +301,9 @@ const DiagramEditor = forwardRef(
       }));
     }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId, isLocked]);
 
-    const handleLockChange = useCallback(() => {
-      updateCurrentDiagramData({ isLocked: !isLocked });
-    }, [isLocked, updateCurrentDiagramData]);
+    const handleLockChange = () => {
+      toggleLock();
+    };
 
     const handleSnapToGridChange = useCallback(() => {
       const snapToGrid = settings.snapToGrid;
@@ -232,8 +315,8 @@ const DiagramEditor = forwardRef(
       if (!source || !target || !sourceHandle || !targetHandle) return;
 
       const getColumnId = (handleId: string) => handleId.split('-')[0];
-      const sourceNode = nodes.find(n => n.id === source);
-      const targetNode = nodes.find(n => n.id === target);
+      const sourceNode = nodesMap.get(source);
+      const targetNode = nodesMap.get(target);
       if (!sourceNode || !targetNode) return;
 
       const sourceColumn = sourceNode.data.columns.find(c => c.id === getColumnId(sourceHandle));
@@ -252,7 +335,7 @@ const DiagramEditor = forwardRef(
         data: { relationship: relationshipTypes[1]?.value || DbRelationship.ONE_TO_MANY },
       };
       addEdgeToStore(newEdge);
-    }, [nodes, addEdgeToStore]);
+    }, [nodesMap, addEdgeToStore]);
 
     const onInit = useCallback((instance: ReactFlowInstance<ProcessedNode, ProcessedEdge>) => {
       rfInstanceRef.current = instance;
@@ -267,51 +350,7 @@ const DiagramEditor = forwardRef(
       }
     }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
 
-    const onCreateTableAtPosition = useCallback((position: { x: number; y: number }) => {
-      if (!diagram) return;
-      const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
-      const tableName = `new_table_${visibleNodes.length + 1}`;
-      const defaultPosition = { x: position.x - 144, y: position.y - 50 };
-      const canvasDimensions = getCanvasDimensions();
-      const viewportBounds = rfInstanceRef.current ? {
-        x: rfInstanceRef.current.getViewport().x,
-        y: rfInstanceRef.current.getViewport().y,
-        width: canvasDimensions.width,
-        height: canvasDimensions.height,
-        zoom: rfInstanceRef.current.getViewport().zoom
-      } : undefined;
-      const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
-      
-      const newNode: AppNode = {
-        id: `${tableName}-${+new Date()}`,
-        type: "table",
-        position: nonOverlappingPosition,
-        data: {
-          label: tableName,
-          color: tableColors[Math.floor(Math.random() * tableColors.length)] ?? colors.DEFAULT_TABLE_COLOR,
-          columns: [{ id: `col_${Date.now()}`, name: "id", type: "INT", pk: true, nullable: false }],
-          order: visibleNodes.length,
-        },
-      };
-      addNode(newNode);
-    }, [diagram, addNode]);
 
-    const onCreateNoteAtPosition = useCallback((position: { x: number; y: number }) => {
-      const newNote: AppNoteNode = {
-        id: `note-${+new Date()}`, type: 'note', position, width: 192, height: 192, data: { text: 'New Note' },
-      };
-      addNode(newNote);
-    }, [addNode]);
-
-    const onCreateZoneAtPosition = useCallback((position: { x: number; y: number }) => {
-      if (!diagram) return;
-      const visibleZones = diagram?.data?.zones || [];
-      const zoneName = `New Zone ${visibleZones.length + 1}`;
-      const newZone: AppZoneNode = {
-        id: `zone-${+new Date()}`, type: 'zone', position, width: 300, height: 300, zIndex: -1, data: { name: zoneName },
-      };
-      addNode(newZone);
-    }, [addNode, diagram]);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
@@ -324,36 +363,23 @@ const DiagramEditor = forwardRef(
       setLastCursorPosition({ x: event.clientX, y: event.clientY });
     }, [setLastCursorPosition]);
 
+    const handleReorganizeClick = useCallback(() => {
+      setIsReorganizeDialogOpen(true);
+    }, []);
+
+    const handleReorganizeConfirm = useCallback(() => {
+      reorganizeTables();
+      setIsReorganizeDialogOpen(false);
+    }, [reorganizeTables]);
+
+    const handleReorganizeCancel = useCallback(() => {
+      setIsReorganizeDialogOpen(false);
+    }, []);
+
     useImperativeHandle(ref, () => ({
       undoDelete,
       batchUpdateNodes,
     }));
-
-    const handleZoneUpdate = useCallback((id: string, data: Partial<import('@/lib/types').ZoneNodeData>) => {
-      const zone = zones.find(z => z.id === id);
-      if (zone) {
-        updateNode({ ...zone, data: { ...zone.data, ...data } });
-      }
-    }, [zones, updateNode]);
-
-    const handleZoneDelete = useCallback((ids: string[]) => {
-      deleteNodes(ids);
-    }, [deleteNodes]);
-
-    const handleNoteUpdate = useCallback((id: string, data: Partial<import('@/lib/types').NoteNodeData>) => {
-      const note = notes.find(n => n.id === id);
-      if (note) {
-        updateNode({ ...note, data: { ...note.data, ...data } });
-      }
-    }, [notes, updateNode]);
-
-    const handleNoteDelete = useCallback((ids: string[]) => {
-      deleteNodes(ids);
-    }, [deleteNodes]);
-
-    const handleTableDelete = useCallback((ids: string[]) => {
-      deleteNodes(ids);
-    }, [deleteNodes]);
 
     const notesWithCallbacks = useMemo(() => notes.map(note => ({
       ...note,
@@ -429,7 +455,7 @@ const DiagramEditor = forwardRef(
               onBeforeDelete={onBeforeDelete} //prevent table permanent delete
               onConnect={onConnect}
               onSelectionChange={onSelectionChange}
-              nodeTypes={nodeTypes}
+              nodeTypes={memoizedNodeTypes}
               edgeTypes={edgeTypes}
               onInit={onInit}
               onEdgeMouseEnter={onEdgeMouseEnter}
@@ -443,6 +469,7 @@ const DiagramEditor = forwardRef(
               deleteKeyCode={isLocked ? null : ["Delete"]}
               fitView
               colorMode={theme as ColorMode}
+              onlyRenderVisibleElements={onlyRenderVisibleElements}
             >
               <Controls showInteractive={false}>
                 <ControlButton onClick={handleLockChange} title={isLocked ? "Unlock" : "Lock"}>
@@ -450,6 +477,9 @@ const DiagramEditor = forwardRef(
                 </ControlButton>
                 <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
                   {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
+                </ControlButton>
+                <ControlButton onClick={handleReorganizeClick} title={"Reorganize Tables"} disabled={isLocked}>
+                  <LayoutGrid size={18} />
                 </ControlButton>
               </Controls>
               <Background />
@@ -511,6 +541,14 @@ const DiagramEditor = forwardRef(
 
           </ContextMenuContent>
         </ContextMenu>
+        <ReorganizeWarningDialog
+          open={isReorganizeDialogOpen}
+          onOpenChange={setIsReorganizeDialogOpen}
+          onConfirm={handleReorganizeConfirm}
+          onCancel={handleReorganizeCancel}
+          zones={zones}
+          nodes={visibleNodes}
+        />
       </div>
     );
   }

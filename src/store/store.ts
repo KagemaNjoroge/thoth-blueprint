@@ -1,5 +1,6 @@
 import { DEFAULT_SETTINGS } from "@/lib/constants";
 import { db } from "@/lib/db";
+import { organizeTablesByRelationshipsWithZones } from "@/lib/layout-algorithms";
 import {
   Settings,
   type AppEdge,
@@ -22,6 +23,7 @@ import { shallow } from "zustand/shallow";
 
 export interface StoreState {
   diagrams: Diagram[];
+  diagramsMap: Map<number, Diagram>;
   selectedDiagramId: number | null;
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
@@ -30,6 +32,7 @@ export interface StoreState {
   clipboard: (AppNode | AppNoteNode | AppZoneNode)[] | null;
   lastCursorPosition: { x: number; y: number } | null;
   isRelationshipDialogOpen: boolean;
+  onlyRenderVisibleElements: boolean;
   loadInitialData: () => Promise<void>;
   setSelectedDiagramId: (id: number | null) => void;
   setSelectedNodeId: (id: string | null) => void;
@@ -45,6 +48,7 @@ export interface StoreState {
     data: Diagram["data"];
   }) => Promise<void>;
   renameDiagram: (id: number, name: string) => void;
+  duplicateDiagram: (id: number) => Promise<void>;
   moveDiagramToTrash: (id: number) => void;
   restoreDiagram: (id: number) => void;
   permanentlyDeleteDiagram: (id: number) => void;
@@ -62,9 +66,34 @@ export interface StoreState {
   copyNodes: (nodes: (AppNode | AppNoteNode | AppZoneNode)[]) => void;
   pasteNodes: (position: { x: number; y: number }) => void;
   setIsRelationshipDialogOpen: (value: boolean) => void;
+  setOnlyRenderVisibleElements: (value: boolean) => void;
+  reorganizeTables: () => void;
+  toggleLock: () => void;
 }
 
 export const TABLE_SOFT_DELETE_LIMIT = 10;
+
+// Helper function to create diagrams map from array
+function createDiagramsMap(diagrams: Diagram[]): Map<number, Diagram> {
+  return new Map(diagrams.map(diagram => [diagram.id!, diagram]));
+}
+
+// Helper function to get diagram by ID with O(1) lookup
+function getDiagramById(diagramsMap: Map<number, Diagram>, id: number | null): Diagram | undefined {
+  return id ? diagramsMap.get(id) : undefined;
+}
+
+// Helper function to update diagrams and maintain map consistency
+function updateDiagramsWithMap(
+  diagrams: Diagram[], 
+  updater: (diagrams: Diagram[]) => Diagram[]
+): { diagrams: Diagram[]; diagramsMap: Map<number, Diagram> } {
+  const updatedDiagrams = updater(diagrams);
+  return {
+    diagrams: updatedDiagrams,
+    diagramsMap: createDiagramsMap(updatedDiagrams),
+  };
+}
 
 let previousDiagrams: Diagram[] = [];
 let previousSelectedDiagramId: number | null = null;
@@ -72,10 +101,11 @@ let previousSelectedDiagramId: number | null = null;
 const debouncedSavePositions = debounce(
   async (diagrams: Diagram[], selectedDiagramId: number | null) => {
     try {
-      const currentDiagram = diagrams.find((d) => d.id === selectedDiagramId);
-      const previousDiagram = previousDiagrams.find(
-        (d) => d.id === previousSelectedDiagramId
-      );
+      const diagramsMap = createDiagramsMap(diagrams);
+      const previousDiagramsMap = createDiagramsMap(previousDiagrams);
+      
+      const currentDiagram = getDiagramById(diagramsMap, selectedDiagramId);
+      const previousDiagram = getDiagramById(previousDiagramsMap, previousSelectedDiagramId);
 
       if (!currentDiagram || !previousDiagram) {
         await debouncedSaveFull(diagrams, selectedDiagramId);
@@ -345,6 +375,7 @@ async function saveSpecificNodePositions(
 export const useStore = create(
   subscribeWithSelector<StoreState>((set) => ({
     diagrams: [],
+    diagramsMap: new Map(),
     selectedDiagramId: null,
     selectedNodeId: null,
     selectedEdgeId: null,
@@ -353,6 +384,7 @@ export const useStore = create(
     clipboard: null,
     lastCursorPosition: null,
     isRelationshipDialogOpen: false,
+    onlyRenderVisibleElements: true, // Default to true for performance
     loadInitialData: async () => {
       set({ isLoading: true });
       set({ isRelationshipDialogOpen: false });
@@ -382,7 +414,13 @@ export const useStore = create(
           selectedDiagramId = selectedDiagramIdState.value;
         }
       }
-      set({ diagrams, selectedDiagramId, settings, isLoading: false });
+      set({
+        diagrams,
+        diagramsMap: createDiagramsMap(diagrams),
+        selectedDiagramId,
+        settings,
+        isLoading: false,
+      });
     },
     setSelectedDiagramId: (id) =>
       set({
@@ -414,10 +452,14 @@ export const useStore = create(
         updatedAt: new Date(),
       };
       const id = await db.diagrams.add(newDiagram);
-      set((state) => ({
-        diagrams: [...state.diagrams, { ...newDiagram, id }],
-        selectedDiagramId: id,
-      }));
+      set((state) => {
+        const updatedDiagrams = [...state.diagrams, { ...newDiagram, id }];
+        return {
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
+          selectedDiagramId: id,
+        };
+      });
     },
     importDiagram: async (diagramData) => {
       const newDiagram: Diagram = {
@@ -426,10 +468,14 @@ export const useStore = create(
         updatedAt: new Date(),
       };
       const id = await db.diagrams.add(newDiagram);
-      set((state) => ({
-        diagrams: [...state.diagrams, { ...newDiagram, id }],
-        selectedDiagramId: id,
-      }));
+      set((state) => {
+        const updatedDiagrams = [...state.diagrams, { ...newDiagram, id }];
+        return {
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
+          selectedDiagramId: id,
+        };
+      });
     },
     renameDiagram: (id, name) => {
       set((state) => ({
@@ -437,6 +483,89 @@ export const useStore = create(
           d.id === id ? { ...d, name, updatedAt: new Date() } : d
         ),
       }));
+    },
+    duplicateDiagram: async (id) => {
+      // Use set to get the current state and perform the duplication
+      set((state) => {
+        const currentDiagram = getDiagramById(state.diagramsMap, id);
+        if (!currentDiagram) {
+          return state;
+        }
+
+        // Generate a unique name for the duplicate
+        const existingNames = new Set(state.diagrams.map(d => d.name));
+        let duplicateName = `${currentDiagram.name} (Copy)`;
+        let counter = 1;
+        while (existingNames.has(duplicateName)) {
+          duplicateName = `${currentDiagram.name} (Copy ${counter})`;
+          counter++;
+        }
+
+        // Create new IDs for nodes, edges, notes, and zones
+        const nodeIdMap = new Map();
+        const newNodes = currentDiagram.data.nodes?.map(node => {
+          const newId = `${node.type}-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`;
+          nodeIdMap.set(node.id, newId);
+          return {
+            ...node,
+            id: newId,
+            selected: false,
+          };
+        }) || [];
+
+        const newEdges = currentDiagram.data.edges?.map(edge => ({
+          ...edge,
+          id: `edge-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: nodeIdMap.get(edge.source) || edge.source,
+          target: nodeIdMap.get(edge.target) || edge.target,
+        })) || [];
+
+        const newNotes = currentDiagram.data.notes?.map(note => ({
+          ...note,
+          id: `${note.type}-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`,
+          selected: false,
+        })) || [];
+
+        const newZones = currentDiagram.data.zones?.map(zone => ({
+          ...zone,
+          id: `${zone.type}-${+new Date()}-${Math.random().toString(36).substr(2, 9)}`,
+          selected: false,
+        })) || [];
+
+        const duplicatedDiagram: Omit<Diagram, "id" | "createdAt" | "updatedAt"> = {
+          name: duplicateName,
+          dbType: currentDiagram.dbType,
+          data: {
+            ...currentDiagram.data,
+            nodes: newNodes,
+            edges: newEdges,
+            notes: newNotes,
+            zones: newZones,
+          },
+        };
+
+        const newDiagram: Diagram = {
+          ...duplicatedDiagram,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        // Add to database and update state
+        db.diagrams.add(newDiagram).then((newId) => {
+          set((state) => {
+            const updatedDiagrams = [...state.diagrams, { ...newDiagram, id: newId }];
+            return {
+              diagrams: updatedDiagrams,
+              diagramsMap: createDiagramsMap(updatedDiagrams),
+              selectedDiagramId: newId,
+            };
+          });
+        }).catch((error) => {
+          console.error('Failed to duplicate diagram:', error);
+        });
+        
+        return state;
+      });
     },
     moveDiagramToTrash: (id) => {
       set((state) => ({
@@ -460,19 +589,21 @@ export const useStore = create(
       }));
     },
     updateCurrentDiagramData: (data) => {
-      set((state) => ({
-        diagrams: state.diagrams.map((d) =>
+      set((state) => {
+        const updatedDiagrams = state.diagrams.map((d) =>
           d.id === state.selectedDiagramId
             ? { ...d, data: { ...d.data, ...data }, updatedAt: new Date() }
             : d
-        ),
-      }));
+        );
+        return {
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
+        };
+      });
     },
     onNodesChange: (changes) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
 
         const allDiagramNodes = [
@@ -492,72 +623,77 @@ export const useStore = create(
           (n) => n.type === "zone"
         ) as AppZoneNode[];
 
+        const updatedDiagrams = state.diagrams.map((d) =>
+          d.id === state.selectedDiagramId
+            ? {
+                ...d,
+                data: {
+                  ...d.data,
+                  nodes: newNodes,
+                  notes: newNotes,
+                  zones: newZones,
+                },
+                updatedAt: new Date(),
+              }
+            : d
+        );
+
         return {
-          diagrams: state.diagrams.map((d) =>
-            d.id === state.selectedDiagramId
-              ? {
-                  ...d,
-                  data: {
-                    ...d.data,
-                    nodes: newNodes,
-                    notes: newNotes,
-                    zones: newZones,
-                  },
-                  updatedAt: new Date(),
-                }
-              : d
-          ),
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
         };
       });
     },
     onEdgesChange: (changes) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
         const updatedEdges = applyEdgeChanges(
           changes,
           diagram.data.edges || []
         ) as AppEdge[];
+        
+        const updatedDiagrams = state.diagrams.map((d) =>
+          d.id === state.selectedDiagramId
+            ? {
+                ...d,
+                data: { ...d.data, edges: updatedEdges },
+                updatedAt: new Date(),
+              }
+            : d
+        );
+        
         return {
-          diagrams: state.diagrams.map((d) =>
-            d.id === state.selectedDiagramId
-              ? {
-                  ...d,
-                  data: { ...d.data, edges: updatedEdges },
-                  updatedAt: new Date(),
-                }
-              : d
-          ),
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
         };
       });
     },
     addEdge: (edge) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
         const newEdges = [...(diagram.data.edges || []), edge];
+        
+        const updatedDiagrams = state.diagrams.map((d) =>
+          d.id === state.selectedDiagramId
+            ? {
+                ...d,
+                data: { ...d.data, edges: newEdges },
+                updatedAt: new Date(),
+              }
+            : d
+        );
+        
         return {
-          diagrams: state.diagrams.map((d) =>
-            d.id === state.selectedDiagramId
-              ? {
-                  ...d,
-                  data: { ...d.data, edges: newEdges },
-                  updatedAt: new Date(),
-                }
-              : d
-          ),
+          diagrams: updatedDiagrams,
+          diagramsMap: createDiagramsMap(updatedDiagrams),
         };
       });
     },
     updateNode: (nodeToUpdate) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
 
         const updatedData = { ...diagram.data };
@@ -576,8 +712,8 @@ export const useStore = create(
           );
         }
 
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
@@ -585,15 +721,13 @@ export const useStore = create(
                   updatedAt: new Date(),
                 }
               : d
-          ),
-        };
+          )
+        );
       });
     },
     deleteNodes: (nodeIds) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
 
         // Helper function to mark table nodes as deleted
@@ -652,8 +786,8 @@ export const useStore = create(
         const filterZonesForDeletion = (zones: AppZoneNode[]): AppZoneNode[] =>
           (zones || []).filter((zone) => !nodeIds.includes(zone.id));
 
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
@@ -666,21 +800,19 @@ export const useStore = create(
                   updatedAt: new Date(),
                 }
               : d
-          ),
-        };
+          )
+        );
       });
     },
     updateEdge: (edgeToUpdate) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
         const newEdges = (diagram.data.edges || []).map((edge) =>
           edge.id === edgeToUpdate.id ? edgeToUpdate : edge
         );
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
@@ -688,21 +820,19 @@ export const useStore = create(
                   updatedAt: new Date(),
                 }
               : d
-          ),
-        };
+          )
+        );
       });
     },
     deleteEdge: (edgeId) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
         const newEdges = (diagram.data.edges || []).filter(
           (edge) => edge.id !== edgeId
         );
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
@@ -710,15 +840,13 @@ export const useStore = create(
                   updatedAt: new Date(),
                 }
               : d
-          ),
-        };
+          )
+        );
       });
     },
     addNode: (node) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
 
         const updatedData = { ...diagram.data };
@@ -730,20 +858,18 @@ export const useStore = create(
           updatedData.zones = [...(diagram.data.zones || []), node];
         }
 
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? { ...d, data: updatedData, updatedAt: new Date() }
               : d
-          ),
-        };
+          )
+        );
       });
     },
     undoDelete: () => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
 
         const deletedNodes = (diagram.data.nodes || []).filter(
@@ -774,8 +900,8 @@ export const useStore = create(
           return n;
         });
 
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
@@ -786,23 +912,21 @@ export const useStore = create(
                   updatedAt: new Date(),
                 }
               : d
-          ),
-        };
+          )
+        );
       });
     },
 
     batchUpdateNodes: (nodesToUpdate) => {
       set((state) => {
-        const diagram = state.diagrams.find(
-          (d) => d.id === state.selectedDiagramId
-        );
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
         const nodeMap = new Map(nodesToUpdate.map((n) => [n.id, n]));
         const newNodes = (diagram.data.nodes || []).map(
           (n) => nodeMap.get(n.id) || n
         );
-        return {
-          diagrams: state.diagrams.map((d) =>
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
@@ -810,8 +934,8 @@ export const useStore = create(
                   updatedAt: new Date(),
                 }
               : d
-          ),
-        };
+          )
+        );
       });
     },
     copyNodes: (nodes) => {
@@ -894,6 +1018,59 @@ export const useStore = create(
     },
     setIsRelationshipDialogOpen: (value) => {
       set({ isRelationshipDialogOpen: value });
+    },
+    setOnlyRenderVisibleElements: (value) => {
+      set({ onlyRenderVisibleElements: value });
+    },
+    reorganizeTables: () => {
+      set((state) => {
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
+        if (!diagram) return state;
+
+        const tables = diagram.data.nodes || [];
+        const relationships = diagram.data.edges || [];
+        const zones = diagram.data.zones || [];
+
+        // Use the zone-aware layout algorithm
+        const organizedTables = organizeTablesByRelationshipsWithZones(
+          tables,
+          relationships,
+          zones
+        );
+
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
+            d.id === state.selectedDiagramId
+              ? {
+                  ...d,
+                  data: { ...d.data, nodes: organizedTables },
+                  updatedAt: new Date(),
+                }
+              : d
+          )
+        );
+      });
+    },
+    toggleLock: () => {
+      set((state) => {
+        const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
+        if (!diagram) return state;
+
+        const currentLockState = diagram.data.isLocked ?? false;
+        const newLockState = !currentLockState;
+
+        return updateDiagramsWithMap(state.diagrams, (diagrams) =>
+          diagrams.map((d) =>
+            d.id === state.selectedDiagramId
+              ? {
+                  ...d,
+                  data: { ...d.data, isLocked: newLockState },
+                  updatedAt: new Date(),
+                }
+              : d
+          )
+        );
+      });
     },
   }))
 );

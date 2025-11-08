@@ -1,4 +1,6 @@
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -16,27 +18,32 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { importFromJson } from "@/lib/importer";
+import { parseMySqlDdlAsync } from "@/lib/importer/mysql-ddl-parser";
 import { type DatabaseType, type Diagram } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { showError } from "@/utils/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Upload } from "lucide-react";
-import { useRef } from "react";
+import { Terminal, Upload, FileJson, FileText } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { Progress } from "@/components/ui/progress";
+import { MySQLIcon } from "@/components/icons/MySQLIcon";
+import { PostgreSQLIcon } from "@/components/icons/PostgreSQLIcon";
+import { MSSQLIcon } from "@/components/icons/MSSQLIcon";
+import { SQLiteIcon } from "@/components/icons/SQLiteIcon";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Diagram name is required"),
+  name: z.string().trim().min(1, "Diagram name is required"),
   dbType: z.enum(["mysql", "postgres"]),
+  importType: z.enum(["json", "sql"]),
   content: z.string().min(1, "Content to import is required"),
+  reorganizeAfterImport: z.boolean().optional(),
 });
 
 interface ImportDialogProps {
@@ -46,124 +53,484 @@ interface ImportDialogProps {
 }
 
 export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDialogProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState("json");
+  const [isParsing, setIsParsing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
+  const [uiStep, setUiStep] = useState<1 | 2>(1);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       dbType: "mysql",
+      importType: "json",
       content: "",
+      reorganizeAfterImport: true,
     },
   });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const content = form.watch("content");
+  const nameValue = form.watch("name");
+
+  const handleFileRead = useCallback((file: File) => {
+    const acceptedExtension = activeTab === 'json' ? '.json' : '.sql';
+    if (!file.name.endsWith(acceptedExtension)) {
+      showError(`Invalid file type. Please upload a ${acceptedExtension} file.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const fileContent = e.target?.result as string;
+      form.setValue("content", fileContent);
+    };
+    reader.readAsText(file);
+  }, [activeTab, form]);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        form.setValue("content", content);
-      };
-      reader.readAsText(file);
+      handleFileRead(file);
     }
-    if (event.target) {
-      event.target.value = "";
+  }, [handleFileRead]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: activeTab === 'json' ? { 'application/json': ['.json'] } : { 'application/sql': ['.sql'] },
+    multiple: false,
+  });
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    form.setValue("importType", value as "json" | "sql");
+    form.setValue("content", ""); // Clear content on tab switch
+    form.clearErrors("content");
+  };
+
+  const dbOptions: { key: "mysql" | "postgres"; label: string; component: React.ReactNode }[] = [
+    { key: "mysql", label: "MySQL", component: <MySQLIcon className="h-6" /> },
+    { key: "postgres", label: "PostgreSQL", component: <PostgreSQLIcon className="h-6" /> },
+  ];
+
+  // Coming soon databases — shown in Step 1 only, disabled
+  const comingSoonOptions: { key: "mssql" | "sqlite"; label: string; component: React.ReactNode }[] = [
+    { key: "mssql", label: "SQL Server", component: <MSSQLIcon className="h-6" /> },
+    { key: "sqlite", label: "SQLite", component: <SQLiteIcon className="h-6" /> },
+  ];
+
+  const selectDatabase = (key: "mysql" | "postgres") => {
+    const name = form.getValues("name").trim();
+    if (!name) {
+      // Trigger field validation and inform the user
+      form.trigger("name");
+      showError("Please enter a diagram name to continue.");
+      return;
     }
+    // Clear any lingering name errors once valid
+    form.clearErrors("name");
+    form.setValue("dbType", key);
+    setActiveTab("json");
+    setUiStep(2);
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const diagramData = importFromJson(values.content);
+      let diagramData: Diagram['data'];
       const dbType = values.dbType as DatabaseType;
+
+      if (values.importType === "json") {
+        diagramData = importFromJson(values.content);
+      } else if (values.importType === "sql") {
+        setIsParsing(true);
+        setProgress(0);
+        setProgressLabel("Starting import...");
+        
+        if (dbType === 'mysql') {
+          diagramData = await parseMySqlDdlAsync(values.content, (p, label) => {
+            setProgress(p);
+            if (label) setProgressLabel(label);
+          }, values.reorganizeAfterImport);
+        } else if (dbType === 'postgres') {
+          // Import PostgreSQL DDL
+          const { parsePostgreSqlDdlAsync } = await import('../lib/importer/postgres-ddl-parser');
+          diagramData = await parsePostgreSqlDdlAsync(values.content, (p, label) => {
+            setProgress(p);
+            if (label) setProgressLabel(label);
+          }, values.reorganizeAfterImport);
+        } else {
+          showError(`Sorry, ${dbType} DDL import is not supported at the moment.`);
+          setIsParsing(false);
+          return;
+        }
+        setIsParsing(false);
+      } else {
+        throw new Error("Invalid import type");
+      }
 
       onImportDiagram({ name: values.name, dbType, data: diagramData });
       onOpenChange(false);
       form.reset();
+      setActiveTab("json");
+      setProgress(0);
+      setProgressLabel("");
+      setIsParsing(false);
     } catch (error) {
       console.error("Import failed:", error);
       const errorMessage = error instanceof Error ? `Import failed: ${error.message}` : "An unknown error occurred during import.";
       showError(errorMessage);
+      setIsParsing(false);
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent
+        className="
+          w-[calc(100vw-2rem)] sm:w-full
+          sm:max-w-xl md:max-w-2xl lg:max-w-3xl
+          max-h-[calc(100vh-3rem)]
+        "
+      >
         <DialogHeader>
-          <DialogTitle>Import Diagram from JSON</DialogTitle>
+          <DialogTitle>Import Diagram</DialogTitle>
           <DialogDescription>
-            Import a diagram from a JSON file previously exported from this application.
+            Import a diagram from JSON or a SQL schema file.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Diagram Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., My Imported Schema" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="dbType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Database Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a database type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="postgres">PostgreSQL</SelectItem>
-                      <SelectItem value="mysql">MySQL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Scrollable content area to keep dialog height-aware */}
+            <div className="overflow-y-auto no-scrollbar max-h-[calc(100vh-12rem)] px-3 sm:px-0 space-y-4">
+            {uiStep === 1 && (
+              // Add horizontal padding only for Step 1 to bring content slightly inward
+              <div className="space-y-3 px-3 sm:px-4 md:px-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Step 1 — Diagram details</h3>
+                  <span className="text-xs text-muted-foreground">Name and database</span>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Diagram Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., My Imported Schema" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="space-y-2">
+                  <FormLabel>Database</FormLabel>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    {dbOptions.map((db) => {
+                      const selected = form.getValues("dbType") === db.key;
+                      const isNameProvided = !!nameValue?.trim();
+                      return (
+                        <Card
+                          key={db.key}
+                          role="button"
+                          aria-selected={selected}
+                          aria-disabled={!isNameProvided}
+                          onClick={() => {
+                            if (!isNameProvided) {
+                              form.trigger("name");
+                              showError("Please enter a diagram name to continue.");
+                              return;
+                            }
+                            selectDatabase(db.key);
+                          }}
+                          className={cn(
+                            "transition border",
+                            isNameProvided ? "cursor-pointer" : "cursor-not-allowed opacity-60",
+                            selected ? "border-primary ring-1 ring-primary" : "hover:border-primary/40"
+                          )}
+                        >
+                          <CardHeader className="flex items-center gap-3 py-3">
+                            {db.component}
+                            <div>
+                              <CardTitle className="text-base">{db.label}</CardTitle>
+                              <CardDescription className="text-xs">
+                                {isNameProvided ? "Click to select" : "Enter name to enable"}
+                              </CardDescription>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      );
+                    })}
+                    {comingSoonOptions.map((db) => (
+                      <Card
+                        key={db.key}
+                        aria-disabled="true"
+                        className={cn(
+                          "opacity-60 cursor-not-allowed border border-dashed bg-muted/30",
+                          "hover:border-muted"
+                        )}
+                        title="Coming soon"
+                      >
+                        <CardHeader className="flex items-center gap-3 py-3">
+                          {db.component}
+                          <div>
+                            <CardTitle className="text-base">{db.label}</CardTitle>
+                            <CardDescription className="text-xs">Coming soon</CardDescription>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {uiStep === 2 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Step 2 — Import source</h3>
+                  <span className="text-xs text-muted-foreground">JSON or SQL DDL</span>
+                </div>
+                {/* Summary of selections from Step 1 */}
+                <div className="flex items-center justify-between rounded-md border p-3 bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    {form.getValues("dbType") === "mysql" ? (
+                      <MySQLIcon className="h-5" />
+                    ) : (
+                      <PostgreSQLIcon className="h-5" />
+                    )}
+                    <div className="text-sm">
+                      <div className="font-medium">{form.getValues("name") || "Untitled diagram"}</div>
+                      <div className="text-muted-foreground">
+                        Database: {form.getValues("dbType") === "mysql" ? "MySQL" : "PostgreSQL"}
+                      </div>
+                    </div>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUiStep(1)}>
+                    Change
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Card
+                    role="button"
+                    aria-selected={activeTab === "json"}
+                    onClick={() => handleTabChange("json")}
+                    className={cn(
+                      "cursor-pointer transition border",
+                      activeTab === "json" ? "border-primary ring-1 ring-primary" : "hover:border-primary/40"
+                    )}
+                  >
+                    <CardHeader className="flex items-center gap-3 py-3">
+                      <FileJson className="h-5 w-5" />
+                      <div>
+                        <CardTitle className="text-base">From JSON</CardTitle>
+                        <CardDescription className="text-xs">Exported app JSON</CardDescription>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                  <Card
+                    role="button"
+                    aria-selected={activeTab === "sql"}
+                    onClick={() => handleTabChange("sql")}
+                    className={cn(
+                      "cursor-pointer transition border",
+                      activeTab === "sql" ? "border-primary ring-1 ring-primary" : "hover:border-primary/40"
+                    )}
+                  >
+                    <CardHeader className="flex items-center gap-3 py-3">
+                      <FileText className="h-5 w-5" />
+                      <div>
+                        <CardTitle className="text-base">From SQL (DDL)</CardTitle>
+                        <CardDescription className="text-xs">{form.getValues("dbType") === "mysql" ? "MySQL CREATE TABLE" : "PostgreSQL CREATE TABLE"}</CardDescription>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                  <Card className="opacity-50 cursor-not-allowed border-dashed">
+                    <CardHeader className="flex items-center gap-3 py-3">
+                      <img src="/placeholder.svg" alt="DBML" className="h-5 w-5" />
+                      <div>
+                        <CardTitle className="text-base">From DBML</CardTitle>
+                        <CardDescription className="text-xs">Coming soon</CardDescription>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {uiStep === 2 && (
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <TabsContent value="json" className="mt-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Import a diagram from a JSON file previously exported from this application.
+                </p>
+              </TabsContent>
+              <TabsContent value="sql" className="mt-4 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Import a diagram from a {form.getValues("dbType") === "mysql" ? "MySQL" : "PostgreSQL"} `CREATE TABLE` script.
+                </p>
+                <Alert className="p-3 sm:p-4">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle className="text-sm sm:text-base">How to get your {form.getValues("dbType") === "mysql" ? "MySQL" : "PostgreSQL"} schema</AlertTitle>
+                  <AlertDescription className="space-y-2 text-xs sm:text-sm">
+                    {form.getValues("dbType") === "mysql" ? (
+                      <>
+                        <p className="text-xs sm:text-sm">
+                          You can generate a schema file from your database using the `mysqldump` command.
+                          Run the following command in your terminal:
+                        </p>
+                        <pre className="mt-2 p-2 bg-muted rounded-md text-[11px] sm:text-xs font-mono w-full max-w-full whitespace-pre-wrap break-words">
+                          <code>
+                            mysqldump --no-data -u [username] -p [database_name] &gt; schema.sql
+                          </code>
+                        </pre>
+                        <p className="text-xs sm:text-sm">
+                          Replace `[username]` and `[database_name]` with your database credentials.
+                          The `--no-data` flag ensures only the table structure is exported.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs sm:text-sm">
+                          You can generate a schema file from your PostgreSQL database using the `pg_dump` command.
+                          Run the following command in your terminal:
+                        </p>
+                        <pre className="mt-2 p-2 bg-muted rounded-md text-[11px] sm:text-xs font-mono w-full max-w-full whitespace-pre-wrap break-words">
+                          <code>
+                            pg_dump -U [username] -s [database_name] &gt; schema.sql
+                          </code>
+                        </pre>
+                        <p className="text-xs sm:text-sm">
+                          Replace `[username]` and `[database_name]` with your database credentials.
+                          The `-s` flag ensures only the schema (table structure) is exported.
+                        </p>
+                      </>
+                    )}
+                  </AlertDescription>
+                </Alert>
+                <FormField
+                  control={form.control}
+                  name="reorganizeAfterImport"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Auto-organize tables by relationships
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Automatically arrange tables based on their foreign key relationships for better visualization
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                {isParsing && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Importing SQL…</span>
+                      <span>{progressLabel}</span>
+                    </div>
+                    <Progress value={progress} />
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+            )}
+
+            {uiStep === 2 && (
             <FormField
               control={form.control}
               name="content"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex justify-between items-center">
-                    <FormLabel>JSON Content</FormLabel>
-                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload File
-                    </Button>
-                    <Input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      className="hidden"
-                      accept=".json"
-                    />
-                  </div>
-                  <FormControl>
-                    <Textarea
-                      placeholder={`Paste your JSON content here or upload a file...`}
-                      className="min-h-[200px] font-mono"
-                      {...field}
-                    />
-                  </FormControl>
+                  {content ? (
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <FormLabel>
+                          {activeTab === 'json' ? 'JSON Content' : 'SQL Content'}
+                        </FormLabel>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => form.setValue("content", "")}
+                        >
+                          Clear and re-upload
+                        </Button>
+                      </div>
+                      <FormControl>
+                        <Textarea
+                          placeholder={`Paste content, upload a file, or drag and drop here...`}
+                          className="min-h-[200px] font-mono"
+                          {...field}
+                        />
+                      </FormControl>
+                    </div>
+                  ) : (
+                    <div
+                      {...getRootProps({
+                        className: cn(
+                          "relative border-2 border-dashed rounded-lg p-4 transition-colors h-[240px] flex flex-col items-center justify-center text-center cursor-pointer",
+                          isDragActive ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                        )
+                      })}
+                    >
+                      <input {...getInputProps()} />
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      {isDragActive ? (
+                        <p className="text-lg font-semibold text-primary">Drop the file here...</p>
+                      ) : (
+                        <>
+                          <p className="text-muted-foreground mb-2">
+                            Drag & drop a file here, or click to select a file
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            (Only {activeTab === 'json' ? '*.json' : '*.sql'} files will be accepted)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="submit">Import Diagram</Button>
+            )}
+            </div>
+            <DialogFooter className="mt-3 sm:mt-4">
+              {uiStep === 1 ? (
+                <Button
+                  type="button"
+                  disabled={!nameValue?.trim()}
+                  onClick={() => {
+                    const name = form.getValues("name").trim();
+                    if (!name) {
+                      form.trigger("name");
+                      showError("Please enter a diagram name to continue.");
+                      return;
+                    }
+                    setUiStep(2);
+                  }}
+                >
+                  Next
+                </Button>
+              ) : (
+                <div className="flex w-full gap-2">
+                  <Button type="button" variant="outline" onClick={() => setUiStep(1)}>
+                    Back
+                  </Button>
+                  <Button type="submit" disabled={isParsing || !content} className="flex-1">
+                    {isParsing ? "Importing…" : "Import Diagram"}
+                  </Button>
+                </div>
+              )}
             </DialogFooter>
           </form>
         </Form>

@@ -23,6 +23,7 @@ import { ExportDialog } from "./ExportDialog";
 import { PWAUpdateNotification } from "./PWAUpdateNotification";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { UpdateDialog } from "./UpdateDialog";
+import { WhatsNewDialog } from "./WhatsNewDialog";
 
 interface LayoutProps {
   onInstallAppRequest: () => void;
@@ -31,14 +32,11 @@ interface LayoutProps {
 export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
   const isRelationshipDialogOpen = useStore((state) => state.isRelationshipDialogOpen);
-  const allDiagrams = useStore((state) => state.diagrams);
+  const diagramsMap = useStore((state) => state.diagramsMap);
   const isLoading = useStore((state) => state.isLoading);
   const isMobile = useIsMobile();
 
-  const diagram = useMemo(() =>
-    allDiagrams.find((d) => d.id === selectedDiagramId),
-    [allDiagrams, selectedDiagramId]
-  );
+  const diagram = diagramsMap.get(selectedDiagramId || 0);
 
   const existingTableNames = useMemo(() =>
     diagram?.data.nodes.map(n => n.data.label) ?? [],
@@ -81,8 +79,44 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const [isShortcutsDialogOpen, setIsShortcutsDialogOpen] = useState(false);
   const [isAboutDialogOpen, setIsAboutDialogOpen] = useState(false);
   const [isAddElementDialogOpen, setIsAddElementDialogOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  const [whatsNewMarkdown, setWhatsNewMarkdown] = useState<string>("");
 
   const [rfInstance, setRfInstance] = useState<ReactFlowInstance<ProcessedNode, ProcessedEdge> | null>(null);
+
+  // Auto-show What's New when app version changes and fetch local markdown
+  useEffect(() => {
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+    const lastSeenVersion = localStorage.getItem('whatsNewSeenVersion');
+    if (currentVersion && currentVersion !== lastSeenVersion) {
+      fetch('/whats-new.md')
+        .then((res) => res.ok ? res.text() : Promise.reject(new Error('Failed to load whats-new.md')))
+        .then((text) => {
+          setWhatsNewMarkdown(text);
+          setIsWhatsNewOpen(true);
+        })
+        .catch((err) => {
+          console.error('Error loading whats-new.md', err);
+          setWhatsNewMarkdown('# What\'s New\n\nUpdate available.');
+          setIsWhatsNewOpen(true);
+        });
+    }
+  }, []);
+
+  // Manual open handler to view What's New on demand
+  const openWhatsNew = () => {
+    fetch('/whats-new.md')
+      .then((res) => res.ok ? res.text() : Promise.reject(new Error('Failed to load whats-new.md')))
+      .then((text) => {
+        setWhatsNewMarkdown(text);
+        setIsWhatsNewOpen(true);
+      })
+      .catch((err) => {
+        console.error('Error loading whats-new.md', err);
+        setWhatsNewMarkdown('# What\'s New\n\nUpdate available.');
+        setIsWhatsNewOpen(true);
+      });
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -278,16 +312,23 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     if (!diagram) return;
     const { sourceNodeId, sourceColumnId, targetNodeId, targetColumnId, relationshipType } = values;
 
-    const sourceNode = diagram.data.nodes.find(n => n.id === sourceNodeId);
-    const targetNode = diagram.data.nodes.find(n => n.id === targetNodeId);
+    // Create nodes map for O(1) lookups
+    const nodesMap = new Map(diagram.data.nodes.map(node => [node.id, node]));
+    
+    const sourceNode = nodesMap.get(sourceNodeId);
+    const targetNode = nodesMap.get(targetNodeId);
 
     if (!sourceNode || !targetNode) {
       showError("Source or target table not found.");
       return;
     }
 
-    const sourceColumn = sourceNode.data.columns.find(c => c.id === sourceColumnId);
-    const targetColumn = targetNode.data.columns.find(c => c.id === targetColumnId);
+    // Create column maps for O(1) lookups
+    const sourceColumnsMap = new Map(sourceNode.data.columns.map(col => [col.id, col]));
+    const targetColumnsMap = new Map(targetNode.data.columns.map(col => [col.id, col]));
+
+    const sourceColumn = sourceColumnsMap.get(sourceColumnId);
+    const targetColumn = targetColumnsMap.get(targetColumnId);
 
     if (!sourceColumn || !targetColumn) {
       showError("Source or target column not found.");
@@ -331,6 +372,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       onInstallAppRequest={onInstallAppRequest}
       onViewShortcuts={() => setIsShortcutsDialogOpen(true)}
       onViewAbout={() => setIsAboutDialogOpen(true)}
+      onViewWhatsNew={openWhatsNew}
     />
   ) : null;
 
@@ -355,6 +397,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
             onInstallAppRequest={onInstallAppRequest}
             onCheckForUpdate={() => setIsUpdateDialogOpen(true)}
             onViewAbout={() => setIsAboutDialogOpen(true)}
+            onViewWhatsNew={openWhatsNew}
           />
         </div>
       )}
@@ -377,6 +420,17 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       <UpdateDialog isOpen={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen} />
       <ShortcutsDialog isOpen={isShortcutsDialogOpen} onOpenChange={setIsShortcutsDialogOpen} />
       <AboutDialog isOpen={isAboutDialogOpen} onOpenChange={setIsAboutDialogOpen} />
+      <WhatsNewDialog
+        isOpen={isWhatsNewOpen}
+        onOpenChange={(open) => {
+          setIsWhatsNewOpen(open);
+          if (!open) {
+            const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+            localStorage.setItem('whatsNewSeenVersion', currentVersion);
+          }
+        }}
+        markdown={whatsNewMarkdown}
+      />
     </>
   );
 }

@@ -40,6 +40,7 @@ interface EditorMenubarProps {
   onInstallAppRequest: () => void;
   onViewShortcuts: () => void;
   onViewAbout: () => void;
+  onViewWhatsNew: () => void;
 }
 
 export default function EditorMenubar({
@@ -52,13 +53,14 @@ export default function EditorMenubar({
   onInstallAppRequest,
   onViewShortcuts,
   onViewAbout,
+  onViewWhatsNew,
 }: EditorMenubarProps) {
   const selectedDiagramId = useStore((state) => state.selectedDiagramId);
-  const allDiagrams = useStore((state) => state.diagrams);
+  const diagramsMap = useStore((state) => state.diagramsMap);
 
   const diagram = useMemo(() =>
-    allDiagrams.find(d => d.id === selectedDiagramId),
-    [allDiagrams, selectedDiagramId]
+    diagramsMap.get(selectedDiagramId || 0),
+    [diagramsMap, selectedDiagramId]
   );
 
   const {
@@ -187,6 +189,12 @@ export default function EditorMenubar({
             Remember Last Editor Position
           </MenubarCheckboxItem>
           <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.allowTableOverlapDuringCreation}
+            onCheckedChange={(checked) => updateSettings({ allowTableOverlapDuringCreation: checked })}
+          >
+            Allow Table Overlap During Creation
+          </MenubarCheckboxItem>
         </MenubarContent>
       </MenubarMenu>
       <MenubarMenu>
@@ -220,6 +228,7 @@ export default function EditorMenubar({
         <MenubarTrigger className="px-2">Help</MenubarTrigger>
         <MenubarContent>
           <MenubarItem onClick={onViewAbout}>About</MenubarItem>
+          <MenubarItem onClick={onViewWhatsNew}>What's New</MenubarItem>
           <MenubarItem onClick={onViewShortcuts}>
             View Shortcuts
           </MenubarItem>
