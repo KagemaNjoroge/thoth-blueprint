@@ -39,7 +39,7 @@ import { MSSQLIcon } from "@/components/icons/MSSQLIcon";
 import { SQLiteIcon } from "@/components/icons/SQLiteIcon";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Diagram name is required"),
+  name: z.string().trim().min(1, "Diagram name is required"),
   dbType: z.enum(["mysql", "postgres"]),
   importType: z.enum(["json", "sql"]),
   content: z.string().min(1, "Content to import is required"),
@@ -61,6 +61,8 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       dbType: "mysql",
@@ -71,6 +73,7 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
   });
 
   const content = form.watch("content");
+  const nameValue = form.watch("name");
 
   const handleFileRead = useCallback((file: File) => {
     const acceptedExtension = activeTab === 'json' ? '.json' : '.sql';
@@ -119,6 +122,15 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
   ];
 
   const selectDatabase = (key: "mysql" | "postgres") => {
+    const name = form.getValues("name").trim();
+    if (!name) {
+      // Trigger field validation and inform the user
+      form.trigger("name");
+      showError("Please enter a diagram name to continue.");
+      return;
+    }
+    // Clear any lingering name errors once valid
+    form.clearErrors("name");
     form.setValue("dbType", key);
     setActiveTab("json");
     setUiStep(2);
@@ -217,14 +229,24 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     {dbOptions.map((db) => {
                       const selected = form.getValues("dbType") === db.key;
+                      const isNameProvided = !!nameValue?.trim();
                       return (
                         <Card
                           key={db.key}
                           role="button"
                           aria-selected={selected}
-                          onClick={() => selectDatabase(db.key)}
+                          aria-disabled={!isNameProvided}
+                          onClick={() => {
+                            if (!isNameProvided) {
+                              form.trigger("name");
+                              showError("Please enter a diagram name to continue.");
+                              return;
+                            }
+                            selectDatabase(db.key);
+                          }}
                           className={cn(
-                            "cursor-pointer transition border",
+                            "transition border",
+                            isNameProvided ? "cursor-pointer" : "cursor-not-allowed opacity-60",
                             selected ? "border-primary ring-1 ring-primary" : "hover:border-primary/40"
                           )}
                         >
@@ -232,7 +254,9 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
                             {db.component}
                             <div>
                               <CardTitle className="text-base">{db.label}</CardTitle>
-                              <CardDescription className="text-xs">Click to select</CardDescription>
+                              <CardDescription className="text-xs">
+                                {isNameProvided ? "Click to select" : "Enter name to enable"}
+                              </CardDescription>
                             </div>
                           </CardHeader>
                         </Card>
@@ -482,7 +506,19 @@ export function ImportDialog({ isOpen, onOpenChange, onImportDiagram }: ImportDi
             </div>
             <DialogFooter className="mt-3 sm:mt-4">
               {uiStep === 1 ? (
-                <Button type="button" onClick={() => setUiStep(2)}>
+                <Button
+                  type="button"
+                  disabled={!nameValue?.trim()}
+                  onClick={() => {
+                    const name = form.getValues("name").trim();
+                    if (!name) {
+                      form.trigger("name");
+                      showError("Please enter a diagram name to continue.");
+                      return;
+                    }
+                    setUiStep(2);
+                  }}
+                >
                   Next
                 </Button>
               ) : (

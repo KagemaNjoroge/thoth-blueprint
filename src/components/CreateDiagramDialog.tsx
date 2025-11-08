@@ -16,13 +16,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { MySQLIcon } from "@/components/icons/MySQLIcon";
+import { PostgreSQLIcon } from "@/components/icons/PostgreSQLIcon";
+import { MSSQLIcon } from "@/components/icons/MSSQLIcon";
+import { SQLiteIcon } from "@/components/icons/SQLiteIcon";
 import { type DatabaseType } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -90,17 +89,50 @@ export function CreateDiagramDialog({ isOpen, onOpenChange, onCreateDiagram, exi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Database Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a database type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="postgres">PostgreSQL</SelectItem>
-                      <SelectItem value="mysql">MySQL</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    {dbOptions.map((db) => {
+                      const selected = field.value === db.key;
+                      return (
+                        <Card
+                          key={db.key}
+                          role="button"
+                          aria-selected={selected}
+                          onClick={() => field.onChange(db.key)}
+                          className={cn(
+                            "cursor-pointer transition border",
+                            selected ? "border-primary ring-1 ring-primary" : "hover:border-primary/40"
+                          )}
+                        >
+                          <CardHeader className="flex items-center gap-3 py-3">
+                            {db.component}
+                            <div>
+                              <CardTitle className="text-base">{db.label}</CardTitle>
+                              <CardDescription className="text-xs">Click to select</CardDescription>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      );
+                    })}
+                    {comingSoonOptions.map((db) => (
+                      <Card
+                        key={db.key}
+                        aria-disabled="true"
+                        className={cn(
+                          "opacity-60 cursor-not-allowed border border-dashed bg-muted/30",
+                          "hover:border-muted"
+                        )}
+                        title="Coming soon"
+                      >
+                        <CardHeader className="flex items-center gap-3 py-3">
+                          {db.component}
+                          <div>
+                            <CardTitle className="text-base">{db.label}</CardTitle>
+                            <CardDescription className="text-xs">Coming soon</CardDescription>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -114,3 +146,12 @@ export function CreateDiagramDialog({ isOpen, onOpenChange, onCreateDiagram, exi
     </Dialog>
   );
 }
+  const dbOptions: { key: "mysql" | "postgres"; label: string; component: React.ReactNode }[] = [
+    { key: "mysql", label: "MySQL", component: <MySQLIcon className="h-6" /> },
+    { key: "postgres", label: "PostgreSQL", component: <PostgreSQLIcon className="h-6" /> },
+  ];
+
+  const comingSoonOptions: { key: "mssql" | "sqlite"; label: string; component: React.ReactNode }[] = [
+    { key: "mssql", label: "SQL Server", component: <MSSQLIcon className="h-6" /> },
+    { key: "sqlite", label: "SQLite", component: <SQLiteIcon className="h-6" /> },
+  ];

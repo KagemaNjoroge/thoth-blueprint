@@ -68,6 +68,8 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
   const isMobile = useIsMobile();
 
   // Force grid view when on mobile
@@ -126,6 +128,25 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
       }
     });
   }, [activeDiagrams, searchTerm, sortOrder]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredAndSortedDiagrams.length / PAGE_SIZE));
+  }, [filteredAndSortedDiagrams]);
+
+  const paginatedDiagrams = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredAndSortedDiagrams.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredAndSortedDiagrams, currentPage]);
+
+  useEffect(() => {
+    // Reset to first page when search or sort changes
+    setCurrentPage(1);
+  }, [searchTerm, sortOrder]);
+
+  useEffect(() => {
+    // Clamp current page when totalPages shrinks
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
   const activeDiagramNames = activeDiagrams.map(d => d.name);
 
   const handleCreateDiagram = async ({ name, dbType }: { name: string; dbType: DatabaseType }) => {
@@ -252,7 +273,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
             {filteredAndSortedDiagrams.length > 0 ? (
               viewMode === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {filteredAndSortedDiagrams.map((diagram) => (
+                  {paginatedDiagrams.map((diagram) => (
                     <div key={diagram.id} className="relative group">
                       <Card
                         className="hover:shadow-lg hover:border-primary transition-all cursor-pointer flex flex-col h-full overflow-hidden"
@@ -282,7 +303,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                           </p>
                         </CardFooter>
                       </Card>
-                      <div className="absolute top-4 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                      <div className="absolute top-4 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => {
                           e.stopPropagation();
                           duplicateDiagram(diagram.id!);
@@ -329,7 +350,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredAndSortedDiagrams.map((diagram) => (
+                      {paginatedDiagrams.map((diagram) => (
                         <TableRow key={diagram.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedDiagramId(diagram.id!)}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
@@ -396,6 +417,29 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                 </div>
               )
             }
+
+            {filteredAndSortedDiagrams.length > 0 && totalPages > 1 && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-full sm:w-auto"
+                  aria-label="Previous page"
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-full sm:w-auto"
+                  aria-label="Next page"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </TabsContent>
           <TabsContent value="trash" className="mt-6">
             {trashedDiagrams && trashedDiagrams.length > 0 ? (
