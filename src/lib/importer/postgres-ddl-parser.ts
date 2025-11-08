@@ -555,16 +555,29 @@ export async function parsePostgreSqlDdlAsync(
       const commentMatch = rest.match(/\bCOMMENT\s*'([^']*)'/i);
       const comment = commentMatch?.[1] || "";
 
-      // Check if this type is an enum type
+      // Check if this type is an enum type using the raw token,
+      // so schema-qualified names like public.employment_type work.
       let enumValues: string | undefined;
-      if (enumTypes.has(type)) {
-        enumValues = enumTypes.get(type)?.join(",") || "";
+      let isEnumColumn = false;
+
+      const resolveEnumName = (token: string): string | undefined => {
+        const t = token.trim();
+        const candidate = t.includes(".")
+          ? normalizeIdentifier(t.split(".").pop() || t)
+          : normalizeIdentifier(t);
+        return candidate && enumTypes.has(candidate) ? candidate : undefined;
+      };
+
+      const enumName = resolveEnumName(typeString);
+      if (enumName) {
+        isEnumColumn = true;
+        enumValues = enumTypes.get(enumName)?.join(",") || "";
       }
 
       const column: Column = {
         id: uuid(),
         name,
-        type,
+        type: isEnumColumn ? "ENUM" : type,
         length: length || 0,
         precision: precision || 0,
         scale: scale || 0,
