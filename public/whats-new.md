@@ -1,34 +1,40 @@
 # What’s New in ThothBlueprint v0.0.6
 
-Welcome to v0.0.6 — a big step forward for importing and organizing real-world database schemas.
+This release brings major importer upgrades, PostgreSQL support, UI improvements, and performance optimizations tailored for large real‑world schemas.
 
 ## Highlights
 
-- Database import support: import dump schemas (MySQL, PostgreSQL) to jump-start diagram creation.
-- Faster, smoother editor performance for large diagrams.
-- Better control over layout and organization.
+- MySQL and PostgreSQL DDL import with asynchronous parsing and progress reporting.
+- Gallery pagination (10 per page) with simple previous/next controls.
+- Card‑based database selection in Create Diagram.
+- Improved Import Dialog validation and database icons.
 
 ## New & Improved
 
-- New MySQL DDL Import Feature — import a MySQL SQL DDL file or script and generate a diagram from its structure. (8bee30f)
-- Enhanced DDL Parser — now asynchronous to handle larger scripts without blocking the UI, with broader parsing capabilities for more MySQL syntax and configurations. (b972563)
-- Diagram Gallery Sorting and Searching — quickly find diagrams with A–Z sorting and a search bar.
-- Relationship-Based Layout Algorithm — automatically organizes tables based on foreign-key relationships.
-- Zone-Aware Reorganization — lock specific elements and reorganize others within defined zones.
-- Diagram Duplication — duplicate existing diagrams to iterate faster.
-- Table Overlap Option — allow tables to overlap during manual creation when you need compact layouts.
+- MySQL and PostgreSQL DDL Import (8bee30f): import SQL DDL files/scripts to generate diagrams.
+- Enhanced MySQL/PostgreSQL Parser (b972563): async parsing, composite foreign keys, extra column attributes, better syntax coverage, diagnostics for warnings/errors, and visible progress in ImportDialog.
+- Gallery Sort & Search (dba6ee9): quickly locate diagrams with A–Z sorting and a search bar.
+- Pagination (a518c78): display 10 items per page with previous/next.
+- Create Diagram UI (a518c78): replace dropdown with database icon cards (MySQL, PostgreSQL; SQL Server, SQLite coming soon).
+- Import Dialog UX (e93e023, a518c78): database icons, clearer validation, and progress updates.
+- Relationship‑Based Layout (6f41ce4): auto‑organize tables by foreign‑key relationships.
+- Zone‑Aware Reorganization (7e1ad2f): lock zones, warn before reorganizing, and respect locked areas.
+- Duplicate Diagram (d300ad1): duplicate existing diagrams with unique IDs.
+- Table Overlap Option (b9aa3e4): allow overlap during creation when compactness is desired.
+- What’s New Dialog (25904e7): in‑app release notes with Markdown.
 
 ## Performance & Stability
 
-- Optimized data lookups using Maps and memoization across components.
-- Improved importer logic for handling long MySQL DDL scripts.
-- Enhanced rendering performance and stability for big diagrams.
-- State management refactoring for consistent behavior across diagram states.
+- Big‑diagram rendering improvements (854e8dc).
+- Faster lookups via Maps and component memoization (8c83951).
+- Refactored diagram state management for consistency (44b2b80).
+- Better importer logic for long scripts (b7af309).
+- PostgreSQL enum handling fix for schema‑qualified types (04a0663).
 
 ## Tips
 
-- Use Gallery sort/search to quickly navigate large sets of diagrams.
-- To import, choose “Import Diagram” from the Gallery or the menubar.
-- Lock zones before reorganizing to protect key areas of your diagram.
+- Use search/sort and pagination to navigate large galleries.
+- For MySQL, export schema via `mysqldump --no-data`; for PostgreSQL, use `pg_dump -s`.
+- Lock zones before reorganizing to protect critical areas.
 
 Thanks for using ThothBlueprint!

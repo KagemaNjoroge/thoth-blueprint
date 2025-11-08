@@ -17,7 +17,7 @@ export function WhatsNewDialog({ isOpen, onOpenChange, markdown = "", onReload }
         className="
           w-[calc(100vw-2rem)] sm:w-full
           sm:max-w-2xl md:max-w-3xl lg:max-w-4xl
-          max-h-[calc(100vh-3rem)]
+          max-h-[calc(100vh-6rem)]
         "
       >
         <DialogHeader>
@@ -30,7 +30,7 @@ export function WhatsNewDialog({ isOpen, onOpenChange, markdown = "", onReload }
         <div
           className="
             overflow-y-auto no-scrollbar
-            max-h-[calc(100vh-12rem)]
+            max-h-[calc(100vh-15rem)]
             prose dark:prose-invert max-w-none
             pr-2
           "
