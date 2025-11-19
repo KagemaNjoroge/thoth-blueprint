@@ -3,7 +3,7 @@ import { useSidebarState } from "@/hooks/use-sidebar-state";
 import { tableColors } from "@/lib/colors";
 import { colors, KeyboardShortcuts } from "@/lib/constants";
 import { ElementType, type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
-import { findNonOverlappingPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, getCanvasDimensions } from "@/lib/utils";
+import { DEFAULT_NODE_SPACING, DEFAULT_TABLE_HEIGHT, DEFAULT_TABLE_WIDTH, findNonOverlappingPosition, getCanvasDimensions } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { showError, showSuccess } from "@/utils/toast";
 import { type ReactFlowInstance } from "@xyflow/react";
@@ -39,7 +39,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
   const diagram = diagramsMap.get(selectedDiagramId || 0);
 
   const existingTableNames = useMemo(() =>
-    diagram?.data.nodes.map(n => n.data.label) ?? [],
+    diagram?.data?.nodes?.map(n => n.data.label) ?? [],
     [diagram]
   );
 
@@ -241,7 +241,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
       defaultPosition = { x: flowPosition.x - 144, y: flowPosition.y - 50 };
     }
-    
+
     const visibleNodes = diagram.data.nodes.filter((n: AppNode) => !n.data.isDeleted) || [];
     const canvasDimensions = getCanvasDimensions();
     const viewportBounds = rfInstance ? {
@@ -252,7 +252,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       zoom: rfInstance.getViewport().zoom
     } : undefined;
     const nonOverlappingPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
-    
+
     const newNode: AppNode = {
       id: `${tableName}-${+new Date()}`,
       type: "table",
@@ -314,7 +314,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
 
     // Create nodes map for O(1) lookups
     const nodesMap = new Map(diagram.data.nodes.map(node => [node.id, node]));
-    
+
     const sourceNode = nodesMap.get(sourceNodeId);
     const targetNode = nodesMap.get(targetNodeId);
 
@@ -405,7 +405,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
         isOpen={isAddElementDialogOpen}
         onOpenChange={setIsAddElementDialogOpen}
         onSelect={handleSelectElementToAdd}
-        tableCount={diagram?.data.nodes.filter(n => !n.data.isDeleted).length || 0}
+        tableCount={diagram?.data?.nodes?.filter(n => !n.data.isDeleted).length || 0}
       />
       <AddTableDialog isOpen={isAddTableDialogOpen} onOpenChange={setIsAddTableDialogOpen} onCreateTable={handleCreateTable} existingTableNames={existingTableNames} />
       <AddNoteDialog isOpen={isAddNoteDialogOpen} onOpenChange={setIsAddNoteDialogOpen} onCreateNote={handleCreateNote} />
@@ -413,7 +413,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       <AddRelationshipDialog
         isOpen={isRelationshipDialogOpen}
         onOpenChange={setIsAddRelationshipDialogOpen}
-        nodes={diagram?.data.nodes.filter(n => !n.data.isDeleted) || []}
+        nodes={diagram?.data?.nodes?.filter(n => !n.data.isDeleted) || []}
         onCreateRelationship={handleCreateRelationship}
       />
       <ExportDialog isOpen={isExportDialogOpen} onOpenChange={setIsExportDialogOpen} diagram={diagram} rfInstance={rfInstance} />

@@ -7,7 +7,7 @@ import {
 import { tableColors } from "@/lib/colors";
 import { colors, DbRelationship, relationshipTypes } from "@/lib/constants";
 import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
-import { findNonOverlappingPosition, isNodeInLockedZone, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, getCanvasDimensions } from "@/lib/utils";
+import { DEFAULT_NODE_SPACING, DEFAULT_TABLE_HEIGHT, DEFAULT_TABLE_WIDTH, findNonOverlappingPosition, getCanvasDimensions, isNodeInLockedZone } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { showError } from "@/utils/toast";
 import {
@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, GitCommitHorizontal, Grid2x2Check, Magnet, Plus, SquareDashed, StickyNote, LayoutGrid } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, LayoutGrid, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -42,9 +42,9 @@ import { useDebouncedCallback } from "use-debounce";
 import { useShallow } from "zustand/react/shallow";
 import CustomEdge from "./CustomEdge";
 import NoteNode from "./NoteNode";
+import { ReorganizeWarningDialog } from "./ReorganizeWarningDialog";
 import TableNode from "./TableNode";
 import ZoneNode from "./ZoneNode";
-import { ReorganizeWarningDialog } from "./ReorganizeWarningDialog";
 
 interface DiagramEditorProps {
   setRfInstance: (instance: ReactFlowInstance<ProcessedNode, ProcessedEdge> | null) => void;
@@ -188,7 +188,7 @@ const DiagramEditor = forwardRef(
         height: canvasDimensions.height,
         zoom: rfInstanceRef.current.getViewport().zoom
       } : undefined;
-      
+
       let finalPosition = defaultPosition;
       if (!settings.allowTableOverlapDuringCreation) {
         finalPosition = findNonOverlappingPosition(visibleNodes, defaultPosition, DEFAULT_TABLE_WIDTH, DEFAULT_TABLE_HEIGHT, DEFAULT_NODE_SPACING, viewportBounds);
@@ -314,13 +314,18 @@ const DiagramEditor = forwardRef(
       const { source, target, sourceHandle, targetHandle } = connection;
       if (!source || !target || !sourceHandle || !targetHandle) return;
 
-      const getColumnId = (handleId: string) => handleId.split('-')[0];
+      const getColumnId = (handleId: string) => {
+        const parts = handleId.split('-');
+        return parts.slice(0, -2).join('-');
+      };
       const sourceNode = nodesMap.get(source);
       const targetNode = nodesMap.get(target);
       if (!sourceNode || !targetNode) return;
 
-      const sourceColumn = sourceNode.data.columns.find(c => c.id === getColumnId(sourceHandle));
-      const targetColumn = targetNode.data.columns.find(c => c.id === getColumnId(targetHandle));
+      const sourceColumnId = getColumnId(sourceHandle);
+      const targetColumnId = getColumnId(targetHandle);
+      const sourceColumn = sourceNode.data.columns.find(c => c.id === sourceColumnId);
+      const targetColumn = targetNode.data.columns.find(c => c.id === targetColumnId);
       if (!sourceColumn || !targetColumn) return;
 
       if (sourceColumn.type !== targetColumn.type) {
