@@ -66,8 +66,8 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
   const [isLoadProjectDialogOpen, setIsLoadProjectDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortType, setSortType] = useState<"name" | "modified">("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortType, setSortType] = useState<"name" | "modified">("modified");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;

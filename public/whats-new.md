@@ -9,6 +9,7 @@ This release brings major importer upgrades, MySQL PostgreSQL schema dump import
 - Gallery pagination (10 per page) with simple previous/next controls.
 - Card‑based database selection in Create Diagram.
 - Improved Import Dialog validation and database icons.
+- Duplicte column feature added. easily duplicate columns with a single click.
 
 ## New & Improved
 

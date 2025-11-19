@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Check,
   ChevronsUpDown,
+  Copy,
   Edit,
   GripVertical,
   HelpCircle,
@@ -72,6 +73,7 @@ function SortableColumnItem({
   availableTypes,
   handleColumnUpdate,
   handleDeleteColumn,
+  handleDuplicateColumn,
   isLocked,
   dbType,
 }: {
@@ -84,6 +86,7 @@ function SortableColumnItem({
     value: string | number | boolean | undefined
   ) => void;
   handleDeleteColumn: (index: number) => void;
+  handleDuplicateColumn: (index: number) => void;
   isLocked: boolean;
   dbType: DatabaseType;
 }) {
@@ -172,6 +175,17 @@ function SortableColumnItem({
         </Popover>
       </div>
       <div className="flex items-center gap-1 justify-end pl-8">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8"
+          onClick={() => handleDuplicateColumn(index)}
+          disabled={isLocked}
+        >
+          <Copy
+            className={`h-4 w-4 mr-2`}
+          />
+        </Button>
         {needsLength && (
           <Input
             type="number"
@@ -338,6 +352,16 @@ function SortableColumnItem({
             </div>
             <Separator />
             <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => handleDuplicateColumn(index)}
+              disabled={isLocked}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicate Column
+            </Button>
+            <Button
               variant="destructive"
               size="sm"
               className="w-full"
@@ -425,6 +449,22 @@ export default function TableAccordionContent({
 
   const handleDeleteColumn = (index: number) => {
     const newColumns = columns.filter((_, i) => i !== index);
+    setColumns(newColumns);
+    onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
+  };
+
+  const handleDuplicateColumn = (index: number) => {
+    const columnToDuplicate = columns[index];
+    if (!columnToDuplicate) return;
+
+    const duplicatedColumn: Column = {
+      ...columnToDuplicate,
+      id: `col_${Date.now()}`,
+      name: `${columnToDuplicate.name}_copy`,
+      pk: false,
+    };
+    const newColumns = [...columns];
+    newColumns.splice(index + 1, 0, duplicatedColumn);
     setColumns(newColumns);
     onNodeUpdate({ ...node, data: { ...node.data, columns: newColumns } });
   };
@@ -531,6 +571,7 @@ export default function TableAccordionContent({
                   availableTypes={availableTypes}
                   handleColumnUpdate={handleColumnUpdate}
                   handleDeleteColumn={handleDeleteColumn}
+                  handleDuplicateColumn={handleDuplicateColumn}
                   isLocked={isLocked}
                   dbType={dbType}
                 />
