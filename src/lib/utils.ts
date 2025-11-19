@@ -312,3 +312,14 @@ export function findNonOverlappingPosition(
   
   return preferredPosition;
 }
+
+export function uuid(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // ignore crypto.randomUUID() errors, fallback will be used
+  }
+  return `uuid_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+}

@@ -2,15 +2,15 @@ import { tableColors } from "@/lib/colors";
 import { DbRelationship } from "@/lib/constants";
 import { organizeTablesByRelationships } from "@/lib/layout-algorithms";
 import {
-  type AppEdge,
-  type AppNode,
-  type AppNoteNode,
-  type Column,
-  type Diagram,
-  type Index,
-  // type IndexType,
-  type EdgeData,
+    type AppEdge,
+    type AppNode,
+    type AppNoteNode,
+    type Column,
+    type Diagram,
+    type EdgeData,
+    type Index,
 } from "@/lib/types";
+import { uuid } from "../utils";
 
 interface ParsedForeignKey {
   sourceTable: string;
@@ -22,11 +22,6 @@ interface ParsedForeignKey {
   onUpdate?: string;
 }
 
-// interface ParsedEnumType {
-//   name: string;
-//   values: string[];
-// }
-
 interface Diagnostic {
   level: "warning" | "error";
   message: string;
@@ -34,24 +29,7 @@ interface Diagnostic {
   detail?: string;
 }
 
-function uuid(): string {
-  try {
-    // Prefer Web Crypto API
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
-  } catch {
-    // ignore crypto.randomUUID() errors, fallback will be used
-  }
-  // Fallback
-  return `uuid_${Math.random().toString(36).slice(2)}_${Date.now()}`;
-}
-
 function stripComments(sql: string): string {
-  // Robust comment stripping that respects quotes and PostgreSQL variants.
-  // - Removes '--' single-line comments (outside quotes)
-  // - Removes standard block comments '/* ... */' (outside quotes)
-  // - Preserves dollar-quoted strings
   let out = "";
   let inSingle = false;
   let inDouble = false;
@@ -93,7 +71,6 @@ function stripComments(sql: string): string {
       continue;
     }
 
-    // End line comment on newline
     if (inLineComment) {
       if (ch === "\n") {
         inLineComment = false;
@@ -103,18 +80,16 @@ function stripComments(sql: string): string {
       continue;
     }
 
-    // End block comment
     if (inBlockComment) {
       if (ch === "*" && next === "/") {
         inBlockComment = false;
-        i += 2; // skip */
+        i += 2;
         continue;
       }
       i++;
       continue;
     }
 
-    // Toggle quotes when not in comments
     if (!inLineComment && !inBlockComment) {
       if (ch === "'" && !inDouble) {
         inSingle = !inSingle;
@@ -123,7 +98,6 @@ function stripComments(sql: string): string {
       }
     }
 
-    // Start comments only when not inside quotes
     if (!inSingle && !inDouble) {
       if (ch === "-" && next === "-") {
         inLineComment = true;
@@ -137,7 +111,6 @@ function stripComments(sql: string): string {
       }
     }
 
-    // Normal character
     out += ch;
     i++;
   }
@@ -162,8 +135,6 @@ function splitStatements(sql: string): string[] {
 
   while (i < sql.length) {
     const ch = sql[i];
-    // const next = sql[i + 1];
-
     // Handle dollar-quoted strings
     if (!inSingle && !inDouble && !dollarQuoteTag) {
       if (ch === "$") {
@@ -206,22 +177,18 @@ function splitStatements(sql: string): string[] {
 
   pushCurrent();
 
-  // Keep only CREATE TABLE and CREATE TYPE statements
   return statements.filter((s) => /^\s*CREATE\s+(TABLE|TYPE)/i.test(s));
 }
 
 function normalizeIdentifier(raw: string): string {
   if (!raw) return "";
   const trimmed = raw.trim();
-  // If quoted with double quotes, take literal content (PostgreSQL standard)
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     return trimmed.slice(1, -1);
   }
-  // If quoted with single quotes (rare), strip
   if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
     return trimmed.slice(1, -1);
   }
-  // If schema-qualified, take the last segment
   if (trimmed.includes(".")) {
     const parts = trimmed.split(".");
     const lastPart = parts[parts.length - 1];
@@ -241,8 +208,6 @@ function splitTopLevelItems(body: string): string[] {
 
   while (i < body.length) {
     const ch = body[i];
-    // const next = body[i + 1];
-
     // Handle dollar-quoted strings
     if (!inSingle && !inDouble && !dollarQuoteTag) {
       if (ch === "$") {
@@ -290,7 +255,6 @@ function splitTopLevelItems(body: string): string[] {
 }
 
 function parseQuotedList(listStr: string): string[] {
-  // Expect input like: 'a','b','c' or "a","b"
   const result: string[] = [];
   let token = "";
   let inSingle = false;
@@ -304,11 +268,9 @@ function parseQuotedList(listStr: string): string[] {
     if (!isEscaped) {
       if (ch === "'" && !inDouble) {
         if (inSingle) {
-          // end token
           result.push(token);
           token = "";
           inSingle = false;
-          // skip next comma if any
           continue;
         } else {
           inSingle = true;
@@ -359,7 +321,6 @@ export async function parsePostgreSqlDdlAsync(
   const nodes: AppNode[] = [];
   const foreignKeys: ParsedForeignKey[] = [];
 
-  // First pass: extract enum types
   const enumTypes = extractEnumTypes(ddl);
   
   const cleaned = stripComments(ddl);
@@ -367,7 +328,6 @@ export async function parsePostgreSqlDdlAsync(
   const tableStatements = statements.filter(s => /^\s*CREATE\s+TABLE/i.test(s));
   const total = tableStatements.length || 1;
 
-  // adaptive layout parameters for optimized space utilization
   const totalTables = tableStatements.length;
   const NUM_COLUMNS = Math.min(Math.max(Math.ceil(Math.sqrt(totalTables * 1.5)), 4), 8);
   const CARD_WIDTH = 288;
@@ -376,7 +336,6 @@ export async function parsePostgreSqlDdlAsync(
   const columnYOffset: number[] = Array(NUM_COLUMNS).fill(20);
   const estimateHeight = (columnCount: number) => 60 + columnCount * 28;
   
-  // Helper function to find the column with minimum height for balanced layout
   const findMinHeightColumn = () => {
     let minHeight = columnYOffset[0] ?? 0;
     let minIndex = 0;

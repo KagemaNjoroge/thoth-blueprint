@@ -7,10 +7,11 @@ import {
   type AppNoteNode,
   type Column,
   type Diagram,
+  type EdgeData,
   type Index,
   type IndexType,
-  type EdgeData,
 } from "@/lib/types";
+import { uuid } from "../utils";
 
 interface ParsedForeignKey {
   sourceTable: string;
@@ -29,24 +30,7 @@ interface Diagnostic {
   detail?: string;
 }
 
-function uuid(): string {
-  try {
-    // Prefer Web Crypto API
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
-  } catch {
-    // ignore crypto.randomUUID() errors, fallback will be used
-  }
-  // Fallback
-  return `uuid_${Math.random().toString(36).slice(2)}_${Date.now()}`;
-}
-
 function stripComments(sql: string): string {
-  // Robust comment stripping that respects quotes and MySQL variants.
-  // - Removes '--' and '#' single-line comments (outside quotes)
-  // - Removes standard block comments '/* ... */' (outside quotes)
-  // - Preserves versioned comments '/*! ... */' content by stripping only the wrappers
   let out = "";
   let inSingle = false;
   let inDouble = false;
@@ -62,7 +46,6 @@ function stripComments(sql: string): string {
     const next2 = sql[i + 2];
     const isEscaped = prev === "\\";
 
-    // End line comment on newline
     if (inLineComment) {
       if (ch === "\n") {
         inLineComment = false;
@@ -71,23 +54,17 @@ function stripComments(sql: string): string {
       continue;
     }
 
-    // End block or versioned comment
     if (inBlockComment || inVersionedComment) {
       if (ch === "*" && next === "/") {
-        if (inVersionedComment) {
-          // Skip the closing '*/' but keep inner content already copied
-        }
         inBlockComment = false;
         inVersionedComment = false;
-        i++; // consume '/'
+        i++;
         continue;
       }
-      // Copy inner content only for versioned comments
       if (inVersionedComment) out += ch;
       continue;
     }
 
-    // Toggle quotes when not escaped and not in comments
     if (!isEscaped) {
       if (ch === "'" && !inDouble && !inBacktick) {
         inSingle = !inSingle;
@@ -98,12 +75,10 @@ function stripComments(sql: string): string {
       }
     }
 
-    // Start comments only when not inside quotes
     if (!inSingle && !inDouble && !inBacktick) {
-      // Start line comments '--' or '#'
       if (ch === "-" && next === "-") {
         inLineComment = "dash";
-        i++; // consume second '-'
+        i++;
         continue;
       }
       if (ch === "#") {
@@ -111,22 +86,19 @@ function stripComments(sql: string): string {
         continue;
       }
 
-      // Start block comments
       if (ch === "/" && next === "*") {
         if (next2 === "!") {
-          // Versioned comment: keep inner content
           inVersionedComment = true;
-          i += 2; // consume '/*'
+          i += 2;
           continue;
         } else {
           inBlockComment = true;
-          i++; // consume '*'
+          i++;
           continue;
         }
       }
     }
 
-    // Normal character
     out += ch;
   }
 
@@ -188,7 +160,6 @@ function normalizeIdentifier(raw: string): string {
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     return trimmed.slice(1, -1);
   }
-  // If schema-qualified, take the last segment
   if (trimmed.includes(".")) {
     const parts = trimmed.split(".");
     const lastPart = parts[parts.length - 1];
@@ -234,7 +205,6 @@ function splitTopLevelItems(body: string): string[] {
 }
 
 function parseQuotedList(listStr: string): string[] {
-  // Expect input like: 'a','b','c' or "a","b"
   const result: string[] = [];
   let token = "";
   let inSingle = false;
@@ -248,11 +218,9 @@ function parseQuotedList(listStr: string): string[] {
     if (!isEscaped) {
       if (ch === "'" && !inDouble) {
         if (inSingle) {
-          // end token
           result.push(token);
           token = "";
           inSingle = false;
-          // skip next comma if any
           continue;
         } else {
           inSingle = true;
@@ -297,16 +265,14 @@ export async function parseMySqlDdlAsync(
   const statements = splitStatements(cleaned);
   const total = statements.length || 1;
 
-  // adaptive layout parameters for optimized space utilization
   const totalTables = statements.length;
-  const NUM_COLUMNS = Math.min(Math.max(Math.ceil(Math.sqrt(totalTables * 1.5)), 4), 8); // Dynamic columns: 4-8 based on table count
+  const NUM_COLUMNS = Math.min(Math.max(Math.ceil(Math.sqrt(totalTables * 1.5)), 4), 8);
   const CARD_WIDTH = 288;
-  const X_GAP = 32; // Reduced gap for better space utilization
-  const Y_GAP = 32; // Reduced gap for more compact layout
+  const X_GAP = 32;
+  const Y_GAP = 32;
   const columnYOffset: number[] = Array(NUM_COLUMNS).fill(20);
   const estimateHeight = (columnCount: number) => 60 + columnCount * 28;
   
-  // Helper function to find the column with minimum height for balanced layout
   const findMinHeightColumn = () => {
     let minHeight = columnYOffset[0] ?? 0;
     let minIndex = 0;
@@ -323,7 +289,6 @@ export async function parseMySqlDdlAsync(
   for (let statementIndex = 0; statementIndex < statements.length; statementIndex++) {
     const statement = statements[statementIndex];
 
-    // Table name
     const tableNameMatch = statement?.match(/CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?([^\s(]+)/i);
     if (!tableNameMatch) {
       diagnostics.push({ level: "warning", message: "Unable to parse table name", detail: statement?.slice(0, 120) || "" });

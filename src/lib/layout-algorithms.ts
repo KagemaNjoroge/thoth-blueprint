@@ -1,4 +1,4 @@
-import { type AppNode, type AppEdge, type AppZoneNode } from "@/lib/types";
+import { type AppEdge, type AppNode, type AppZoneNode } from "@/lib/types";
 import { isNodeInsideZone } from "./utils";
 
 interface LayoutNode {
@@ -30,23 +30,14 @@ const DEFAULT_OPTIONS: Required<LayoutOptions> = {
   startY: 50,
 };
 
-/**
- * Calculates the actual height of a table node based on its content
- */
 function calculateTableHeight(node: AppNode): number {
-  // Base height for table header and padding
   const baseHeight = 60;
-  // Height per column (including borders and spacing)
   const columnHeight = 32;
-  // Number of columns
   const columnCount = node.data.columns?.length || 0;
   
   return baseHeight + (columnCount * columnHeight);
 }
 
-/**
- * Checks if two rectangles overlap
- */
 function rectanglesOverlap(
   rect1: { x: number; y: number; width: number; height: number },
   rect2: { x: number; y: number; width: number; height: number }
@@ -59,9 +50,6 @@ function rectanglesOverlap(
   );
 }
 
-/**
- * Finds a non-overlapping position for a node within a level
- */
 function findNonOverlappingPosition(
   node: LayoutNode,
   levelNodes: LayoutNode[],
@@ -95,18 +83,15 @@ function findNonOverlappingPosition(
       
       if (rectanglesOverlap(currentRect, otherRect)) {
         hasOverlap = true;
-        // Move to the right
         currentX = otherNode.x + otherNode.width + opts.horizontalSpacing;
         break;
       }
     }
     
     if (!hasOverlap) {
-      // Also check for overlaps with nodes from previous levels
-      // This helps prevent vertical stacking issues
       const verticalSpacing = Math.max(opts.verticalSpacing, node.actualHeight + 20);
       if (currentY < node.y + verticalSpacing) {
-        currentY = node.y + (attempts * 20); // Gradually move down
+        currentY = node.y + (attempts * 20);
       }
       
       return { x: currentX, y: currentY };
@@ -115,15 +100,9 @@ function findNonOverlappingPosition(
     attempts++;
   }
   
-  // Fallback: return original position if we can't find a non-overlapping one
   return { x: node.x, y: node.y };
 }
 
-/**
- * Organizes tables based on their relationships using a hierarchical layout algorithm.
- * Tables with foreign key relationships are positioned closer together,
- * with parent tables above child tables. Includes collision detection to prevent overlaps.
- */
 export function organizeTablesByRelationships(
   nodes: AppNode[],
   edges: AppEdge[],
@@ -133,11 +112,9 @@ export function organizeTablesByRelationships(
   
   if (nodes.length === 0) return nodes;
   
-  // Build relationship graph
   const nodeMap = new Map<string, LayoutNode>();
   const adjacencyList = new Map<string, Set<string>>();
   
-  // Initialize nodes with actual heights
   nodes.forEach(node => {
     const actualHeight = calculateTableHeight(node);
     const layoutNode: LayoutNode = {
