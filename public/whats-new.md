@@ -1,9 +1,10 @@
 # What’s New in ThothBlueprint v0.0.6
 
-This release brings major importer upgrades, PostgreSQL support, UI improvements, and performance optimizations tailored for large real‑world schemas.
+This release brings major importer upgrades, MySQL PostgreSQL schema dump importer support, UI improvements, and performance optimizations tailored for large real‑world schemas.
 
 ## Highlights
 
+- DBML import support with full enum/SET type resolution and table notes.
 - MySQL and PostgreSQL DDL import with asynchronous parsing and progress reporting.
 - Gallery pagination (10 per page) with simple previous/next controls.
 - Card‑based database selection in Create Diagram.
@@ -11,6 +12,7 @@ This release brings major importer upgrades, PostgreSQL support, UI improvements
 
 ## New & Improved
 
+- DBML Import: import DBML (Database Markup Language) files to generate diagrams with full support for enums, SET types, table notes, indexes, and relationships.
 - MySQL and PostgreSQL DDL Import (8bee30f): import SQL DDL files/scripts to generate diagrams.
 - Enhanced MySQL/PostgreSQL Parser (b972563): async parsing, composite foreign keys, extra column attributes, better syntax coverage, diagnostics for warnings/errors, and visible progress in ImportDialog.
 - Gallery Sort & Search (dba6ee9): quickly locate diagrams with A–Z sorting and a search bar.
@@ -34,6 +36,7 @@ This release brings major importer upgrades, PostgreSQL support, UI improvements
 ## Tips
 
 - Use search/sort and pagination to navigate large galleries.
+- For DBML, export from dbdiagram.io or this app or use the `@dbml/cli` package to convert SQL to DBML.
 - For MySQL, export schema via `mysqldump --no-data`; for PostgreSQL, use `pg_dump -s`.
 - Lock zones before reorganizing to protect critical areas.
 

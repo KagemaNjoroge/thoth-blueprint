@@ -32,17 +32,18 @@ import { Input } from "@/components/ui/input";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow, Table as UiTable } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { usePWA } from "@/hooks/usePWA";
 import { exportDbToJson } from "@/lib/backup";
 import { colors } from "@/lib/constants";
+import { dbTypeDisplay } from "@/lib/db-types";
 import { type DatabaseType, type Diagram } from "@/lib/types";
 import { useStore, type StoreState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
 import { Copy, GitCommitHorizontal, Grid, Import, List, Pencil, PlusCircle, RotateCcw, Save, Settings, Table, Trash2, Upload } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { AppIntro } from "./AppIntro";
 import { CreateDiagramDialog } from "./CreateDiagramDialog";
 import { Features } from "./Features";
@@ -50,7 +51,6 @@ import { ImportDialog } from "./ImportDialog";
 import { LoadProjectDialog } from "./LoadProjectDialog";
 import { RenameDiagramDialog } from "./RenameDiagramDialog";
 import { DatabaseTypeIcon } from "./icons/DatabaseTypeIcon";
-import { dbTypeDisplay } from "@/lib/db-types";
 
 interface DiagramGalleryProps {
   onInstallAppRequest: () => void;
@@ -66,6 +66,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
   const [isLoadProjectDialogOpen, setIsLoadProjectDialogOpen] = useState(false);
   const [diagramToEdit, setDiagramToEdit] = useState<Diagram | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortType, setSortType] = useState<"name" | "modified">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,22 +113,34 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
   // Filter and sort active diagrams
   const filteredAndSortedDiagrams = useMemo(() => {
     if (!activeDiagrams) return [];
-    
+
     const filtered = activeDiagrams.filter(diagram =>
       diagram.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
+
     return filtered.sort((a, b) => {
-      const nameA = a.name.toLowerCase();
-      const nameB = b.name.toLowerCase();
-      
-      if (sortOrder === "asc") {
-        return nameA.localeCompare(nameB);
+      if (sortType === "name") {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+
+        if (sortOrder === "asc") {
+          return nameA.localeCompare(nameB);
+        } else {
+          return nameB.localeCompare(nameA);
+        }
       } else {
-        return nameB.localeCompare(nameA);
+        // Sort by last modified (updatedAt)
+        const dateA = new Date(a.updatedAt).getTime();
+        const dateB = new Date(b.updatedAt).getTime();
+
+        if (sortOrder === "asc") {
+          return dateA - dateB; // Oldest first
+        } else {
+          return dateB - dateA; // Newest first
+        }
       }
     });
-  }, [activeDiagrams, searchTerm, sortOrder]);
+  }, [activeDiagrams, searchTerm, sortType, sortOrder]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredAndSortedDiagrams.length / PAGE_SIZE));
@@ -141,7 +154,7 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
   useEffect(() => {
     // Reset to first page when search or sort changes
     setCurrentPage(1);
-  }, [searchTerm, sortOrder]);
+  }, [searchTerm, sortType, sortOrder]);
 
   useEffect(() => {
     // Clamp current page when totalPages shrinks
@@ -246,15 +259,23 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
-                      Sort {sortOrder === "asc" ? "A-Z" : "Z-A"}
+                      Sort: {sortType === "name"
+                        ? (sortOrder === "asc" ? "A-Z" : "Z-A")
+                        : (sortOrder === "desc" ? "Newest" : "Oldest")}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setSortOrder("asc")}>
-                      A-Z (Ascending)
+                    <DropdownMenuItem onClick={() => { setSortType("name"); setSortOrder("asc"); }}>
+                      Name (A-Z)
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortOrder("desc")}>
-                      Z-A (Descending)
+                    <DropdownMenuItem onClick={() => { setSortType("name"); setSortOrder("desc"); }}>
+                      Name (Z-A)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortType("modified"); setSortOrder("desc"); }}>
+                      Last Modified (Newest First)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortType("modified"); setSortOrder("asc"); }}>
+                      Last Modified (Oldest First)
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -354,8 +375,8 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                         <TableRow key={diagram.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedDiagramId(diagram.id!)}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
+                              <div
+                                className="w-3 h-3 rounded-full"
                                 style={{ backgroundColor: diagram.data.nodes?.[0]?.data.color || colors.DEFAULT_DIAGRAM_COLOR }}
                               />
                               {diagram.name}
@@ -407,15 +428,15 @@ export default function DiagramGallery({ onInstallAppRequest, onCheckForUpdate, 
                 </Card>
               )
             ) : (
-                <div className="text-center py-24 border-2 border-dashed rounded-lg">
-                  <h2 className="text-xl font-semibold">
-                    {searchTerm ? "No diagrams found" : "No diagrams yet"}
-                  </h2>
-                  <p className="text-muted-foreground mt-2 mb-4">
-                    {searchTerm ? "Try adjusting your search term" : "Click 'Create New' to get started."}
-                  </p>
-                </div>
-              )
+              <div className="text-center py-24 border-2 border-dashed rounded-lg">
+                <h2 className="text-xl font-semibold">
+                  {searchTerm ? "No diagrams found" : "No diagrams yet"}
+                </h2>
+                <p className="text-muted-foreground mt-2 mb-4">
+                  {searchTerm ? "Try adjusting your search term" : "Click 'Create New' to get started."}
+                </p>
+              </div>
+            )
             }
 
             {filteredAndSortedDiagrams.length > 0 && totalPages > 1 && (
