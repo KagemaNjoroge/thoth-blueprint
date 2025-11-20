@@ -284,7 +284,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
     addNode(newNote);
   };
 
-  const handleCreateZone = (name: string) => {
+  const handleCreateZone = (name: string, color?: string) => {
     let position = { x: 200, y: 200 };
     if (rfInstance) {
       const flowPosition = rfInstance.screenToFlowPosition({ x: window.innerWidth * 0.6, y: window.innerHeight / 2 });
@@ -297,7 +297,7 @@ export default function Layout({ onInstallAppRequest }: LayoutProps) {
       width: 300,
       height: 300,
       zIndex: -1,
-      data: { name },
+      data: { name, ...(color ? { color } : {}) },
     };
     addNode(newZone);
   };

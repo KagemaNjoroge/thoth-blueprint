@@ -25,3 +25,12 @@ export const tableColors = [
   "#9400D3", "#FF1493", "#00BFFF", "#696969", "#1E90FF",
   "#B22222", "#FFFAF0", "#228B22", "#FF00FF", "#DCDCDC",
 ];
+
+export const ZONE_COLORS = [
+  { name: "Blue", value: "rgba(59, 130, 246, 0.1)", border: "rgba(59, 130, 246, 0.5)" },
+  { name: "Green", value: "rgba(34, 197, 94, 0.1)", border: "rgba(34, 197, 94, 0.5)" },
+  { name: "Red", value: "rgba(239, 68, 68, 0.1)", border: "rgba(239, 68, 68, 0.5)" },
+  { name: "Yellow", value: "rgba(234, 179, 8, 0.1)", border: "rgba(234, 179, 8, 0.5)" },
+  { name: "Purple", value: "rgba(168, 85, 247, 0.1)", border: "rgba(168, 85, 247, 0.5)" },
+  { name: "Gray", value: "rgba(107, 114, 128, 0.1)", border: "rgba(107, 114, 128, 0.5)" },
+];

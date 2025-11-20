@@ -2,19 +2,19 @@ import { DEFAULT_SETTINGS } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { organizeTablesByRelationshipsWithZones } from "@/lib/layout-algorithms";
 import {
-  Settings,
-  type AppEdge,
-  type AppNode,
-  type AppNoteNode,
-  type AppZoneNode,
-  type DatabaseType,
-  type Diagram,
+    Settings,
+    type AppEdge,
+    type AppNode,
+    type AppNoteNode,
+    type AppZoneNode,
+    type DatabaseType,
+    type Diagram,
 } from "@/lib/types";
 import {
-  applyEdgeChanges,
-  applyNodeChanges,
-  type EdgeChange,
-  type NodeChange,
+    applyEdgeChanges,
+    applyNodeChanges,
+    type EdgeChange,
+    type NodeChange,
 } from "@xyflow/react";
 import debounce from "lodash/debounce";
 import { create } from "zustand";
@@ -62,7 +62,7 @@ export interface StoreState {
   deleteEdge: (edgeId: string) => void;
   addNode: (node: AppNode | AppNoteNode | AppZoneNode) => void;
   undoDelete: () => void;
-  batchUpdateNodes: (nodes: AppNode[]) => void;
+  batchUpdateNodes: (nodes: (AppNode | AppNoteNode | AppZoneNode)[]) => void;
   copyNodes: (nodes: (AppNode | AppNoteNode | AppZoneNode)[]) => void;
   pasteNodes: (position: { x: number; y: number }) => void;
   setIsRelationshipDialogOpen: (value: boolean) => void;
@@ -921,16 +921,39 @@ export const useStore = create(
       set((state) => {
         const diagram = getDiagramById(state.diagramsMap, state.selectedDiagramId);
         if (!diagram) return state;
+        
         const nodeMap = new Map(nodesToUpdate.map((n) => [n.id, n]));
+        
         const newNodes = (diagram.data.nodes || []).map(
-          (n) => nodeMap.get(n.id) || n
+          (n) => {
+            const updated = nodeMap.get(n.id);
+            return (updated && updated.type === 'table' ? updated as AppNode : n);
+          }
         );
+        const newNotes = (diagram.data.notes || []).map(
+          (n) => {
+            const updated = nodeMap.get(n.id);
+            return (updated && updated.type === 'note' ? updated as AppNoteNode : n);
+          }
+        );
+        const newZones = (diagram.data.zones || []).map(
+          (n) => {
+            const updated = nodeMap.get(n.id);
+            return (updated && updated.type === 'zone' ? updated as AppZoneNode : n);
+          }
+        );
+
         return updateDiagramsWithMap(state.diagrams, (diagrams) =>
           diagrams.map((d) =>
             d.id === state.selectedDiagramId
               ? {
                   ...d,
-                  data: { ...d.data, nodes: newNodes },
+                  data: { 
+                    ...d.data, 
+                    nodes: newNodes,
+                    notes: newNotes,
+                    zones: newZones
+                  },
                   updatedAt: new Date(),
                 }
               : d

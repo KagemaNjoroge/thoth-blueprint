@@ -24,8 +24,11 @@ export function AboutDialog({ isOpen, onOpenChange }: AboutDialogProps) {
         <DialogHeader className="items-center text-center">
           <img src="/ThothBlueprint-icon.svg" alt="ThothBlueprint Logo" className="h-16 w-16 mb-2" />
           <DialogTitle className="text-2xl">ThothBlueprint</DialogTitle>
-          <DialogDescription>
-            Visualize your database schema with an intuitive drag-and-drop editor.
+          <DialogDescription className="text-center pt-2">
+            Visualize your database schema with our intuitive drag-and-drop editor. 
+            Import from SQL or DBML, or create new diagrams from scratch. 
+            When you're done, export your design to SQL, DBML, JSON, SVG, or PNG, 
+            or generate migration files for frameworks like Laravel, TypeORM, and Django.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 text-center text-sm text-muted-foreground">

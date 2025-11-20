@@ -3,7 +3,7 @@ import { type AppZoneNode, type ZoneNodeData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { NodeResizer, useReactFlow, type NodeProps } from "@xyflow/react";
-import { GitCommitHorizontal, Lock, Plus, StickyNote, Trash2, Unlock, Pencil } from "lucide-react";
+import { GitCommitHorizontal, Lock, Pencil, Plus, StickyNote, Trash2, Unlock } from "lucide-react";
 import React, { useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { EditZoneDialog } from "./EditZoneDialog";
@@ -54,17 +54,22 @@ function ZoneNode({
     }
   };
 
-  const { isLocked } = data;
+  const { isLocked, color } = data;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger onContextMenu={handleContextMenu}>
         <div
           className={cn(
-            "w-full h-full rounded-lg border-2 bg-primary/5 group relative flex flex-col",
+            "w-full h-full rounded-lg border-2 group relative flex flex-col transition-colors duration-200",
             selected ? "border-blue-500" : "border-primary/20",
-            isLocked ? "border-solid border-primary/40" : "border-dashed"
+            isLocked ? "border-solid border-primary/40" : "border-dashed",
+            !color && "bg-primary/5"
           )}
+          style={{
+            backgroundColor: color,
+            borderColor: color ? color.replace('0.1)', '0.5)').replace('0.1', '0.5') : undefined
+          }}
         >
           <NodeResizer
             minWidth={150}
@@ -74,7 +79,7 @@ function ZoneNode({
             handleClassName="h-3 w-3 bg-white border-2 rounded-full border-blue-400"
           />
           <div className="flex items-center p-1 flex-shrink-0 relative">
-            <div className="bg-transparent border-none text-foreground/80 font-semibold text-center w-full select-none">
+            <div className="bg-transparent border-none text-foreground/80 font-semibold text-center w-full select-none truncate px-6">
               {data.name || "Zone"}
             </div>
             {!isLocked && (
@@ -154,8 +159,9 @@ function ZoneNode({
           isOpen={isEditOpen}
           onOpenChange={setIsEditOpen}
           initialName={data.name || ""}
-          onUpdateZone={(name) => {
-            if (onUpdate) onUpdate(id, { name });
+          initialColor={data.color || ""}
+          onUpdateZone={(name, color) => {
+            if (onUpdate) onUpdate(id, { name, ...(color ? { color } : {}) });
           }}
           existingZoneNames={existingZoneNames}
           excludeName={data.name || ""}
