@@ -1,6 +1,6 @@
 import { exporter } from "@dbml/core";
-import { type AppNode, type Column, type Diagram, type Index } from "./types";
-import { DbRelationship } from "./constants";
+import { type AppNode, type Column, type Diagram, type Index } from "../types";
+import { DbRelationship } from "../constants";
 import { useStore } from "@/store/store";
 
 interface ExportOptions {

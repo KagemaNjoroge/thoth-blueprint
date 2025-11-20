@@ -13,7 +13,7 @@ import {
 import { generateDjangoMigration } from "@/lib/codegen/django/migration-generator";
 import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-generator";
 import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
-import { exportToDbml, exportToJson, exportToSql } from "@/lib/dbml";
+import { exportToDbml, exportToJson, exportToSql } from "@/lib/exporter/sql-dbml-json-exporter";
 import { exportToMermaid } from "@/lib/mermaid";
 import { type Diagram, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
 import { useStore } from "@/store/store";

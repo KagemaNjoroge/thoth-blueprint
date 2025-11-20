@@ -1,4 +1,4 @@
-import { exportToSql } from "@/lib/dbml";
+import { exportToSql } from "@/lib/exporter/sql-dbml-json-exporter";
 import { type AppNode, type Diagram } from "@/lib/types";
 import {
   generateTimestamp,
