@@ -16,6 +16,7 @@ import {
 import { colors } from "@/lib/constants";
 import { type TableNodeData } from "@/lib/types";
 import { useStore } from "@/store/store";
+import { useShallow } from "zustand/react/shallow";
 import {
   Handle,
   Position,
@@ -46,6 +47,21 @@ function TableNode({
   const prevColumnsRef = useRef(data.columns);
   const selectedNodeId = useStore((state) => state.selectedNodeId);
   const isSelected = selected || selectedNodeId === id;
+  const { selectedEdgeId, edges } = useStore(
+    useShallow((state) => ({
+      selectedEdgeId: state.selectedEdgeId,
+      edges: state.diagrams.find(d => d.id === state.selectedDiagramId)?.data.edges || [],
+    }))
+  );
+  const selectedEdge = edges.find(e => e.id === selectedEdgeId);
+  const isSourceTable = selectedEdge?.source === id;
+  const isTargetTable = selectedEdge?.target === id;
+  const sourceHandleParts = selectedEdge?.sourceHandle?.split("-") || [];
+  const targetHandleParts = selectedEdge?.targetHandle?.split("-") || [];
+  const sourceColId = sourceHandleParts.length > 2 ? sourceHandleParts.slice(0, -2).join("-") : "";
+  const targetColId = targetHandleParts.length > 2 ? targetHandleParts.slice(0, -2).join("-") : "";
+
+  
 
   // Create a Map for O(1) column lookups
   const columnsMap = useMemo(() => {
@@ -167,7 +183,7 @@ function TableNode({
               <TooltipProvider key={col.id} delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="relative flex justify-between items-center text-xs py-1.5 px-4">
+                    <div className={`relative flex justify-between items-center text-xs py-1.5 px-4 ${((isSourceTable && col.id === sourceColId) || (isTargetTable && col.id === targetColId)) ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
                       <Handle
                         type="target"
                         position={Position.Left}
