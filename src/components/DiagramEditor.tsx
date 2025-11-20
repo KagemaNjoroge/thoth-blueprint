@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, GitCommitHorizontal, Grid2x2Check, LayoutGrid, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, LayoutGrid, Magnet, Move, Plus, Pointer, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -113,9 +113,10 @@ const DiagramEditor = forwardRef(
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
     const [isReorganizeDialogOpen, setIsReorganizeDialogOpen] = useState(false);
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const { theme } = useTheme();
-    const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+  const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
 
     const nodes = useMemo(() => diagram?.data.nodes || [], [diagram?.data.nodes]);
     const edges = useMemo(() => diagram?.data.edges || [], [diagram?.data.edges]);
@@ -408,9 +409,9 @@ const DiagramEditor = forwardRef(
       addEdgeToStore(newEdge);
     }, [nodesMap, addEdgeToStore]);
 
-    const onInit = useCallback((instance: ReactFlowInstance<ProcessedNode, ProcessedEdge>) => {
-      rfInstanceRef.current = instance;
-      setRfInstance(instance);
+  const onInit = useCallback((instance: ReactFlowInstance<ProcessedNode, ProcessedEdge>) => {
+    rfInstanceRef.current = instance;
+    setRfInstance(instance);
 
       // Restore viewport if rememberLastPosition is enabled and viewport is available
       if (settings.rememberLastPosition && diagram?.data.viewport) {
@@ -419,9 +420,32 @@ const DiagramEditor = forwardRef(
       } else {
         instance.fitView({ duration: 200 });
       }
-    }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
+  }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
 
 
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.code === "Space") {
+          const activeTag = (document.activeElement?.tagName || "").toLowerCase();
+          if (activeTag !== "input" && activeTag !== "textarea" && activeTag !== "select") {
+            e.preventDefault();
+            setIsSpacePressed(true);
+          }
+        }
+      };
+      const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.code === "Space") {
+          setIsSpacePressed(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+      };
+    }, []);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
@@ -541,6 +565,8 @@ const DiagramEditor = forwardRef(
               elementsSelectable={!isLocked}
               snapToGrid={settings.snapToGrid}
               deleteKeyCode={isLocked ? null : ["Delete"]}
+              panOnDrag={settings.enableFreePanning || isSpacePressed}
+              selectionOnDrag={!isSpacePressed}
               fitView
               colorMode={theme as ColorMode}
               onlyRenderVisibleElements={onlyRenderVisibleElements}
@@ -551,6 +577,9 @@ const DiagramEditor = forwardRef(
                 </ControlButton>
                 <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
                   {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
+                </ControlButton>
+                <ControlButton onClick={() => updateSettings({ enableFreePanning: !settings.enableFreePanning })} title={settings.enableFreePanning ? "Disable Free Panning" : "Enable Free Panning"}>
+                  {settings.enableFreePanning ? <Move size={18} /> : <Pointer size={18} />}
                 </ControlButton>
                 <ControlButton onClick={handleReorganizeClick} title={"Reorganize Tables"} disabled={isLocked}>
                   <LayoutGrid size={18} />

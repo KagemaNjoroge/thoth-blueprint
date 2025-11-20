@@ -391,12 +391,13 @@ export const useStore = create(
       const diagrams = await db.diagrams.toArray();
       const selectedDiagramIdState = await db.appState.get("selectedDiagramId");
 
-      // Load settings
+      // Load settings and merge with defaults to ensure new options have defaults
       const settingsState = await db.appState.get("settings");
       let settings = DEFAULT_SETTINGS;
       if (settingsState && typeof settingsState.value === "string") {
         try {
-          settings = JSON.parse(settingsState.value);
+          const parsed = JSON.parse(settingsState.value);
+          settings = { ...DEFAULT_SETTINGS, ...parsed } as Settings;
         } catch (e) {
           console.error("Failed to parse settings:", e);
         }

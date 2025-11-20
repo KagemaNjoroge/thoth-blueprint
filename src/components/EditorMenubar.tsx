@@ -183,6 +183,13 @@ export default function EditorMenubar({
           </MenubarCheckboxItem>
           <MenubarSeparator />
           <MenubarCheckboxItem
+            checked={settings.enableFreePanning}
+            onCheckedChange={(checked) => updateSettings({ enableFreePanning: checked })}
+          >
+            Enable Free Panning
+          </MenubarCheckboxItem>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
             checked={settings.rememberLastPosition}
             onCheckedChange={(checked) => updateSettings({ rememberLastPosition: checked })}
           >
