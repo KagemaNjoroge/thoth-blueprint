@@ -221,6 +221,13 @@ export default function EditorMenubar({
               </MenubarItem>
             </MenubarSubContent>
           </MenubarSub>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.exportForeignKeyConstraint}
+            onCheckedChange={(checked) => updateSettings({ exportForeignKeyConstraint: checked })}
+          >
+            Export Foreign Key Constraint
+          </MenubarCheckboxItem>
           <MenubarItem onClick={onCheckForUpdate}>
             Check for Updates
           </MenubarItem>

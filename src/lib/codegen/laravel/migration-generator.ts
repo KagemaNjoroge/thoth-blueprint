@@ -17,6 +17,7 @@ export interface LaravelMigrationOptions {
   tableName?: string;
   className?: string;
   timestamp?: string;
+  omitForeignKeys?: boolean;
 }
 
 export interface LaravelMigrationFile {
@@ -47,7 +48,7 @@ export function generateLaravelMigration(
     const tableName = toLaravelTableName(node.data.label.trim());
     const migrationTimestamp = timestamp + String(index).padStart(2, "0");
     const filename = `${migrationTimestamp}_create_${tableName}_table.php`;
-    const content = generateSingleTableMigration(node, tableName, edges, nodes);
+    const content = generateSingleTableMigration(node, tableName, edges, nodes, options.omitForeignKeys === true);
 
     migrationFiles.push({ filename, content });
   });
@@ -93,7 +94,8 @@ function generateSingleTableMigration(
   node: AppNode,
   tableName: string,
   edges: AppEdge[],
-  nodes: AppNode[]
+  nodes: AppNode[],
+  omitForeignKeys: boolean
 ): string {
   const columns = node.data.columns || [];
   const indices = node.data.indices || [];
@@ -129,10 +131,10 @@ return new class extends Migration
   // Generate columns (skip primary key if we added id())
   columns.forEach((col) => {
     if (!hasPrimaryKey || !col.pk) {
-      migration += generateColumnDefinition(col, edges, nodes, "            ");
+      migration += generateColumnDefinition(col, edges, nodes, "            ", omitForeignKeys);
     } else if (col.pk) {
       // Handle custom primary key
-      migration += generateColumnDefinition(col, edges, nodes, "            ");
+      migration += generateColumnDefinition(col, edges, nodes, "            ", omitForeignKeys);
     }
   });
 
@@ -170,7 +172,8 @@ function generateColumnDefinition(
   col: Column,
   edges: AppEdge[],
   nodes: AppNode[],
-  indent: string
+  indent: string,
+  omitForeignKeys: boolean
 ): string {
   let definition = `${indent}$table`;
   const columnName = col.name.trim().toLowerCase();
@@ -180,18 +183,19 @@ function generateColumnDefinition(
   if (columnName.endsWith("_id") && !col.pk) {
     // Use foreignId() for foreign key columns
     definition += `->foreignId('${trimmedColName}')`;
-
-    // Find the actual referenced table from edges
-    const referencedTable = findReferencedTable(col.id, edges, nodes);
-    if (referencedTable) {
-      definition += `->constrained('${referencedTable}')`;
-    } else {
-      // Fallback to convention-based naming
-      const conventionTable = columnName.replace("_id", "");
-      const pluralTable = conventionTable.endsWith("s")
-        ? conventionTable
-        : `${conventionTable}s`;
-      definition += `->constrained('${pluralTable}')`;
+    if (!omitForeignKeys) {
+      // Find the actual referenced table from edges
+      const referencedTable = findReferencedTable(col.id, edges, nodes);
+      if (referencedTable) {
+        definition += `->constrained('${referencedTable}')`;
+      } else {
+        // Fallback to convention-based naming
+        const conventionTable = columnName.replace("_id", "");
+        const pluralTable = conventionTable.endsWith("s")
+          ? conventionTable
+          : `${conventionTable}s`;
+        definition += `->constrained('${pluralTable}')`;
+      }
     }
   } else if (col.pk && columnName === "id") {
     // Use id() for primary key id columns

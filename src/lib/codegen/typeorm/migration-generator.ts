@@ -8,6 +8,7 @@ import {
 
 export interface TypeOrmMigrationOptions {
   timestamp?: string;
+  omitForeignKeys?: boolean;
 }
 
 export interface TypeOrmMigrationFile {
@@ -51,10 +52,10 @@ export function generateTypeOrmMigration(
   });
 
   // Generate foreign key constraints migration if there are any edges
-  if (edges.length > 0) {
+  if (!options.omitForeignKeys && edges.length > 0) {
     const fkTimestamp = timestamp + String(sortedNodes.length).padStart(2, "0");
     const fkFilename = `${fkTimestamp}-AddForeignKeyConstraints.ts`;
-    const fkContent = generateForeignKeyMigration(fkTimestamp, diagram);
+    const fkContent = generateForeignKeyMigration(fkTimestamp, diagram, options);
 
     migrationFiles.push({ filename: fkFilename, content: fkContent });
   }
@@ -196,10 +197,11 @@ export class ${className}${timestamp} implements MigrationInterface {
 
 function generateForeignKeyMigration(
   timestamp: string,
-  diagram: Diagram
+  diagram: Diagram,
+  options: TypeOrmMigrationOptions = {}
 ): string {
   // Generate SQL for all foreign key constraints
-  const sql = exportToSql(diagram);
+  const sql = exportToSql(diagram, { exportForeignKeyConstraint: !options.omitForeignKeys });
 
   // Split SQL into individual statements and clean them
   const statements = sql

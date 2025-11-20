@@ -1,12 +1,19 @@
 import { exporter } from "@dbml/core";
 import { type AppNode, type Column, type Diagram, type Index } from "./types";
 import { DbRelationship } from "./constants";
+import { useStore } from "@/store/store";
 
-const diagramToDbml = (diagram: Diagram): string => {
+interface ExportOptions {
+  exportForeignKeyConstraint?: boolean;
+}
+
+const diagramToDbml = (diagram: Diagram, options: ExportOptions = {}): string => {
   const { nodes, edges } = diagram.data;
   let tableDbml = "";
   const enumDefinitions = new Set<string>();
   const enumTypeMap = new Map<string, string>();
+  const shouldExportFks =
+    options.exportForeignKeyConstraint ?? useStore.getState().settings.exportForeignKeyConstraint ?? true;
 
   // First pass: find all enums and prepare definitions
   nodes
@@ -140,6 +147,7 @@ const diagramToDbml = (diagram: Diagram): string => {
     });
 
   let relationshipsDbml = "";
+  if (shouldExportFks) {
   edges.forEach((edge) => {
     const sourceNode = nodes.find((n) => n.id === edge.source) as
       | AppNode
@@ -186,6 +194,7 @@ const diagramToDbml = (diagram: Diagram): string => {
       relationshipsDbml += `Ref: ${sourceNode.data.label}.${sourceColumn.name} ${relationship} ${targetNode.data.label}.${targetColumn.name}\n`;
     }
   });
+  }
 
   // Combine all parts, with enums first to ensure correct dependency order
   const dbmlString =
@@ -193,12 +202,12 @@ const diagramToDbml = (diagram: Diagram): string => {
   return dbmlString;
 };
 
-export const exportToDbml = (diagram: Diagram): string => {
-  return diagramToDbml(diagram);
+export const exportToDbml = (diagram: Diagram, options: ExportOptions = {}): string => {
+  return diagramToDbml(diagram, options);
 };
 
-export const exportToSql = (diagram: Diagram): string => {
-  const dbmlString = diagramToDbml(diagram);
+export const exportToSql = (diagram: Diagram, options: ExportOptions = {}): string => {
+  const dbmlString = diagramToDbml(diagram, options);
   return exporter.export(dbmlString, diagram.dbType);
 };
 

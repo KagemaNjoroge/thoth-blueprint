@@ -53,4 +53,5 @@ export const DEFAULT_SETTINGS: Settings = {
   focusRelDuringSelection: false,
   allowTableOverlapDuringCreation: true,
   enableFreePanning: true,
+  exportForeignKeyConstraint: true,
 };
