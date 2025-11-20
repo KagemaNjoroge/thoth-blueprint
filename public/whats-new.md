@@ -1,4 +1,4 @@
-# What’s New in ThothBlueprint v0.0.6
+# What’s New in ThothBlueprint v0.0.7
 
 This release brings major importer upgrades, MySQL PostgreSQL schema dump importer support, UI improvements, and performance optimizations tailored for large real‑world schemas.
 
@@ -9,7 +9,9 @@ This release brings major importer upgrades, MySQL PostgreSQL schema dump import
 - Gallery pagination (10 per page) with simple previous/next controls.
 - Card‑based database selection in Create Diagram.
 - Improved Import Dialog validation and database icons.
-- Duplicte column feature added. easily duplicate columns with a single click.
+- Duplicate column feature added. easily duplicate columns with a single click.
+- Manual pan support: toggle free panning or hold Space to pan.
+- Export foreign key constraint option: choose whether FKs are included in exports.
 
 ## New & Improved
 
@@ -25,6 +27,8 @@ This release brings major importer upgrades, MySQL PostgreSQL schema dump import
 - Duplicate Diagram (d300ad1): duplicate existing diagrams with unique IDs.
 - Table Overlap Option (b9aa3e4): allow overlap during creation when compactness is desired.
 - What’s New Dialog (25904e7): in‑app release notes with Markdown.
+- Manual Pan Support: enable/disable free panning from View/Controls; when disabled, hold Space to pan. Shortcuts dialog updated.
+- Export Foreign Key Constraint: global setting to include/exclude foreign keys in DBML/SQL export and code generation (Laravel, TypeORM, Django).
 
 ## Performance & Stability
 

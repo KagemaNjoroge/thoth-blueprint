@@ -16,6 +16,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ZONE_COLORS } from "@/lib/colors";
+import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -25,12 +27,13 @@ interface EditZoneDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   initialName: string;
-  onUpdateZone: (name: string) => void;
+  initialColor?: string;
+  onUpdateZone: (name: string, color?: string) => void;
   existingZoneNames?: string[];
   excludeName?: string; // current name to allow unchanged value
 }
 
-export function EditZoneDialog({ isOpen, onOpenChange, initialName, onUpdateZone, existingZoneNames = [], excludeName }: EditZoneDialogProps) {
+export function EditZoneDialog({ isOpen, onOpenChange, initialName, initialColor, onUpdateZone, existingZoneNames = [], excludeName }: EditZoneDialogProps) {
   // Build schema with runtime validation against existing names
   const formSchema = z.object({
     name: z
@@ -44,19 +47,20 @@ export function EditZoneDialog({ isOpen, onOpenChange, initialName, onUpdateZone
         },
         { message: "A zone with this name already exists in this diagram." }
       ),
+    color: z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: initialName || "" },
+    defaultValues: { name: initialName || "", color: initialColor || ZONE_COLORS[0]?.value || "" },
   });
 
   useEffect(() => {
-    form.reset({ name: initialName || "" });
-  }, [initialName, form]);
+    form.reset({ name: initialName || "", color: initialColor || ZONE_COLORS[0]?.value || "" });
+  }, [initialName, initialColor, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onUpdateZone(values.name);
+    onUpdateZone(values.name, values.color);
     onOpenChange(false);
   }
 
@@ -65,7 +69,7 @@ export function EditZoneDialog({ isOpen, onOpenChange, initialName, onUpdateZone
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Update Zone</DialogTitle>
-          <DialogDescription>Update the name for this zone.</DialogDescription>
+          <DialogDescription>Update the name and color for this zone.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -78,6 +82,30 @@ export function EditZoneDialog({ isOpen, onOpenChange, initialName, onUpdateZone
                   <FormControl>
                     <Input placeholder="e.g., User Management" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="color"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Color</FormLabel>
+                  <div className="flex gap-2 flex-wrap">
+                    {ZONE_COLORS.map((color) => (
+                      <div
+                        key={color.name}
+                        className={cn(
+                          "w-8 h-8 rounded-full cursor-pointer border-2 transition-all",
+                          field.value === color.value ? "border-primary scale-110" : "border-transparent hover:scale-105"
+                        )}
+                        style={{ backgroundColor: color.value, borderColor: field.value === color.value ? undefined : color.border }}
+                        onClick={() => field.onChange(color.value)}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

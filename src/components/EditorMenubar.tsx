@@ -183,6 +183,13 @@ export default function EditorMenubar({
           </MenubarCheckboxItem>
           <MenubarSeparator />
           <MenubarCheckboxItem
+            checked={settings.enableFreePanning}
+            onCheckedChange={(checked) => updateSettings({ enableFreePanning: checked })}
+          >
+            Enable Free Panning
+          </MenubarCheckboxItem>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
             checked={settings.rememberLastPosition}
             onCheckedChange={(checked) => updateSettings({ rememberLastPosition: checked })}
           >
@@ -214,6 +221,13 @@ export default function EditorMenubar({
               </MenubarItem>
             </MenubarSubContent>
           </MenubarSub>
+          <MenubarSeparator />
+          <MenubarCheckboxItem
+            checked={settings.exportForeignKeyConstraint}
+            onCheckedChange={(checked) => updateSettings({ exportForeignKeyConstraint: checked })}
+          >
+            Export Foreign Key Constraint
+          </MenubarCheckboxItem>
           <MenubarItem onClick={onCheckForUpdate}>
             Check for Updates
           </MenubarItem>

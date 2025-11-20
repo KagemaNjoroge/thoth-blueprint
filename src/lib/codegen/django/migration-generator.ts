@@ -15,6 +15,7 @@ import {
 
 export interface DjangoMigrationOptions {
   timestamp?: string;
+  omitForeignKeys?: boolean;
 }
 
 export interface DjangoMigrationFile {
@@ -24,9 +25,9 @@ export interface DjangoMigrationFile {
 
 export function generateDjangoMigration(
   diagram: Diagram,
-  _options: DjangoMigrationOptions = {}
+  options: DjangoMigrationOptions = {}
 ): DjangoMigrationFile[] {
-  const content = generateInitialMigrationContent(diagram);
+  const content = generateInitialMigrationContent(diagram, options);
   return [
     {
       filename: `0001_initial.py`,
@@ -87,7 +88,7 @@ function topologicalSort(nodes: AppNode[], edges: AppEdge[]): AppNode[] {
   return sorted;
 }
 
-function generateInitialMigrationContent(diagram: Diagram): string {
+function generateInitialMigrationContent(diagram: Diagram, options: DjangoMigrationOptions = {}): string {
   const { nodes, edges } = diagram.data;
   const appName = "yourapp"; // Placeholder as requested
 
@@ -101,7 +102,7 @@ function generateInitialMigrationContent(diagram: Diagram): string {
   operations.push(...enumOperations);
 
   const createModelOperations = sortedNodes.map((node) =>
-    generateCreateModelOperation(node, nodes, edges, diagram.dbType, appName)
+    generateCreateModelOperation(node, nodes, edges, diagram.dbType, appName, options.omitForeignKeys === true)
   );
   operations.push(...createModelOperations);
 
@@ -165,12 +166,13 @@ function generateCreateModelOperation(
   allNodes: AppNode[],
   edges: AppEdge[],
   dbType: "mysql" | "postgres",
-  appName: string
+  appName: string,
+  omitForeignKeys: boolean
 ): string {
   const modelName = toDjangoModelName(node.data.label);
   const fields = node.data.columns
     .map((col) =>
-      generateFieldDefinition(col, node, allNodes, edges, dbType, appName)
+      generateFieldDefinition(col, node, allNodes, edges, dbType, appName, omitForeignKeys)
     )
     .join(",\n                ");
 
@@ -198,11 +200,14 @@ function generateFieldDefinition(
   allNodes: AppNode[],
   edges: AppEdge[],
   dbType: "mysql" | "postgres",
-  appName: string
+  appName: string,
+  omitForeignKeys: boolean
 ): string {
   const getColumnId = (handleId?: string | null) => handleId?.split("-")[0];
 
-  const edge = edges.find(
+  const edge = omitForeignKeys
+    ? undefined
+    : edges.find(
     (e) => e.source === currentNode.id && getColumnId(e.sourceHandle) === col.id
   );
 

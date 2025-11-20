@@ -40,6 +40,7 @@ export const KeyboardShortcuts = {
   ZOOM_IN_KEY_2: "=",
   ZOOM_OUT_KEY: "-",
   ZOOM_RESET_KEY: "0",
+  PAN_WITH_SPACE: "Space",
 };
 
 const isMac = navigator.userAgent.includes("Mac");
@@ -51,4 +52,6 @@ export const DEFAULT_SETTINGS: Settings = {
   focusTableDuringSelection: false,
   focusRelDuringSelection: false,
   allowTableOverlapDuringCreation: true,
+  enableFreePanning: true,
+  exportForeignKeyConstraint: true,
 };

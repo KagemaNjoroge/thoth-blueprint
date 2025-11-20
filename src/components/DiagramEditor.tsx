@@ -6,8 +6,8 @@ import {
 } from "@/components/ui/context-menu";
 import { tableColors } from "@/lib/colors";
 import { colors, DbRelationship, relationshipTypes } from "@/lib/constants";
-import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
-import { DEFAULT_NODE_SPACING, DEFAULT_TABLE_HEIGHT, DEFAULT_TABLE_WIDTH, findNonOverlappingPosition, getCanvasDimensions, isNodeInLockedZone } from "@/lib/utils";
+import { type AppEdge, type AppNode, type AppNoteNode, type AppZoneNode, type CombinedNode, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
+import { DEFAULT_NODE_SPACING, DEFAULT_TABLE_HEIGHT, DEFAULT_TABLE_WIDTH, findNonOverlappingPosition, getCanvasDimensions, isNodeInLockedZone, isNodeInsideZone } from "@/lib/utils";
 import { useStore, type StoreState } from "@/store/store";
 import { showError } from "@/utils/toast";
 import {
@@ -26,7 +26,7 @@ import {
   type Viewport
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Clipboard, GitCommitHorizontal, Grid2x2Check, LayoutGrid, Magnet, Plus, SquareDashed, StickyNote } from "lucide-react";
+import { Clipboard, GitCommitHorizontal, Grid2x2Check, LayoutGrid, Magnet, Move, Plus, Pointer, SquareDashed, StickyNote } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   forwardRef,
@@ -113,9 +113,10 @@ const DiagramEditor = forwardRef(
     );
     const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
     const [isReorganizeDialogOpen, setIsReorganizeDialogOpen] = useState(false);
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const { theme } = useTheme();
-    const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+  const clickPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
 
     const nodes = useMemo(() => diagram?.data.nodes || [], [diagram?.data.nodes]);
     const edges = useMemo(() => diagram?.data.edges || [], [diagram?.data.edges]);
@@ -301,6 +302,72 @@ const DiagramEditor = forwardRef(
       }));
     }, [edges, selectedNodeId, selectedEdgeId, hoveredEdgeId, isLocked]);
 
+    // Ref to store drag state
+    const dragRef = useRef<{
+      zoneId: string;
+      initialZonePos: { x: number; y: number };
+      childNodes: { id: string; initialPos: { x: number; y: number }; type: string }[];
+    } | null>(null);
+
+    const onNodeDragStart = useCallback((_: React.MouseEvent, node: ProcessedNode) => {
+      if (node.type === 'zone') {
+        const zone = zonesMap.get(node.id);
+        if (!zone) return;
+
+        const allNodes = rfInstanceRef.current?.getNodes() || [];
+        const childNodes: { id: string; initialPos: { x: number; y: number }; type: string }[] = [];
+
+        allNodes.forEach(n => {
+          if (n.id === zone.id) return; // Skip the zone itself
+
+          if ((n.type === 'table' || n.type === 'note') && !n.data.isDeleted) {
+            if (isNodeInsideZone(n as unknown as CombinedNode, zone)) {
+              childNodes.push({ id: n.id, initialPos: { ...n.position }, type: n.type });
+            }
+          }
+        });
+
+        dragRef.current = {
+          zoneId: node.id,
+          initialZonePos: { ...node.position },
+          childNodes
+        };
+      }
+    }, [zonesMap]);
+
+    const onNodeDrag = useCallback((_: React.MouseEvent, node: ProcessedNode) => {
+      if (dragRef.current && dragRef.current.zoneId === node.id) {
+        const dx = node.position.x - dragRef.current.initialZonePos.x;
+        const dy = node.position.y - dragRef.current.initialZonePos.y;
+
+        const nodesToUpdate: (AppNode | AppNoteNode | AppZoneNode)[] = [];
+
+        dragRef.current.childNodes.forEach(child => {
+          let originalNode: AppNode | AppNoteNode | undefined;
+          if (child.type === 'table') originalNode = nodesMap.get(child.id);
+          else if (child.type === 'note') originalNode = notesMap.get(child.id);
+
+          if (originalNode) {
+            nodesToUpdate.push({
+              ...originalNode,
+              position: {
+                x: child.initialPos.x + dx,
+                y: child.initialPos.y + dy
+              }
+            } as AppNode | AppNoteNode);
+          }
+        });
+
+        if (nodesToUpdate.length > 0) {
+          batchUpdateNodes(nodesToUpdate as AppNode[]);
+        }
+      }
+    }, [nodesMap, notesMap, batchUpdateNodes]);
+
+    const onNodeDragStop = useCallback(() => {
+      dragRef.current = null;
+    }, []);
+
     const handleLockChange = () => {
       toggleLock();
     };
@@ -342,9 +409,9 @@ const DiagramEditor = forwardRef(
       addEdgeToStore(newEdge);
     }, [nodesMap, addEdgeToStore]);
 
-    const onInit = useCallback((instance: ReactFlowInstance<ProcessedNode, ProcessedEdge>) => {
-      rfInstanceRef.current = instance;
-      setRfInstance(instance);
+  const onInit = useCallback((instance: ReactFlowInstance<ProcessedNode, ProcessedEdge>) => {
+    rfInstanceRef.current = instance;
+    setRfInstance(instance);
 
       // Restore viewport if rememberLastPosition is enabled and viewport is available
       if (settings.rememberLastPosition && diagram?.data.viewport) {
@@ -353,9 +420,32 @@ const DiagramEditor = forwardRef(
       } else {
         instance.fitView({ duration: 200 });
       }
-    }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
+  }, [setRfInstance, diagram?.data.viewport, settings.rememberLastPosition]);
 
 
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.code === "Space") {
+          const activeTag = (document.activeElement?.tagName || "").toLowerCase();
+          if (activeTag !== "input" && activeTag !== "textarea" && activeTag !== "select") {
+            e.preventDefault();
+            setIsSpacePressed(true);
+          }
+        }
+      };
+      const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.code === "Space") {
+          setIsSpacePressed(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+      };
+    }, []);
 
     const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
       const pane = reactFlowWrapper.current?.getBoundingClientRect();
@@ -457,6 +547,9 @@ const DiagramEditor = forwardRef(
               edges={processedEdges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
+              onNodeDragStart={onNodeDragStart}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStop={onNodeDragStop}
               onBeforeDelete={onBeforeDelete} //prevent table permanent delete
               onConnect={onConnect}
               onSelectionChange={onSelectionChange}
@@ -472,6 +565,8 @@ const DiagramEditor = forwardRef(
               elementsSelectable={!isLocked}
               snapToGrid={settings.snapToGrid}
               deleteKeyCode={isLocked ? null : ["Delete"]}
+              panOnDrag={settings.enableFreePanning || isSpacePressed}
+              selectionOnDrag={!isSpacePressed}
               fitView
               colorMode={theme as ColorMode}
               onlyRenderVisibleElements={onlyRenderVisibleElements}
@@ -482,6 +577,9 @@ const DiagramEditor = forwardRef(
                 </ControlButton>
                 <ControlButton onClick={handleSnapToGridChange} title={"Snap To Grid"}>
                   {settings.snapToGrid ? <Grid2x2Check size={18} /> : <Magnet size={18} />}
+                </ControlButton>
+                <ControlButton onClick={() => updateSettings({ enableFreePanning: !settings.enableFreePanning })} title={settings.enableFreePanning ? "Disable Free Panning" : "Enable Free Panning"}>
+                  {settings.enableFreePanning ? <Move size={18} /> : <Pointer size={18} />}
                 </ControlButton>
                 <ControlButton onClick={handleReorganizeClick} title={"Reorganize Tables"} disabled={isLocked}>
                   <LayoutGrid size={18} />

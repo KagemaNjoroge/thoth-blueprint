@@ -131,6 +131,8 @@ export interface Settings {
   focusTableDuringSelection: boolean;
   focusRelDuringSelection: boolean;
   allowTableOverlapDuringCreation: boolean;
+  enableFreePanning: boolean;
+  exportForeignKeyConstraint: boolean;
 }
 
 export type AppNode = Node<TableNodeData, "table">;

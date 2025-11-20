@@ -13,9 +13,10 @@ import {
 import { generateDjangoMigration } from "@/lib/codegen/django/migration-generator";
 import { generateLaravelMigration } from "@/lib/codegen/laravel/migration-generator";
 import { generateTypeOrmMigration } from "@/lib/codegen/typeorm/migration-generator";
-import { exportToDbml, exportToJson, exportToSql } from "@/lib/dbml";
+import { exportToDbml, exportToJson, exportToSql } from "@/lib/exporter/sql-dbml-json-exporter";
 import { exportToMermaid } from "@/lib/mermaid";
 import { type Diagram, type ProcessedEdge, type ProcessedNode } from "@/lib/types";
+import { useStore } from "@/store/store";
 import { cn, downloadZip } from "@/lib/utils";
 import { showError } from "@/utils/toast";
 import {
@@ -50,6 +51,8 @@ export function ExportDialog({
   const handleExport = async () => {
     if (!diagram || !selectedFormat) return;
 
+    const settings = useStore.getState().settings;
+
     const filename = `${diagram.name.replace(/\s+/g, "_")}.${selectedFormat === "sql"
       ? "sql"
       : selectedFormat === "mermaid"
@@ -61,10 +64,10 @@ export function ExportDialog({
     try {
       switch (selectedFormat) {
         case "sql":
-          data = exportToSql(diagram);
+          data = exportToSql(diagram, { exportForeignKeyConstraint: settings.exportForeignKeyConstraint });
           break;
         case "dbml":
-          data = exportToDbml(diagram);
+          data = exportToDbml(diagram, { exportForeignKeyConstraint: settings.exportForeignKeyConstraint });
           break;
         case "json":
           data = exportToJson(diagram);
@@ -73,7 +76,7 @@ export function ExportDialog({
           data = exportToMermaid(diagram);
           break;
         case "laravel": {
-          const migrationFiles = generateLaravelMigration(diagram);
+          const migrationFiles = generateLaravelMigration(diagram, { omitForeignKeys: !settings.exportForeignKeyConstraint });
           if (migrationFiles.length === 0) {
             showError("No tables found to generate migrations.");
             return;
@@ -88,7 +91,7 @@ export function ExportDialog({
           return;
         }
         case "typeorm": {
-          const migrationFiles = generateTypeOrmMigration(diagram);
+          const migrationFiles = generateTypeOrmMigration(diagram, { omitForeignKeys: !settings.exportForeignKeyConstraint });
           if (migrationFiles.length === 0) {
             showError("No tables found to generate migrations.");
             return;
@@ -103,7 +106,7 @@ export function ExportDialog({
           return;
         }
         case "django": {
-          const migrationFiles = generateDjangoMigration(diagram);
+          const migrationFiles = generateDjangoMigration(diagram, { omitForeignKeys: !settings.exportForeignKeyConstraint });
           if (migrationFiles.length === 0) {
             showError("No tables found to generate migrations.");
             return;

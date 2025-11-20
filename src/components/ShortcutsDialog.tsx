@@ -28,6 +28,7 @@ const shortcuts = [
   { command: "Copy Selection", keys: [CtrlKey, KeyboardShortcuts.COPY_SELECTION.toUpperCase()] },
   { command: "Paste Selection", keys: [CtrlKey, KeyboardShortcuts.PASTE_COPIED.toUpperCase()] },
   { command: "Select Multiple Nodes", keys: [CtrlKey, KeyboardShortcuts.SELECT_MULTIPLE] },
+  { command: "Pan Canvas (hold)", keys: [KeyboardShortcuts.PAN_WITH_SPACE] },
   { command: "Delete Table, Notes, Zones", keys: [KeyboardShortcuts.DELETE_ELEMENT] },
   { command: "Zoom In", keys: [CtrlKey, KeyboardShortcuts.ZOOM_IN_KEY_1] },
   { command: "Zoom In", keys: [CtrlKey, KeyboardShortcuts.ZOOM_IN_KEY_2] },
